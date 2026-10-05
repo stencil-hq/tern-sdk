@@ -1,0 +1,12 @@
+schema = 1
+id = "review-queue"
+name = "Review Queue"
+version = "1.0.0"
+description = "Pull requests waiting for your review, from the GitHub CLI."
+icon = "merge"
+host = "host.luau"
+window = "window.luau"
+
+[[blocks]]
+id = "queue"
+title = "Review Queue"

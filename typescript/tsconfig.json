@@ -1,0 +1,25 @@
+{
+   "compilerOptions": {
+      "target": "ES2022",
+      "lib": ["ES2024", "ESNext.Disposable"],
+      "module": "ESNext",
+      "moduleResolution": "Bundler",
+      "strict": true,
+      "noEmit": true,
+      "skipLibCheck": true,
+      "isolatedModules": true,
+      "verbatimModuleSyntax": true,
+      "noUncheckedIndexedAccess": true,
+      "exactOptionalPropertyTypes": true,
+      "resolveJsonModule": true,
+      "jsx": "react-jsx",
+      "jsxImportSource": "@stencil-hq/tern",
+      "types": ["node", "bun"],
+      "paths": {
+         "@stencil-hq/tern": ["./src/index.ts"],
+         "@stencil-hq/tern/jsx-runtime": ["./src/jsx-runtime.ts"],
+         "@stencil-hq/tern/jsx-dev-runtime": ["./src/jsx-dev-runtime.ts"]
+      }
+   },
+   "include": ["src", "test", "examples"]
+}

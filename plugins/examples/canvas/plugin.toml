@@ -1,0 +1,7 @@
+schema = 1
+id = "canvas-demo"
+name = "Canvas Dashboard"
+version = "0.1.0"
+description = "A persistent native dashboard built entirely in the window context."
+icon = "sparkle"
+window = "window.luau"

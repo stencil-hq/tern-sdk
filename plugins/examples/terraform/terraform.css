@@ -1,0 +1,36 @@
+/* The terraform plan lens. Every rule is scoped by the lens block's role, so
+   the sheet touches nothing else; colors come from Tern's tone variables, so
+   light and dark themes both follow. */
+
+/* A plan that destroys or replaces something: a red rule down its view. */
+.sf-block[data-role='lens.plugin.terraform.plan'] [data-role='terraform.plan.danger'] {
+	box-shadow: inset 2px 0 0 rgb(from var(--sf-bad) r g b/70%);
+	padding-left: 10px;
+}
+
+/* Resource rows take their action's color as --tc. */
+.sf-block[data-role='lens.plugin.terraform.plan'] .sf-text[data-role^='terraform.'] {
+	--tc: var(--sf-muted);
+	border-radius: 4px;
+	padding: 0 4px;
+}
+.sf-block[data-role='lens.plugin.terraform.plan'] .sf-text[data-role='terraform.create'] {
+	--tc: var(--sf-ok);
+}
+.sf-block[data-role='lens.plugin.terraform.plan'] .sf-text[data-role='terraform.update'],
+.sf-block[data-role='lens.plugin.terraform.plan'] .sf-text[data-role='terraform.replace'] {
+	--tc: var(--sf-warn);
+}
+.sf-block[data-role='lens.plugin.terraform.plan'] .sf-text[data-role='terraform.destroy'] {
+	--tc: var(--sf-bad);
+}
+.sf-block[data-role='lens.plugin.terraform.plan'] .sf-text[data-role='terraform.read'],
+.sf-block[data-role='lens.plugin.terraform.plan'] .sf-text[data-role='terraform.import'] {
+	--tc: var(--sf-info);
+}
+
+/* A click copies the address: say so on hover. */
+.sf-block[data-role='lens.plugin.terraform.plan'] .sf-text[data-role^='terraform.']:hover {
+	background: rgb(from var(--tc) r g b/12%);
+	box-shadow: inset 2px 0 0 var(--tc);
+}

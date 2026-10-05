@@ -1,0 +1,48 @@
+{
+   "name": "@stencil-hq/tern",
+   "version": "0.1.0",
+   "description": "Talk to Tern over the Tern Surface Protocol: typed nodes and TSX, diffing, flow control, events, and a plain-text fallback.",
+   "license": "MIT",
+   "repository": {
+      "type": "git",
+      "url": "git+https://github.com/stencil-hq/tern-sdk.git",
+      "directory": "typescript"
+   },
+   "files": [
+      "dist",
+      "src",
+      "README.md"
+   ],
+   "type": "module",
+   "sideEffects": false,
+   "exports": {
+      ".": {
+         "types": "./dist/index.d.ts",
+         "bun": "./src/index.ts",
+         "default": "./dist/index.js"
+      },
+      "./jsx-runtime": {
+         "types": "./dist/jsx-runtime.d.ts",
+         "bun": "./src/jsx-runtime.ts",
+         "default": "./dist/jsx-runtime.js"
+      },
+      "./jsx-dev-runtime": {
+         "types": "./dist/jsx-dev-runtime.d.ts",
+         "bun": "./src/jsx-dev-runtime.ts",
+         "default": "./dist/jsx-dev-runtime.js"
+      }
+   },
+   "scripts": {
+      "build": "rm -rf dist && tsc -p tsconfig.build.json",
+      "typecheck": "tsc --noEmit -p .",
+      "test": "bun test"
+   },
+   "devDependencies": {
+      "@types/bun": "1.4.2",
+      "@types/node": "25.9.1",
+      "typescript": "6.0.3"
+   },
+   "engines": {
+      "node": ">=22"
+   }
+}

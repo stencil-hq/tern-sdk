@@ -1,0 +1,21 @@
+schema = 1
+id = "terraform"
+name = "Terraform"
+version = "1.0.0"
+description = "Reads terraform and tofu plans as summary badges and resources grouped by action."
+icon = "stack"
+host = "host.luau"
+styles = ["terraform.css"]
+
+[[lenses]]
+id = "plan"
+match = [
+	"terraform plan",
+	"terraform plan *",
+	"terraform -chdir=* plan",
+	"terraform -chdir=* plan *",
+	"tofu plan",
+	"tofu plan *",
+	"tofu -chdir=* plan",
+	"tofu -chdir=* plan *",
+]

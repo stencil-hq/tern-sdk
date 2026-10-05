@@ -1,0 +1,4 @@
+/* The workspace's status segment reads as a label, not a hint. */
+#statusline .sl-plugin[data-plugin="workspaces"] {
+	font-weight: 600;
+}

@@ -1,0 +1,14 @@
+schema = 1
+id = "longrun"
+name = "Long-Running Commands"
+version = "0.1.0"
+description = "Toasts when a slow command finishes and lists recent slow commands."
+icon = "clock"
+host = "host.luau"
+window = "window.luau"
+
+[[blocks]]
+id = "slow"
+title = "Slow Commands"
+# The window half's "Show slow commands" command opens it.
+palette = false

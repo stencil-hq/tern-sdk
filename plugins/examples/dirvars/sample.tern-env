@@ -1,0 +1,27 @@
+# A sample .tern-env: copy it to a project as `.tern-env`.
+# Review and explicitly approve its bytes in the Directory Variables block.
+# One KEY=VALUE per line; lines starting with # are comments.
+
+# Bare values end at a ` #` comment and expand ${NAME}.
+APP_ENV=development   # read by the app's config loader
+DATABASE_URL=postgres://localhost:5432/${APP_ENV}
+
+# Double quotes keep spaces and # and understand \n \t \" \\ \$.
+GREETING="hello # not a comment"
+PRICE="costs \${5}"
+
+# Single quotes are literal: nothing expands.
+PATTERN='${not expanded}'
+
+# `export` is accepted, so the file also works with `source`.
+export RUST_LOG=info
+
+# A name no file set falls back to the daemon's own environment (${HOME});
+# an undefined name expands to nothing.
+TOOLS=${HOME}/src/app/bin
+
+# PATH is accepted, but ${PATH} is the daemon's, and a login shell's
+# profile runs after the filter and rebuilds PATH (on macOS, path_helper
+# puts the system's entries first). Prefer project variables like TOOLS
+# and prepend them in your shell's rc file when the order matters.
+PATH=${TOOLS}:${PATH}

@@ -1,0 +1,27 @@
+{
+  "name": "webapp",
+  "tabs": [
+    {
+      "name": "code",
+      "split": "right",
+      "panes": [
+        { "command": "nvim ." },
+        {
+          "split": "down",
+          "panes": [
+            { "cwd": "web", "command": "npm run dev" },
+            { "cwd": "api", "command": "cargo watch -x run" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "shell",
+      "panes": [{}, { "block": "longrun.slow" }]
+    },
+    {
+      "name": "infra",
+      "cwd": "infra"
+    }
+  ]
+}

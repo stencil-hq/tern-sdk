@@ -1,0 +1,15 @@
+schema = 1
+id = "jsonx"
+name = "JSON Explorer"
+version = "1.0.0"
+description = "Browse JSON files as a collapsible tree and copy jq paths."
+icon = "braces"
+host = "host.luau"
+window = "window.luau"
+
+[[blocks]]
+id = "explorer"
+title = "JSON Explorer"
+files = ["*.json", "*.geojson"]
+# The block needs a file: it opens from "Open with", the route or a command.
+palette = false

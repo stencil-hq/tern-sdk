@@ -1,0 +1,8 @@
+schema = 1
+id = "workspaces"
+name = "Project Workspaces"
+version = "0.1.0"
+description = "Opens the tabs a project's .tern/workspace.json describes."
+icon = "folder"
+window = "window.luau"
+styles = ["workspaces.css"]

@@ -1,0 +1,12 @@
+schema = 1
+id = "dirvars"
+name = "Directory Variables"
+version = "0.1.0"
+description = "New shells get explicitly approved .tern-env variables above their directory."
+icon = "key"
+host = "host.luau"
+
+[[blocks]]
+id = "approve"
+title = "Directory Variables"
+palette = true
