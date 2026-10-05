@@ -25,13 +25,13 @@ approved files up.
 ## Install
 
 ```sh
-git clone https://github.com/stencil-hq/tern-sdk
-tern plugin install tern-sdk/plugins/examples/dirvars
+tern plugin install github.com/stencil-hq/tern-sdk/plugins/examples/dirvars
 ```
 
-or, to load it in place and reload on every save:
+or, to load a clone in place and reload on every save:
 
 ```sh
+git clone https://github.com/stencil-hq/tern-sdk
 tern plugin link tern-sdk/plugins/examples/dirvars
 ```
 

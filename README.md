@@ -24,8 +24,7 @@ installable folder each; `plugins/tern.d.luau` is the API they type-check
 against. See the [plugin docs](https://docs.stencil.so/tern/).
 
 ```sh
-git clone https://github.com/stencil-hq/tern-sdk
-tern plugin install tern-sdk/plugins/examples/jsonx
+tern plugin install github.com/stencil-hq/tern-sdk/plugins/examples/jsonx
 ```
 
 [MIT](LICENSE).

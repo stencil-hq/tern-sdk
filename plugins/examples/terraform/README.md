@@ -18,13 +18,13 @@ prompt that the native view would hide.
 ## Install
 
 ```sh
-git clone https://github.com/stencil-hq/tern-sdk
-tern plugin install tern-sdk/plugins/examples/terraform
+tern plugin install github.com/stencil-hq/tern-sdk/plugins/examples/terraform
 ```
 
-or, to load it in place and reload on every save:
+or, to load a clone in place and reload on every save:
 
 ```sh
+git clone https://github.com/stencil-hq/tern-sdk
 tern plugin link tern-sdk/plugins/examples/terraform
 ```
 
