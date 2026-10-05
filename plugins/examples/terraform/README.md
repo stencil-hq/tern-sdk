@@ -17,9 +17,8 @@ prompt that the native view would hide.
 
 ## Install
 
-From where you cloned the SDK (`git clone https://github.com/stencil-hq/tern-sdk`):
-
 ```sh
+git clone https://github.com/stencil-hq/tern-sdk
 tern plugin install tern-sdk/plugins/examples/terraform
 ```
 

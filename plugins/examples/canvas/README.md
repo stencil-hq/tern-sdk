@@ -3,9 +3,8 @@
 A window-only plugin that opens a persistent native canvas and handles its
 Refresh button. No host entry, background program or worker is needed.
 
-From where you cloned the SDK (`git clone https://github.com/stencil-hq/tern-sdk`):
-
 ```sh
+git clone https://github.com/stencil-hq/tern-sdk
 tern plugin install tern-sdk/plugins/examples/canvas
 ```
 
