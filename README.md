@@ -14,7 +14,7 @@ program prints plain text.
 | --- | --- | --- |
 | Rust | [`rust/`](rust) | crate `tern-sdk` |
 | Python | [`python/`](python) | `tern-sdk` |
-| Go | [`go/`](go) | `github.com/stencil-hq/tern-sdk/go` |
+| Go | [`go/tern/`](go/tern) | `github.com/stencil-hq/tern-sdk/go/tern` |
 | TypeScript | [`typescript/`](typescript) | `@stencil-hq/tern` |
 
 ## Plugins

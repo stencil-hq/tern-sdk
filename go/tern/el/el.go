@@ -11,8 +11,8 @@
 package el
 
 import (
-	tern "github.com/stencil-hq/tern-sdk/go"
-	"github.com/stencil-hq/tern-sdk/go/ui"
+	"github.com/stencil-hq/tern-sdk/go/tern"
+	"github.com/stencil-hq/tern-sdk/go/tern/ui"
 )
 
 // Props are the props of every tag but input and hr.

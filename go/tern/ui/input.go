@@ -1,6 +1,6 @@
 package ui
 
-import tern "github.com/stencil-hq/tern-sdk/go"
+import "github.com/stencil-hq/tern-sdk/go/tern"
 
 // Field holds the props editor and input share. The program owns the
 // text: answer keys with new Text and Cursor.

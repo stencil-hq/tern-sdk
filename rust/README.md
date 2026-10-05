@@ -10,9 +10,8 @@ Synchronous, no async runtime: `serde`, `serde_json`, `sha2`, `base64`,
 
 ## Install
 
-```toml
-[dependencies]
-tern-sdk = { git = "https://github.com/stencil-hq/tern-sdk" }
+```sh
+cargo add tern-sdk
 ```
 
 The library is `tern_sdk`.

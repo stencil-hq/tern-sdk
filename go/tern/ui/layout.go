@@ -1,6 +1,6 @@
 package ui
 
-import tern "github.com/stencil-hq/tern-sdk/go"
+import "github.com/stencil-hq/tern-sdk/go/tern"
 
 // Col is a vertical stack (kind col).
 type Col struct {

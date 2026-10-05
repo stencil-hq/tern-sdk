@@ -1,6 +1,6 @@
 package ui
 
-import tern "github.com/stencil-hq/tern-sdk/go"
+import "github.com/stencil-hq/tern-sdk/go/tern"
 
 // Spinner is an activity indicator (kind spinner).
 type Spinner struct {

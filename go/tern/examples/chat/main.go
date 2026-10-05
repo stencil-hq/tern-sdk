@@ -12,8 +12,8 @@ import (
 	"strings"
 	"unicode/utf16"
 
-	tern "github.com/stencil-hq/tern-sdk/go"
-	"github.com/stencil-hq/tern-sdk/go/ui"
+	"github.com/stencil-hq/tern-sdk/go/tern"
+	"github.com/stencil-hq/tern-sdk/go/tern/ui"
 )
 
 // message is one transcript entry.

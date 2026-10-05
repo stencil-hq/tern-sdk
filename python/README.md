@@ -10,8 +10,7 @@ Python 3.11 or newer, standard library only.
 ## Install
 
 ```sh
-uv add tern-sdk            # from an index
-uv add "tern-sdk @ git+https://github.com/stencil-hq/tern-sdk#subdirectory=python"
+uv add tern-sdk
 ```
 
 The distribution is `tern-sdk`; the import is `tern_sdk`.

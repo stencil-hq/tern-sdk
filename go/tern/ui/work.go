@@ -1,6 +1,6 @@
 package ui
 
-import tern "github.com/stencil-hq/tern-sdk/go"
+import "github.com/stencil-hq/tern-sdk/go/tern"
 
 // Tool is one step of work: a head drawn from data over a body of children
 // (kind tool).

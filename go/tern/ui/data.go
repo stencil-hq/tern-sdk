@@ -1,6 +1,6 @@
 package ui
 
-import tern "github.com/stencil-hq/tern-sdk/go"
+import "github.com/stencil-hq/tern-sdk/go/tern"
 
 // KV is an aligned key/value list (kind kv).
 type KV struct {

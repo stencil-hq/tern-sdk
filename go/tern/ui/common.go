@@ -16,7 +16,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	tern "github.com/stencil-hq/tern-sdk/go"
+	"github.com/stencil-hq/tern-sdk/go/tern"
 )
 
 // Nodes lists elements, as children or as a view region (a col).

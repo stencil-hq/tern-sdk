@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	tern "github.com/stencil-hq/tern-sdk/go"
-	"github.com/stencil-hq/tern-sdk/go/el"
-	"github.com/stencil-hq/tern-sdk/go/ui"
+	"github.com/stencil-hq/tern-sdk/go/tern"
+	"github.com/stencil-hq/tern-sdk/go/tern/el"
+	"github.com/stencil-hq/tern-sdk/go/tern/ui"
 )
 
 // Print shows a view in Tern, or its plain text elsewhere (here: a test's

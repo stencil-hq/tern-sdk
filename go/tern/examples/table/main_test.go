@@ -5,7 +5,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	tern "github.com/stencil-hq/tern-sdk/go"
+	"github.com/stencil-hq/tern-sdk/go/tern"
 )
 
 func TestDirectoryViewSeparatesHeaderAndFileKeys(t *testing.T) {

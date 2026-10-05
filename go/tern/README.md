@@ -1,7 +1,7 @@
 # Tern SDK for Go
 
-`github.com/stencil-hq/tern-sdk/go` (package `tern`) lets a Go program running
-in a terminal pane talk to Tern over the
+`github.com/stencil-hq/tern-sdk/go/tern` lets a Go program running in a
+terminal pane talk to Tern over the
 [Tern Surface Protocol](https://docs.stencil.so/tern/protocol/index.html):
 it describes its UI as a tree of nodes, and Tern draws it natively. Outside
 Tern the same program falls back to plain text.
@@ -9,7 +9,7 @@ Tern the same program falls back to plain text.
 ## Install
 
 ```sh
-go get github.com/stencil-hq/tern-sdk/go
+go get github.com/stencil-hq/tern-sdk/go/tern
 ```
 
 Go 1.26 or later. The only dependencies are `golang.org/x/term` and
@@ -23,8 +23,8 @@ package main
 import (
 	"context"
 
-	tern "github.com/stencil-hq/tern-sdk/go"
-	"github.com/stencil-hq/tern-sdk/go/ui"
+	"github.com/stencil-hq/tern-sdk/go/tern"
+	"github.com/stencil-hq/tern-sdk/go/tern/ui"
 )
 
 func main() {

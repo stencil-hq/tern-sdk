@@ -1,6 +1,6 @@
 package ui
 
-import tern "github.com/stencil-hq/tern-sdk/go"
+import "github.com/stencil-hq/tern-sdk/go/tern"
 
 // List is a selectable list of Item children (kind list). Clicks on items
 // send select, double clicks activate, both with the list as the target.

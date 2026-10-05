@@ -1,4 +1,4 @@
-module github.com/stencil-hq/tern-sdk/go
+module github.com/stencil-hq/tern-sdk/go/tern
 
 go 1.26.0
 

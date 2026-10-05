@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	tern "github.com/stencil-hq/tern-sdk/go"
+	"github.com/stencil-hq/tern-sdk/go/tern"
 )
 
 func TestDraftEditsCodePoints(t *testing.T) {

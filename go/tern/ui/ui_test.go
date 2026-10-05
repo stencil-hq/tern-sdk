@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	tern "github.com/stencil-hq/tern-sdk/go"
-	"github.com/stencil-hq/tern-sdk/go/el"
-	"github.com/stencil-hq/tern-sdk/go/ui"
+	"github.com/stencil-hq/tern-sdk/go/tern"
+	"github.com/stencil-hq/tern-sdk/go/tern/el"
+	"github.com/stencil-hq/tern-sdk/go/tern/ui"
 )
 
 // props is el's node's props as compact JSON.
