@@ -541,10 +541,12 @@ macro_rules! actions_methods {
 		where
 			M: Clone + Send + Sync + 'static,
 		{
-			$crate::ui::node::AsNode::as_node(&mut self).handlers.push((
-				$crate::ui::node::Trigger::Menu(act.into()),
-				$crate::ui::node::msg_handler(msg),
-			));
+			$crate::ui::node::AsNode::as_node(&mut self)
+				.handlers
+				.push((
+					$crate::ui::node::Trigger::Menu(act.into()),
+					$crate::ui::node::msg_handler(msg),
+				));
 			self
 		}
 	};
@@ -559,10 +561,12 @@ macro_rules! event_methods {
 		where
 			M: Clone + Send + Sync + 'static,
 		{
-			$crate::ui::node::AsNode::as_node(&mut self).handlers.push((
-				$crate::ui::node::Trigger::Action(act.into()),
-				$crate::ui::node::msg_handler(msg),
-			));
+			$crate::ui::node::AsNode::as_node(&mut self)
+				.handlers
+				.push((
+					$crate::ui::node::Trigger::Action(act.into()),
+					$crate::ui::node::msg_handler(msg),
+				));
 			self
 		}
 
@@ -572,38 +576,46 @@ macro_rules! event_methods {
 			act: impl Into<String>,
 			f: impl Fn(&$crate::wire::Action) -> M + Send + Sync + 'static,
 		) -> Self {
-			$crate::ui::node::AsNode::as_node(&mut self).handlers.push((
-				$crate::ui::node::Trigger::Action(act.into()),
-				$crate::ui::node::action_handler(f),
-			));
+			$crate::ui::node::AsNode::as_node(&mut self)
+				.handlers
+				.push((
+					$crate::ui::node::Trigger::Action(act.into()),
+					$crate::ui::node::action_handler(f),
+				));
 			self
 		}
 
 		/// Maps `toggle` events (the new `collapsed`) to a message.
 		pub fn on_toggle(mut self, f: impl Fn(bool) -> M + Send + Sync + 'static) -> Self {
-			$crate::ui::node::AsNode::as_node(&mut self).handlers.push((
-				$crate::ui::node::Trigger::Event("toggle"),
-				$crate::ui::node::toggle_handler(f),
-			));
+			$crate::ui::node::AsNode::as_node(&mut self)
+				.handlers
+				.push((
+					$crate::ui::node::Trigger::Event("toggle"),
+					$crate::ui::node::toggle_handler(f),
+				));
 			self
 		}
 
 		/// Maps `select` events (the item) to a message. On a list's item the
 		/// item's own handler runs first.
 		pub fn on_select(mut self, f: impl Fn(&str) -> M + Send + Sync + 'static) -> Self {
-			$crate::ui::node::AsNode::as_node(&mut self).handlers.push((
-				$crate::ui::node::Trigger::Event("select"),
-				$crate::ui::node::item_handler(f, false),
-			));
+			$crate::ui::node::AsNode::as_node(&mut self)
+				.handlers
+				.push((
+					$crate::ui::node::Trigger::Event("select"),
+					$crate::ui::node::item_handler(f, false),
+				));
 			self
 		}
 
 		/// Maps `activate` events (the item) to a message.
 		pub fn on_activate(mut self, f: impl Fn(&str) -> M + Send + Sync + 'static) -> Self {
-			$crate::ui::node::AsNode::as_node(&mut self).handlers.push((
-				$crate::ui::node::Trigger::Event("activate"),
-				$crate::ui::node::item_handler(f, true),
-			));
+			$crate::ui::node::AsNode::as_node(&mut self)
+				.handlers
+				.push((
+					$crate::ui::node::Trigger::Event("activate"),
+					$crate::ui::node::item_handler(f, true),
+				));
 			self
 		}
 
@@ -612,10 +624,12 @@ macro_rules! event_methods {
 			mut self,
 			f: impl Fn(&$crate::wire::Change) -> M + Send + Sync + 'static,
 		) -> Self {
-			$crate::ui::node::AsNode::as_node(&mut self).handlers.push((
-				$crate::ui::node::Trigger::Event("change"),
-				$crate::ui::node::change_handler(f),
-			));
+			$crate::ui::node::AsNode::as_node(&mut self)
+				.handlers
+				.push((
+					$crate::ui::node::Trigger::Event("change"),
+					$crate::ui::node::change_handler(f),
+				));
 			self
 		}
 
