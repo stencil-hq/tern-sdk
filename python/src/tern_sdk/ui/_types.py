@@ -83,8 +83,8 @@ Tag: TypeAlias = Literal[
 """An allowed `el` tag."""
 IconName: TypeAlias = Literal[
     "app-btop", "app-bun", "app-claude", "app-codex", "app-deno", "app-docker", "app-go",
-    "app-hammer", "app-helix", "app-htop", "app-java", "app-node", "app-omp", "app-python",
-    "app-ruby", "app-rust", "app-vim", "logo", "tern", "pi-mark",
+    "app-hammer", "app-helix", "app-hermes", "app-htop", "app-java", "app-node", "app-omp",
+    "app-python", "app-ruby", "app-rust", "app-vim", "logo", "tern", "pi-mark",
     "arrow-up", "arrow-down", "arrow-left", "arrow-right", "back", "forward", "chev", "chev-r",
     "chev-up", "corner-down-right", "expand", "shrink", "minimize", "fit", "zoom-in",
     "zoom-out", "more", "grip", "compass",

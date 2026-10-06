@@ -198,3 +198,8 @@ priority = -1
 [lints.rust]
 mismatched_lifetime_syntaxes = "allow"
 missing_docs = "warn"
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+priority = 0
+check-cfg = ["cfg(stencil_shipping)"]

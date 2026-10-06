@@ -560,7 +560,7 @@ export type HostSpec = number | string
 --- A machine's real connection and identity metadata, with its sessions and panes.
 export type ManagedHost = {
 	id: number, name: string, kind: "local" | "remote", address: string?,
-	state: "connecting" | "connected" | "verify" | "reconnecting" | "failed",
+	state: "connecting" | "connected" | "stalled" | "verify" | "reconnecting" | "failed",
 	detail: { fingerprint: string?, attempt: number?, error: string? }?,
 	identity: { [string]: any }?, current: boolean, rtt_ms: number?,
 	sessions: { number }, panes: { number },

@@ -24,6 +24,8 @@ string_enum!(
 		AppHammer = "app-hammer",
 		/// `app-helix`.
 		AppHelix = "app-helix",
+		/// `app-hermes`.
+		AppHermes = "app-hermes",
 		/// `app-htop`.
 		AppHtop = "app-htop",
 		/// `app-java`.

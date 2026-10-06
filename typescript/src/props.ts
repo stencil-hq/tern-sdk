@@ -85,6 +85,7 @@ export type IconName =
    | 'app-go'
    | 'app-hammer'
    | 'app-helix'
+   | 'app-hermes'
    | 'app-htop'
    | 'app-java'
    | 'app-node'

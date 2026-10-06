@@ -14,6 +14,7 @@ const (
 	IconAppGo           IconName = "app-go"
 	IconAppHammer       IconName = "app-hammer"
 	IconAppHelix        IconName = "app-helix"
+	IconAppHermes       IconName = "app-hermes"
 	IconAppHtop         IconName = "app-htop"
 	IconAppJava         IconName = "app-java"
 	IconAppNode         IconName = "app-node"
