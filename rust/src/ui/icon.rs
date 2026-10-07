@@ -1,25 +1,13 @@
-//! Icon names: the 196 icons Tern ships ([`Icon`]); names newer than the
-//! SDK and aliases go through [`Icon::Other`].
+//! Icon names: the icons Tern ships ([`Icon`]) apart from the app icons
+//! (`app-vim`, `app-python`, …), which follow Tern's catalog of programs.
+//! Those, names newer than the SDK and aliases go through [`Icon::Other`]:
+//! `Icon::from("app-vim")`.
 
 use super::types::string_enum;
 
 string_enum!(
 	/// A named icon from Tern's icon set.
 	Icon {
-		/// `app-docker`.
-		AppDocker = "app-docker",
-		/// `app-go`.
-		AppGo = "app-go",
-		/// `app-hammer`.
-		AppHammer = "app-hammer",
-		/// `app-hermes`.
-		AppHermes = "app-hermes",
-		/// `app-node`.
-		AppNode = "app-node",
-		/// `app-omp`.
-		AppOmp = "app-omp",
-		/// `app-python`.
-		AppPython = "app-python",
 		/// `logo`.
 		Logo = "logo",
 		/// `tern`.

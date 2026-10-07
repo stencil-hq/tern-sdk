@@ -74,15 +74,9 @@ export interface SpanData {
 /** Text given as a string or as a list of strings and styled spans. */
 export type Spans = string | readonly (string | SpanData)[];
 
-/** Tern's named icons and their aliases. */
+/** Tern's named icons and their aliases. The app icons (`app-vim`, `app-python`, …)
+    follow Tern's catalog of programs, so they aren't listed: any string passes. */
 export type IconName =
-   | 'app-docker'
-   | 'app-go'
-   | 'app-hammer'
-   | 'app-hermes'
-   | 'app-node'
-   | 'app-omp'
-   | 'app-python'
    | 'logo'
    | 'tern'
    | 'pi-mark'

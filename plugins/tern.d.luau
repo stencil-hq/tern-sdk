@@ -368,9 +368,10 @@ export type PaneInfo = {
 	--- Window only: native block kind and containing tab.
 	kind: PaneKind?,
 	tab: number?,
-	--- Window only: focus and floating picture state.
+	--- Window only: focus, floating picture and parked state (a parked pane has no tab).
 	focused: boolean?,
 	floating: boolean?,
+	parked: boolean?,
 	--- Window terminal/agent only: prompt/listening state.
 	at_prompt: boolean?,
 	--- Window terminal/agent only: current command and elapsed milliseconds.
@@ -905,9 +906,10 @@ export type TabTree = { pane: number?, split: ("right" | "down")?, ratio: number
 export type Float = { pane: number, over: number, corner: Corner }
 --- A tab's current tree, floats, zoom and focused block.
 export type TabLayout = { tab: number, root: TabTree, floats: { Float }, zoomed: boolean, focus: number }
---- Every tab's arrangement, not programs; restore refuses after blocks open or close.
+--- Every tab's arrangement and parked panes, not programs; restore refuses after blocks open or close.
 declare extern type LayoutSnapshot with end
---- A regrouping target; blocks may be ids or resolve specs, empty means rename-only.
+--- A regrouping target; blocks may be ids or resolve specs (parked blocks are dealt into it), empty
+--- means rename-only.
 export type TabGroup = {
 	tab: (number | string)?,
 	name: string?,
@@ -1307,7 +1309,7 @@ declare extern type SessionCx with
 	--- Sends a TSP event such as {ev = "action", id = "main.button", act = "click"}; a canvas takes
 	--- only action events and delivers them to its owner as clicks once the caller returns.
 	function event(self, pane: number | string, ev: { [string]: any }): ()
-	--- Every pane.
+	--- Every pane, parked ones included.
 	function panes(self): { PaneInfo }
 	--- Every tab.
 	function tabs(self): { TabInfo }
@@ -1346,6 +1348,11 @@ declare extern type LayoutCx with
 	function float(self, pane: number, over: number?, corner: Corner?, reveal: Reveal?): (boolean, string?)
 	--- Docks a floating block; defaults to its original split, else beside its owner.
 	function dock(self, pane: number, target: number?, dir: Dir?, reveal: Reveal?): (boolean, string?)
+	--- Parks pane in its session's deck, its program still running; its split collapses, or its tab
+	--- closes when it was the only pane.
+	function park(self, pane: number): (boolean, string?)
+	--- Deals a parked pane into the current tab beside its focused block; reveals by default.
+	function unpark(self, pane: number, reveal: Reveal?): (boolean, string?)
 	--- Gives the tab's tiled blocks equal shares.
 	function even(self, tab: number): ()
 	--- Names a tab; nil or blank restores its pane's label.
@@ -1356,7 +1363,7 @@ declare extern type LayoutCx with
 	function order_tab(self, tab: number, position: number): ()
 	--- Renames a session; blank and unknown sessions return false with a reason.
 	function rename_session(self, session: number, name: string): (boolean, string?)
-	--- Captures all trees, floats, names, colors and tab order.
+	--- Captures all trees, floats, names, colors, tab order and parked panes.
 	function snapshot(self): LayoutSnapshot
 	--- Restores a snapshot, refusing if blocks opened or closed since.
 	function restore(self, snap: LayoutSnapshot): (boolean, string?)

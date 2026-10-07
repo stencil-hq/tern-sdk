@@ -1,17 +1,12 @@
 package ui
 
-// IconName is a name from Tern's icon set, or an alias of one.
+// IconName is a name from Tern's icon set, or an alias of one. The app icons
+// (`app-vim`, `app-python`, …) follow Tern's catalog of programs, so they have
+// no constant here: write the name, `ui.IconName("app-vim")`.
 type IconName string
 
-// Tern's icons.
+// Tern's icons, apart from the app icons.
 const (
-	IconAppDocker       IconName = "app-docker"
-	IconAppGo           IconName = "app-go"
-	IconAppHammer       IconName = "app-hammer"
-	IconAppHermes       IconName = "app-hermes"
-	IconAppNode         IconName = "app-node"
-	IconAppOmp          IconName = "app-omp"
-	IconAppPython       IconName = "app-python"
 	IconLogo            IconName = "logo"
 	IconTern            IconName = "tern"
 	IconPiMark          IconName = "pi-mark"

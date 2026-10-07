@@ -82,7 +82,6 @@ Tag: TypeAlias = Literal[
 ]  # fmt: skip
 """An allowed `el` tag."""
 IconName: TypeAlias = Literal[
-    "app-docker", "app-go", "app-hammer", "app-hermes", "app-node", "app-omp", "app-python",
     "logo", "tern", "pi-mark",
     "arrow-up", "arrow-down", "arrow-left", "arrow-right", "back", "forward", "chev", "chev-r",
     "chev-up", "corner-down-right", "expand", "shrink", "minimize", "fit", "zoom-in",
@@ -110,7 +109,8 @@ IconName: TypeAlias = Literal[
     "user", "users", "message", "brain", "sparkle", "lightbulb", "bolt", "flame", "rocket",
     "moon", "sun", "cart", "footprints", "scale", "log-in", "log-out",
 ]  # fmt: skip
-"""A name from Tern's icon set."""
+"""A name from Tern's icon set. The app icons (`app-vim`, `app-python`, …) follow Tern's
+catalog of programs and aren't listed: pass the name untyped."""
 
 
 class Span(TypedDict, total=False):
