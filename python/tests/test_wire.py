@@ -51,7 +51,8 @@ def test_chunk_ids_are_base36_and_drawn_only_when_chunking() -> None:
 def test_oversized_blob_is_refused() -> None:
     with pytest.raises(ValueError):
         wire.blob(bytes(wire.MAX_BLOB + 1))
-    assert wire.blob(b"", None).params == (("id", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),)
+    assert wire.blob(b"", None).params == ()
+    assert wire.blob_id(b"") == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 
 def test_events_are_typed_and_tolerate_bad_fields() -> None:

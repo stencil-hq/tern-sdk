@@ -646,10 +646,9 @@ class Session:
 
     def blob(self, data: bytes, mime: str | None = None) -> str:
         """Sends a blob once per session and returns its id (SHA-256 hex)."""
-        message = wire.blob(data, mime)
-        id = message.params[0][1]
+        id = wire.blob_id(data)
         if id not in self._blobs_sent:
-            self._send(message)
+            self._send(wire.blob(data, mime))
             self._blobs_sent.add(id)
         return id
 

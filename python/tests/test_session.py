@@ -257,7 +257,7 @@ def test_blobs_are_sent_once_and_queried(connected: Session, term: Term) -> None
     first = connected.blob(b"hello", "text/plain")
     assert connected.blob(b"hello", "text/plain") == first
     sent = term.messages()
-    assert [(m.verb, m.params, m.body) for m in sent] == [("b", {"id": first, "mime": "text/plain"}, "aGVsbG8=")]
+    assert [(m.verb, m.params, m.body) for m in sent] == [("b", {"mime": "text/plain"}, "aGVsbG8=")]
     term.send(b'\x1b_tsp;r;{"r":"blobs","have":["' + first.encode() + b'"]}\x1b\\')
     assert connected.blobs([first, "00"]) == [first]
     assert term.messages()[0].body == {"q": "blobs", "ids": [first, "00"]}

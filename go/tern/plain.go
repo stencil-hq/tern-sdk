@@ -233,7 +233,7 @@ func (p plainer) node(t *tree) []string {
 	case KindEditor, KindInput:
 		text := str(pr, "text")
 		if text == "" {
-			text = str(pr, "placeholder")
+			text = spansText(pr["placeholder"])
 		}
 		return splitLines(spansText(pr["prompt"]) + text)
 	case KindAnsi:

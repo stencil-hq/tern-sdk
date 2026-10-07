@@ -519,10 +519,11 @@ pub struct Close {
 	pub keep: bool,
 }
 
-/// A `b` message: binary data named by its SHA-256.
+/// A `b` message: binary data with an optional MIME type. Its id is the
+/// program's own reference to it and is not sent; Tern hashes the bytes.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Blob {
-	/// The lowercase hex SHA-256 of `data`.
+	/// The lowercase hex SHA-256 of `data`, for references (not sent).
 	pub id:   String,
 	/// The MIME type.
 	pub mime: Option<String>,
@@ -587,16 +588,10 @@ impl Message {
 		}
 	}
 
-	/// The parameters, in order (only a blob has any).
+	/// The parameters: a blob's `mime` when it has one, else none.
 	pub fn params(&self) -> Vec<(&'static str, &str)> {
 		match self {
-			Self::Blob(b) => {
-				let mut out = vec![("id", b.id.as_str())];
-				if let Some(mime) = &b.mime {
-					out.push(("mime", mime.as_str()));
-				}
-				out
-			},
+			Self::Blob(b) => b.mime.iter().map(|mime| ("mime", mime.as_str())).collect(),
 			_ => Vec::new(),
 		}
 	}

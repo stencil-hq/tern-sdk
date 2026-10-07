@@ -1012,7 +1012,7 @@ impl<M> Editor<M> {
 		/// An inline completion after the caret.
 		ghost(String) = "ghost";
 		/// Dim text while empty.
-		placeholder(String) = "placeholder";
+		placeholder(Text) = "placeholder";
 		/// Spans before the first line.
 		prompt(Text) = "prompt";
 		/// A vim mode label.
@@ -1051,7 +1051,7 @@ impl<M> Input<M> {
 		/// An inline completion after the caret.
 		ghost(String) = "ghost";
 		/// Dim text while empty.
-		placeholder(String) = "placeholder";
+		placeholder(Text) = "placeholder";
 		/// Spans before the text.
 		prompt(Text) = "prompt";
 		/// A vim mode label.

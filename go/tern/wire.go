@@ -374,13 +374,14 @@ func BlobID(data []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// EncodeBlob frames data as a b message with its id and optional mime.
+// EncodeBlob frames data as a b message with its optional mime and returns
+// the blob's id. The id is not sent: Tern hashes the bytes itself.
 func EncodeBlob(data []byte, mime string, limit int, chunk string) ([]byte, string, error) {
 	if len(data) > MaxBlob {
 		return nil, "", ErrBlobTooLarge
 	}
 	id := BlobID(data)
-	params := []Param{{"id", id}}
+	var params []Param
 	if mime != "" {
 		params = append(params, Param{"mime", mime})
 	}

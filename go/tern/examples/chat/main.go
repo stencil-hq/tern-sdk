@@ -105,7 +105,7 @@ func (c *chat) view() tern.View {
 			_ = c.render()
 		}},
 		Field: ui.Field{Text: string(c.draft), Cursor: &cursor, Sendable: true,
-			Placeholder: "Message (Enter sends, Escape quits)", Prompt: []ui.Span{{T: "> ", S: "accent"}}},
+			Placeholder: ui.T("Message (Enter sends, Escape quits)"), Prompt: []ui.Span{{T: "> ", S: "accent"}}},
 	}
 	return tern.View{
 		Main: transcript,

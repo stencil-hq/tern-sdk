@@ -582,7 +582,7 @@ func (s *Session) Blob(data []byte, mime string) (string, error) {
 	if s.sent[id] {
 		return id, nil
 	}
-	params := []Param{{"id", id}}
+	var params []Param
 	if mime != "" {
 		params = append(params, Param{"mime", mime})
 	}

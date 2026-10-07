@@ -267,17 +267,21 @@ def frame(sf: str, s: int, ops: Sequence[Op]) -> Outgoing:
     return Outgoing("f", {"sf": sf, "s": s, "ops": list(ops)})
 
 
-def blob(data: bytes, mime: str | None = None) -> Outgoing:
-    """A blob (`b`): `id` the lowercase hex SHA-256, body standard base64.
+def blob_id(data: bytes) -> str:
+    """The lowercase hex SHA-256 of `data`, the id Tern names the blob by."""
+    return hashlib.sha256(data).hexdigest()
 
+
+def blob(data: bytes, mime: str | None = None) -> Outgoing:
+    """A blob (`b`): body standard base64, `mime` the only parameter.
+
+    The id is not sent (Tern hashes the bytes); see `blob_id`.
     Raises `ValueError` for more than 16 MiB.
     """
     if len(data) > MAX_BLOB:
         raise ValueError(f"blob of {len(data)} bytes is over {MAX_BLOB}")
-    params = [("id", hashlib.sha256(data).hexdigest())]
-    if mime is not None:
-        params.append(("mime", mime))
-    return Outgoing("b", base64.b64encode(data).decode("ascii"), tuple(params))
+    params = (("mime", mime),) if mime is not None else ()
+    return Outgoing("b", base64.b64encode(data).decode("ascii"), params)
 
 
 def palette(

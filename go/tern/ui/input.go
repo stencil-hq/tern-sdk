@@ -16,7 +16,7 @@ type Field struct {
 	// Ghost is an inline completion drawn dim after the caret.
 	Ghost string `json:"ghost,omitzero"`
 	// Placeholder shows while Text is empty.
-	Placeholder string `json:"placeholder,omitzero"`
+	Placeholder Rich `json:"placeholder,omitzero"`
 	// Prompt are spans before the first line.
 	Prompt []Span `json:"prompt,omitzero"`
 	// Mode is a vim mode label; it turns native editing off.

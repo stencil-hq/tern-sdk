@@ -55,13 +55,22 @@ version = "0.23.1"
 
 [dependencies.serde]
 version = "1.0.229"
-features = ["derive"]
+features = [
+    "alloc",
+    "derive",
+    "rc",
+]
 
 [dependencies.serde_json]
 version = "1.0.151"
+features = [
+    "float_roundtrip",
+    "preserve_order",
+    "raw_value",
+]
 
 [dependencies.sha2]
-version = "0.10.9"
+version = "0.11.0"
 
 [dependencies.thiserror]
 version = "2.0.21"
@@ -76,6 +85,7 @@ default-features = false
 
 [target."cfg(unix)".dependencies.libc]
 version = "0.2.189"
+features = ["extra_traits"]
 
 [target."cfg(windows)".dependencies.windows-sys]
 version = "0.61.2"

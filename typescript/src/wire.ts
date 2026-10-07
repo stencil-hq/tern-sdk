@@ -226,7 +226,7 @@ export type Param = readonly [string, string];
 
 /** How to frame one message. */
 export interface EncodeOptions {
-   /** Parameters written before the body (a blob's `id` and `mime`). */
+   /** Parameters written before the body (a blob's `mime`). */
    readonly params?: readonly Param[];
    /** The APC limit; bodies over it are chunked. Default {@link DEFAULT_APC}. */
    readonly limit?: number;
@@ -336,9 +336,9 @@ export function encodeJson(message: OutMessage, options: EncodeOptions = {}): Ui
 
 /** A blob ready to send: its id and the framed `b` message. */
 export interface EncodedBlob {
-   /** The lowercase hex SHA-256 of the bytes. */
+   /** The lowercase hex SHA-256 of the bytes; not sent, Tern hashes them itself. */
    readonly id: string;
-   /** The parameters of the message (`id`, then `mime` when given). */
+   /** The parameters of the message (`mime` when given). */
    readonly params: readonly Param[];
    /** The base64 body. */
    readonly body: string;
@@ -361,8 +361,7 @@ export function encodeBlob(
       throw new RangeError(`a blob is at most ${MAX_BLOB} bytes, got ${bytes.length}`);
    }
    const id = blobId(bytes);
-   const params: Param[] = [['id', id]];
-   if (mime !== undefined) params.push(['mime', mime]);
+   const params: Param[] = mime === undefined ? [] : [['mime', mime]];
    const body = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.length).toString('base64');
    return { id, params, body, bytes: encodeMessage('b', body, { ...options, params }) };
 }

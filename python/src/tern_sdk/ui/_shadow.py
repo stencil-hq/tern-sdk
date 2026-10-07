@@ -31,7 +31,7 @@ def input(  # noqa: A001
     anchor: int | None = None,
     decor: Sequence[Decor] | None = None,
     ghost: str | None = None,
-    placeholder: str | None = None,
+    placeholder: Text | None = None,
     prompt: Text | None = None,
     mode: str | None = None,
     lang: str | None = None,

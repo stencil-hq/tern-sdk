@@ -878,7 +878,7 @@ export interface InputProps {
    readonly anchor?: number;
    readonly decor?: readonly Decor[];
    readonly ghost?: string;
-   readonly placeholder?: string;
+   readonly placeholder?: Spans;
    readonly prompt?: Spans;
    /** A vim mode label; turns native editing off. */
    readonly mode?: string;

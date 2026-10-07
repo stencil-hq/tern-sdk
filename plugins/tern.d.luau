@@ -34,7 +34,7 @@ export type PluginInfo = {
 export type RuntimeInfo = {
 	--- Operating system: `"macos"`, `"linux"`, `"windows"` or `"ios"`.
 	os: string,
-	--- True when Luau native codegen is active (false on iOS and where unsupported).
+	--- True when Luau native codegen is active (false on iOS, in development builds and where unsupported).
 	jit: boolean,
 }
 
@@ -344,7 +344,7 @@ export type SpawnSpec = {
 	--- Working directory (always set; only the daemon expands a leading `~` in a returned one).
 	cwd: string,
 	--- Only the variables the daemon sets for the pane (`TERN_IDENTITY`, `TERN_PANE`, `TERN_PANE_SOCKET`,
-	--- `TERN_WINDOW_KEY`, `TERN_WINDOW_SOCKET`, `TERN_LENSES`, `TERN_COMPLETE`); the pane's base environment is the
+	--- `TERN_WINDOW_KEY`, `TERN_WINDOW_SOCKET`, `TERN_LENSES`, `TERN_COMPLETE`, `TERN_BLOB_DIR`); the pane's base environment is the
 	--- login environment, not the daemon's (`tern.getenv` here reads the daemon's).
 	env: { [string]: string },
 }
@@ -1513,7 +1513,8 @@ export type TaskInfo = TaskSpec & {
 declare extern type ExportCall with
 	--- True after cancellation, expiry, reply or plugin reload.
 	cancelled: boolean
-	--- Answers once; JSON-safe values only, at most 16 KiB; false after completion.
+	--- Answers once; JSON-safe values only, at most 1 MiB encoded (a longer string is cut and ends with
+	--- `[… N bytes cut]`); false after completion.
 	function reply(self, value: any): boolean
 	--- Fails once; false after completion.
 	function fail(self, message: string): boolean
@@ -1582,6 +1583,15 @@ declare tern: {
 		null: JsonNull,
 	},
 
+	--- Base64 conversion of binary strings.
+	base64: {
+		--- Encodes `bytes` in the standard alphabet with padding; `url = true` uses the URL-safe alphabet without padding.
+		encode: (bytes: string, opts: { url: boolean? }?) -> string,
+		--- Decodes the standard or URL-safe alphabet, padding optional, ASCII whitespace ignored;
+		--- invalid input raises `tern.base64.decode: <reason>`.
+		decode: (text: string) -> string,
+	},
+
 	--- Monotonic milliseconds (fractional).
 	now: () -> number,
 
@@ -1603,6 +1613,16 @@ declare tern: {
 		get: (key: string) -> any,
 		--- Stores `value` under `key`; nil deletes it.
 		set: (key: string, value: any) -> (),
+	},
+
+	--- Window only (plugin halves, not Carly's VM): this plugin's secrets in the system keychain, account
+	--- `plugin.<id>.<name>`; headless sessions keep them in memory. Names match [a-z0-9][a-z0-9._-]{0,63}.
+	--- Bad names, values over 64 KiB and store failures fail the awaitable.
+	secrets: {
+		--- The secret stored under `name` (any bytes), or nil.
+		get: (name: string) -> Awaitable<string?>,
+		--- Stores `value` under `name`, replacing any; nil deletes it.
+		set: (name: string, value: string?) -> Awaitable<nil>,
 	},
 
 	--- Synchronous file access on this context's machine; relative paths resolve against the plugin dir, failures raise.

@@ -596,10 +596,7 @@ describe('blobs and recording', () => {
       expect(session.blob(bytes, 'text/plain')).toBe(id);
       const blobs = term.output.messages().filter(m => m.verb === 'b');
       expect(blobs).toHaveLength(1);
-      expect(blobs[0]?.params).toEqual([
-         ['id', id],
-         ['mime', 'text/plain'],
-      ]);
+      expect(blobs[0]?.params).toEqual([['mime', 'text/plain']]);
       const have = session.blobs([id, 'ff']);
       term.input.type(tsp('r', { r: 'blobs', have: [id] }));
       expect(await have).toEqual([id]);
@@ -615,7 +612,7 @@ describe('blobs and recording', () => {
          'out q',
          'in r',
       ]);
-      expect(lines[2].params).toEqual({ id, mime: 'text/plain' });
+      expect(lines[2].params).toEqual({ mime: 'text/plain' });
       expect(typeof lines[0].t).toBe('number');
    });
 });
