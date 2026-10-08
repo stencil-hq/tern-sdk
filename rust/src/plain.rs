@@ -297,10 +297,7 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 			let rows: Vec<Vec<String>> = list(node, "items")
 				.iter()
 				.map(|i| {
-					vec![
-						i.get("k").map(value_text).unwrap_or_default(),
-						i.get("v").map(value_text).unwrap_or_default(),
-					]
+					vec![i.get("k").map_or_default(value_text), i.get("v").map_or_default(value_text)]
 				})
 				.collect();
 			if string(node, "layout") == Some("inline") {
@@ -335,7 +332,7 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 				out.push(title);
 			}
 			for item in list(node, "items") {
-				let label = item.get("label").map(value_text).unwrap_or_default();
+				let label = item.get("label").map_or_default(value_text);
 				out.push(format!("- {label}"));
 			}
 		},
@@ -357,7 +354,7 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 						Some("blocked") => "[!]",
 						_ => "[ ]",
 					};
-					let text = item.get("text").map(value_text).unwrap_or_default();
+					let text = item.get("text").map_or_default(value_text);
 					out.push(format!("  {done} {text}"));
 				}
 			}
@@ -407,11 +404,7 @@ fn inline<M>(node: &Node<M>) -> String {
 				.join(" ");
 		},
 		"status" => return joined("  "),
-		"badge" => vec![
-			text(node, "text")
-				.map(|t| format!("[{t}]"))
-				.unwrap_or_default(),
-		],
+		"badge" => vec![text(node, "text").map_or_default(|t| format!("[{t}]"))],
 		"kbd" => vec![
 			list(node, "keys")
 				.iter()
@@ -457,7 +450,7 @@ fn inline<M>(node: &Node<M>) -> String {
 				list(node, "items")
 					.iter()
 					.map(|t| {
-						let label = t.get("label").map(value_text).unwrap_or_default();
+						let label = t.get("label").map_or_default(value_text);
 						if t.get("id").and_then(Value::as_str) == active {
 							format!("[{label}]")
 						} else {
@@ -480,19 +473,13 @@ fn inline<M>(node: &Node<M>) -> String {
 				text(node, "target").unwrap_or_default(),
 			];
 			parts.extend(list(node, "meta").iter().map(value_text));
-			parts.push(
-				string(node, "status")
-					.map(|s| format!("({s})"))
-					.unwrap_or_default(),
-			);
+			parts.push(string(node, "status").map_or_default(|s| format!("({s})")));
 			parts
 		},
 		"agent" => vec![
 			text(node, "name").unwrap_or_default(),
 			text(node, "task").unwrap_or_default(),
-			string(node, "status")
-				.map(|s| format!("({s})"))
-				.unwrap_or_default(),
+			string(node, "status").map_or_default(|s| format!("({s})")),
 		],
 		"el" => return el_inline(node),
 		_ => vec![primary(node).unwrap_or_default(), joined(" ")],
@@ -522,7 +509,7 @@ fn table<M>(node: &Node<M>, out: &mut Vec<String>) {
 		rows.push(
 			cols
 				.iter()
-				.map(|c| c.get("head").map(value_text).unwrap_or_default())
+				.map(|c| c.get("head").map_or_default(value_text))
 				.collect(),
 		);
 	}
@@ -538,8 +525,7 @@ fn table<M>(node: &Node<M>, out: &mut Vec<String>) {
 							.get("meter")
 							.and_then(|meter| meter.get("value"))
 							.and_then(Value::as_f64)
-							.map(bar)
-							.unwrap_or_default(),
+							.map_or_default(bar),
 						Some(cell) => value_text(cell),
 						None => String::new(),
 					}
@@ -553,7 +539,7 @@ fn table<M>(node: &Node<M>, out: &mut Vec<String>) {
 /// `tree` items as nested bullets.
 fn tree(items: &[Value], depth: usize, out: &mut Vec<String>) {
 	for item in items {
-		let label = item.get("label").map(value_text).unwrap_or_default();
+		let label = item.get("label").map_or_default(value_text);
 		out.push(format!("{}- {label}", "  ".repeat(depth)));
 		if let Some(Value::Array(children)) = item.get("children") {
 			tree(children, depth + 1, out);
@@ -580,12 +566,11 @@ fn prefs<M>(node: &Node<M>, out: &mut Vec<String>) {
 				["on", "value", "values", "label"]
 					.iter()
 					.find_map(|k| c.get(*k))
-					.map(|v| match v {
+					.map_or_default(|v| match v {
 						Value::Array(vs) => vs.iter().map(value_text).collect::<Vec<_>>().join(", "),
 						Value::Bool(b) => if *b { "on" } else { "off" }.to_owned(),
 						other => value_text(other),
 					})
-					.unwrap_or_default()
 			});
 			out.push(format!("    {label}: {value}"));
 		}

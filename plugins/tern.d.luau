@@ -281,6 +281,9 @@ export type BlockDef<S> = {
 	key: ((state: S, key: Key, cx: BlockCx) -> boolean?)?,
 	--- Handles an event from the view's nodes.
 	event: ((state: S, ev: UiEvent, cx: BlockCx) -> ())?,
+	--- Opts into native editing of the view's editor/input fields: "edit" (a click places the caret, drag/⇧-arrows
+	--- select, edits arrive as `edit` events) and "undo" (⌃Z/⌘Z arrives as an `undo` event, not a key).
+	features: { "edit" | "undo" }?,
 	--- Called when the pane resizes to `cols` × `rows` cells, then the block renders and saves; without it the block
 	--- still re-renders (no save), with `cx.cols`/`cx.rows` updated.
 	resize: ((state: S, cols: number, rows: number, cx: BlockCx) -> ())?,
@@ -351,7 +354,7 @@ export type SpawnSpec = {
 
 --- Native pane kinds; agent and plugin blocks are programs with terminal surfaces.
 export type PaneKind = "terminal" | "agent" | "plugin" | "browser" | "file" | "git"
-	| "database" | "notebook" | "board" | "procs" | "screen" | "profile"
+	| "database" | "notebook" | "board" | "canvas" | "procs" | "screen" | "profile" | "carly"
 
 --- A pane from host listing or window inspection; native blocks have no shell-state fields.
 export type PaneInfo = {
@@ -1274,16 +1277,145 @@ declare extern type DocsCx with
 	function search(self, path: string, query: string): Awaitable<{DocMatch}>
 end
 
---- Persistent native canvases, capped at 256 KiB per update, 2000 nodes and depth 32.
+--- Persistent panels of UI nodes (`tern.canvas` blocks), capped at 256 KiB per update, 2000 nodes
+--- and depth 32. Not whiteboards: canvas blocks (kind `canvas`) are `cx.whiteboard`'s.
 declare extern type CanvasCx with
-	--- Opens an owner-tagged canvas; unavailable hosts return nil and an error.
+	--- Opens an owner-tagged canvas; unavailable hosts return nil and an error. Unknown fields raise.
 	function open(self, spec: CanvasSpec): (number?, string?)
-	--- Validates and updates an owned canvas.
+	--- Validates and updates an owned canvas; unknown fields and an empty change raise.
 	function set(self, pane: number, change: CanvasChange): ()
 	--- Reads any owner's canvas from this window's replica.
 	function get(self, pane: number): CanvasInfo?
 	--- Lists canvas metadata without view or dock.
 	function list(self): { CanvasInfo }
+end
+
+--- A whiteboard page area in page units (one view px at 100%).
+export type WhiteboardArea = { x: number, y: number, w: number, h: number }
+
+--- What `cx.whiteboard:read` lists: shapes by id (with what is inside them) or meeting `area`.
+export type WhiteboardQuery = {
+	ids: { string }?,
+	area: WhiteboardArea?,
+	--- Most shapes listed (default 200, at most 2000).
+	max_shapes: number?,
+}
+
+--- One whiteboard shape as read; fields at their default are left out.
+export type WhiteboardShape = {
+	--- 16 hex digits.
+	id: string,
+	--- rect, ellipse, diamond, triangle, text, arrow, line, polygon, curve, ink, highlight, image or group.
+	type: string,
+	--- The page box of its frame.
+	x: number, y: number, w: number, h: number,
+	--- Clockwise degrees.
+	rotation: number?,
+	text: string?,
+	--- Palette name (`blue`, `pale slate`) or `#rrggbb`; fill `none` when cleared.
+	color: string?, fill: string?,
+	width: number?, dash: string?, font_size: number?, size: number?, opacity: number?,
+	start_head: string?, end_head: string?, route: string?,
+	--- Arrow and line ends: the shape an end attaches to, else its page point {x, y}.
+	from_shape: string?, to_shape: string?, from_point: { number }?, to_point: { number }?,
+	--- Point count of a polygon, curve or ink stroke.
+	points: number?,
+	closed: boolean?,
+	--- A group's child count.
+	children: number?,
+	--- The group the shape is in.
+	group: string?,
+	locked: boolean?,
+}
+
+--- A whiteboard as read.
+export type WhiteboardState = {
+	--- Pane id.
+	block: number,
+	look: string,
+	paper: string,
+	--- The page area the user sees now, and its zoom (1 is 100%).
+	view: { x: number, y: number, w: number, h: number, zoom: number },
+	--- Selected shape ids.
+	selection: { string },
+	--- The style new shapes take.
+	new_shapes: { [string]: any },
+	--- Steps undo and redo can take.
+	undo: number, redo: number,
+	--- Shapes the query matched, and how many of them `max_shapes` left out.
+	total: number, more: number,
+	--- Back to front, each group before what is inside it.
+	shapes: { WhiteboardShape },
+}
+
+--- One whiteboard edit: `op` decides which fields it takes, and any other field fails it.
+export type WhiteboardEdit = {
+	--- add, move, resize, rotate, text, style, delete, lock, unlock, group, ungroup, duplicate, order,
+	--- align, distribute, layout, flip, look, paper or show.
+	op: string,
+	--- add: rect, ellipse, diamond, triangle (x, y, w, h, text); text (x, y, text; w wraps it); arrow
+	--- (from_shape or from_point, to_shape or to_point, text); line (from_point, to_point); polygon
+	--- (points, text); curve (points, closed); ink, highlight (points); image (path, x, y; w).
+	type: string?,
+	--- Names the one shape add, group or duplicate makes, for later edits of the same call.
+	ref: string?,
+	--- Shape ids or refs; `id` for one.
+	ids: { string }?, id: string?,
+	--- layout: lists of ids, each list placed as one (instead of `ids`).
+	groups: { { string } }?,
+	--- Page top-left and size (add, resize, layout, show); move by dx, dy or to x, y.
+	x: number?, y: number?, w: number?, h: number?, dx: number?, dy: number?,
+	--- rotate: clockwise.
+	degrees: number?,
+	--- add's label, or text's new text.
+	text: string?,
+	--- image: a local file.
+	path: string?,
+	--- Arrow ends: a shape id or ref to attach to, or a page point {x, y}; a line takes points.
+	from_shape: string?, to_shape: string?, from_point: { number }?, to_point: { number }?,
+	points: { { number } }?,
+	closed: boolean?,
+	--- order: front, forward, backward or back.
+	to: string?,
+	--- align: left, center, right, top, middle or bottom; layout: where a row (top, middle, bottom)
+	--- or column (left, center, right) lines up across it, default the middle.
+	edge: string?,
+	--- distribute, layout, flip: horizontal or vertical.
+	axis: string?,
+	--- distribute: two or more exactly this far apart after the first; layout: default 40.
+	gap: number?,
+	--- layout: a grid of this many columns, filled row by row, each shape centered in its cell.
+	cols: number?,
+	--- look: clean, mono or sketch; paper: dots, grid, lines or none.
+	look: string?, paper: string?,
+	--- Style (add, style): palette name or #rrggbb (fill "none" clears it), outline width, dash,
+	--- opacity 0-1, font size, text align and valign, ink size, arrow heads, route
+	--- straight|curve|elbow.
+	color: string?, fill: string?, width: number?, dash: string?, opacity: number?,
+	font_size: number?, align: string?, valign: string?, bold: boolean?, italic: boolean?,
+	underline: boolean?, size: number?, start_head: string?, end_head: string?, route: string?,
+}
+
+--- What a whiteboard edit did: refs given, the shapes touched as read, those removed, and notes
+--- (style fields no shape took, arrows whose two shapes touch and so draw short).
+export type WhiteboardResult = {
+	refs: { [string]: string },
+	shapes: { WhiteboardShape },
+	removed: { string }?,
+	notes: { string }?,
+}
+
+--- Window only (desktop): whiteboards, the canvas blocks of kind `canvas` (shapes, arrows, text and
+--- ink on a page, in page units). Not `cx.canvas`, whose panels show UI nodes. A nil `pane` is the
+--- focused whiteboard, else the only one open.
+declare extern type WhiteboardCx with
+	--- Opens an empty whiteboard (how defaults to beside, focus to true); resolves to its pane once
+	--- it can be read and edited.
+	function open(self, opts: { how: How?, focus: boolean? }?): Awaitable<number>
+	--- Its shapes back to front with page boxes and style, and the page area the user sees now.
+	function read(self, pane: (number | string)?, query: WhiteboardQuery?): WhiteboardState
+	--- Applies `edits` in order as one undo step; a failing edit raises, naming it, and none land.
+	function edit(self, pane: (number | string)?, edits: { WhiteboardEdit }): WhiteboardResult
 end
 
 --- Window only: `cx.session`, the window's panes and tabs.
@@ -1429,8 +1561,10 @@ declare extern type WindowCx with
 	hosts: HostsCx
 	--- Pane and tab arrangement.
 	layout: LayoutCx
-	--- Owner-tagged persistent native canvases.
+	--- Owner-tagged persistent panels of UI nodes (`tern.canvas`), not whiteboards.
 	canvas: CanvasCx
+	--- Whiteboards (canvas blocks): shapes read and edited by id (desktop only).
+	whiteboard: WhiteboardCx
 	--- Desktop text/Markdown files and session-owned notes.
 	docs: DocsCx
 	--- Desktop Markdown task boards, lanes and stable card references.
@@ -1516,6 +1650,9 @@ export type TaskInfo = TaskSpec & {
 	runs: { TaskRun }, -- last ten runs
 }
 
+--- The marker `ExportCall:wait` returns: an export returns it to answer from a later callback.
+declare extern type ExportWait with end
+
 --- Callback-safe handle for one Carly export; retained after its scoped cx expires.
 declare extern type ExportCall with
 	--- True after cancellation, expiry, reply or plugin reload.
@@ -1526,7 +1663,7 @@ declare extern type ExportCall with
 	--- Fails once; false after completion.
 	function fail(self, message: string): boolean
 	--- Return this marker to answer from a later callback (default 30000, max 120000 ms).
-	function wait(self, ms: number?): userdata
+	function wait(self, ms: number?): ExportWait
 end
 
 --- Signature and purpose shown by help("plugins.<id>").
