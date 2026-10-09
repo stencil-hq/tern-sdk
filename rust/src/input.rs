@@ -2,6 +2,8 @@
 //! answers, out of the pty's input and passes every other byte through as
 //! key bytes, exactly as they came.
 //!
+//! `OSC 5522` clipboard packets are split out the same way.
+//!
 //! A TSP message is `ESC _ tsp;` (or `ESC ] 877;tsp;` through a Windows
 //! `ConPTY`), then `<verb>[;k=v]*;<body>`, ended by ST or BEL. Bytes inside a
 //! bracketed paste pass through unexamined, so pasted text can never forge
@@ -22,6 +24,8 @@ const PASTE_END: &[u8] = b"\x1b[201~";
 const APC_PREFIX: &[u8] = b"tsp;";
 /// What follows `ESC ]` in a TSP message through `ConPTY`.
 const OSC_PREFIX: &[u8] = b"877;tsp;";
+/// What follows `ESC ]` in a clipboard packet.
+const CLIPBOARD_PREFIX: &[u8] = b"5522;";
 
 /// One thing the parser found in the input.
 #[derive(Clone, Debug, PartialEq)]
@@ -34,6 +38,19 @@ pub enum Item {
 	Event(Event),
 	/// A DA1 answer (`ESC [ ? … c`).
 	Da1,
+	/// An `OSC 5522` clipboard packet: the bytes after `5522;`, before the
+	/// terminator.
+	Osc5522(Vec<u8>),
+}
+
+/// Which message a held sequence is.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+enum Kind {
+	/// A TSP message.
+	#[default]
+	Tsp,
+	/// An `OSC 5522` clipboard packet.
+	Clipboard,
 }
 
 /// What a prefix of the buffer is.
@@ -46,8 +63,8 @@ enum Scan {
 	Da1(usize),
 	/// A bracketed paste starts; pass this many bytes through.
 	Paste(usize),
-	/// A TSP message whose content starts at this offset.
-	Tsp(usize),
+	/// A message whose content starts at this offset.
+	Message(usize, Kind),
 }
 
 /// The streaming input parser.
@@ -69,6 +86,8 @@ pub struct Parser {
 	paste:    bool,
 	/// Content offset of the TSP message at the start of `buf`.
 	tsp:      Option<usize>,
+	/// What the held message is.
+	kind:     Kind,
 	/// How far the TSP message has been searched for its terminator.
 	scanned:  usize,
 	/// Dropping an oversized TSP message until its terminator.
@@ -156,10 +175,11 @@ impl Parser {
 					out.push(Item::Da1);
 					at += n;
 				},
-				Scan::Tsp(content) => {
+				Scan::Message(content, kind) => {
 					// Rebase the message at the buffer's start.
 					self.buf.drain(..at);
 					self.tsp = Some(content);
+					self.kind = kind;
 					self.scanned = content;
 					at = 0;
 				},
@@ -195,9 +215,12 @@ impl Parser {
 			&& let Some(content) = self.tsp
 		{
 			push_keys(out, keys);
-			if let Some(item) = decode(&self.buf[content..end]) {
-				out.push(item);
-			}
+			let body = &self.buf[content..end];
+			let item = match self.kind {
+				Kind::Tsp => decode(body),
+				Kind::Clipboard => Some(Item::Osc5522(body.to_vec())),
+			};
+			out.extend(item);
 		}
 		self.skipping = false;
 		self.tsp = None;
@@ -248,16 +271,23 @@ fn scan(rest: &[u8]) -> Scan {
 		return Scan::Undecided;
 	};
 	match second {
-		b'_' => prefixed(rest, APC_PREFIX),
-		b']' => prefixed(rest, OSC_PREFIX),
+		b'_' => prefixed(rest, APC_PREFIX, Kind::Tsp),
+		b']' => match (
+			prefixed(rest, OSC_PREFIX, Kind::Tsp),
+			prefixed(rest, CLIPBOARD_PREFIX, Kind::Clipboard),
+		) {
+			(scan @ Scan::Message(..), _) | (_, scan @ Scan::Message(..)) => scan,
+			(Scan::Undecided, _) | (_, Scan::Undecided) => Scan::Undecided,
+			_ => Scan::Keys(2),
+		},
 		b'[' => csi(rest),
 		// Any other ESC passes through alone; what follows is scanned anew.
 		_ => Scan::Keys(1),
 	}
 }
 
-/// `ESC <c> <prefix>` starts a TSP message; anything else passes through.
-fn prefixed(rest: &[u8], prefix: &[u8]) -> Scan {
+/// `ESC <c> <prefix>` starts a `kind` message; anything else passes through.
+fn prefixed(rest: &[u8], prefix: &[u8], kind: Kind) -> Scan {
 	let after = &rest[2..];
 	let n = after.len().min(prefix.len());
 	if after[..n] != prefix[..n] {
@@ -266,7 +296,7 @@ fn prefixed(rest: &[u8], prefix: &[u8]) -> Scan {
 	if n < prefix.len() {
 		return Scan::Undecided;
 	}
-	Scan::Tsp(2 + prefix.len())
+	Scan::Message(2 + prefix.len(), kind)
 }
 
 /// A CSI sequence: a DA1 answer, a paste start, or keys.
@@ -333,4 +363,29 @@ fn parameter(segment: &[u8]) -> bool {
 		&& value
 			.iter()
 			.all(|&b| (0x21..=0x7e).contains(&b) && b != b';')
+}
+
+#[cfg(test)]
+mod tests {
+	use super::{Item, Parser};
+
+	#[test]
+	fn clipboard_packet_split_across_feeds_is_one_item() {
+		let mut parser = Parser::new();
+		let mut items = parser.feed(b"a\x1b]55");
+		items.extend(parser.feed(b"22;type=read;Zm9v\x1b\\b"));
+		assert_eq!(items, [
+			Item::Keys(b"a".to_vec()),
+			Item::Osc5522(b"type=read;Zm9v".to_vec()),
+			Item::Keys(b"b".to_vec()),
+		]);
+	}
+
+	#[test]
+	fn clipboard_packet_inside_paste_stays_keys() {
+		let mut parser = Parser::new();
+		let bytes = b"\x1b[200~\x1b]5522;x\x07\x1b[201~";
+		let items = parser.feed(bytes);
+		assert_eq!(items, [Item::Keys(bytes.to_vec())]);
+	}
 }

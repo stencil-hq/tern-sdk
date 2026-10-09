@@ -4,10 +4,57 @@
 //! in-memory pipes; [`Tty`] is the process's own stdin/stdout in raw mode
 //! (`poll(2)` on Unix, a console wait on Windows). `Tty` and tty detection
 //! are available only on Unix and Windows; [`Terminal`] is portable.
+//! [`Waker`] interrupts a session's wait for input from another thread.
 
-#[cfg(any(unix, windows))]
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::{io, time::Duration};
+use std::{
+	io,
+	sync::{
+		Arc,
+		atomic::{AtomicBool, Ordering},
+	},
+	time::Duration,
+};
+
+/// Wakes a session blocked in [`Session::next`](crate::Session::next) from
+/// any thread: the wait returns `Ok(None)`.
+#[derive(Clone, Debug)]
+pub struct Waker(Arc<WakeInner>);
+
+/// The shared state of a [`Waker`].
+#[derive(Debug)]
+struct WakeInner {
+	/// Woken since the last [`Waker::take`].
+	woken: AtomicBool,
+	/// What interrupts a blocked [`Tty`] read.
+	#[cfg(any(unix, windows))]
+	sys:   sys::Wake,
+}
+
+impl Waker {
+	/// A new waker, not woken.
+	///
+	/// # Errors
+	/// When the OS can't create its wake handle (a pipe, an event).
+	pub fn new() -> io::Result<Self> {
+		Ok(Self(Arc::new(WakeInner {
+			woken: AtomicBool::new(false),
+			#[cfg(any(unix, windows))]
+			sys: sys::Wake::new()?,
+		})))
+	}
+
+	/// Interrupts the session's current or next wait for input.
+	pub fn wake(&self) {
+		self.0.woken.store(true, Ordering::Release);
+		#[cfg(any(unix, windows))]
+		self.0.sys.signal();
+	}
+
+	/// Whether it was woken since the last call; clears the flag.
+	pub(crate) fn take(&self) -> bool {
+		self.0.woken.swap(false, Ordering::AcqRel)
+	}
+}
 
 /// Process-global terminal ownership, acquired before touching platform state.
 #[cfg(any(unix, windows))]
@@ -65,6 +112,12 @@ pub trait Terminal {
 	/// Notes which input modes the session enabled, so a process killed by a
 	/// signal can still undo them.
 	fn modes(&mut self, _paste: bool, _kitty: bool) {}
+
+	/// The waker that interrupts [`read`](Self::read), when the terminal has
+	/// one. A session reports a wake as `Ok(None)` from its wait.
+	fn waker(&self) -> Option<Waker> {
+		None
+	}
 }
 
 /// Whether stdin and stdout are both terminals.
@@ -96,6 +149,8 @@ pub struct Tty {
 	restored:  bool,
 	/// Held until restoration finishes.
 	ownership: Option<Ownership>,
+	/// Interrupts a blocked read.
+	waker:     Waker,
 }
 
 #[cfg(any(unix, windows))]
@@ -107,7 +162,8 @@ impl Tty {
 	/// When stdin is not a terminal or its mode can't be changed.
 	pub fn open() -> io::Result<Self> {
 		let ownership = Ownership::acquire()?;
-		Ok(Self { inner: sys::Raw::enter()?, restored: false, ownership: Some(ownership) })
+		let waker = Waker::new()?;
+		Ok(Self { inner: sys::Raw::enter()?, restored: false, ownership: Some(ownership), waker })
 	}
 }
 
@@ -121,7 +177,11 @@ impl Terminal for Tty {
 	}
 
 	fn read(&mut self, buf: &mut [u8], timeout: Option<Duration>) -> io::Result<Option<usize>> {
-		self.inner.read(buf, timeout)
+		self.inner.read(buf, timeout, &self.waker.0.sys)
+	}
+
+	fn waker(&self) -> Option<Waker> {
+		Some(self.waker.clone())
 	}
 
 	fn restore(&mut self) -> io::Result<()> {
@@ -197,6 +257,63 @@ mod sys {
 
 	/// The signals that restore the terminal before the process ends.
 	const SIGNALS: [libc::c_int; 4] = [libc::SIGTERM, libc::SIGHUP, libc::SIGINT, libc::SIGQUIT];
+
+	/// A non-blocking pipe: a byte written to `write` makes `read` readable.
+	#[derive(Debug)]
+	pub(super) struct Wake {
+		/// The end polled beside stdin.
+		read:  libc::c_int,
+		/// The end [`signal`](Self::signal) writes.
+		write: libc::c_int,
+	}
+
+	impl Wake {
+		pub(super) fn new() -> io::Result<Self> {
+			let mut fds = [0; 2];
+			// SAFETY: pipe writes two descriptors into the array.
+			if unsafe { libc::pipe(fds.as_mut_ptr()) } != 0 {
+				return Err(io::Error::last_os_error());
+			}
+			let wake = Self { read: fds[0], write: fds[1] };
+			for fd in fds {
+				// SAFETY: fd is an open descriptor this value owns.
+				let ok = unsafe {
+					let flags = libc::fcntl(fd, libc::F_GETFL);
+					flags >= 0
+						&& libc::fcntl(fd, libc::F_SETFL, flags | libc::O_NONBLOCK) == 0
+						&& libc::fcntl(fd, libc::F_SETFD, libc::FD_CLOEXEC) == 0
+				};
+				if !ok {
+					return Err(io::Error::last_os_error());
+				}
+			}
+			Ok(wake)
+		}
+
+		/// Makes the read end readable; a full pipe (`EAGAIN`) is already so.
+		pub(super) fn signal(&self) {
+			// SAFETY: writes one byte from a valid buffer to an owned descriptor.
+			unsafe { libc::write(self.write, [1u8].as_ptr().cast(), 1) };
+		}
+
+		/// Empties the read end.
+		fn drain(&self) {
+			let mut buf = [0u8; 64];
+			// SAFETY: reads at most buf.len() bytes into buf from an owned,
+			// non-blocking descriptor.
+			while unsafe { libc::read(self.read, buf.as_mut_ptr().cast(), buf.len()) } > 0 {}
+		}
+	}
+
+	impl Drop for Wake {
+		fn drop(&mut self) {
+			// SAFETY: both descriptors are owned and closed once.
+			unsafe {
+				libc::close(self.read);
+				libc::close(self.write);
+			}
+		}
+	}
 
 	/// Raw mode on stdin, with the previous state to restore.
 	#[derive(Debug)]
@@ -307,12 +424,17 @@ mod sys {
 			&self,
 			buf: &mut [u8],
 			timeout: Option<Duration>,
+			wake: &Wake,
 		) -> io::Result<Option<usize>> {
 			let ms = timeout
 				.map_or(-1, |t| libc::c_int::try_from(t.as_millis()).unwrap_or(libc::c_int::MAX));
-			let mut fd = libc::pollfd { fd: 0, events: libc::POLLIN, revents: 0 };
-			// SAFETY: one valid pollfd.
-			let n = unsafe { libc::poll(&mut fd, 1, ms) };
+			let mut fds = [libc::pollfd { fd: 0, events: libc::POLLIN, revents: 0 }, libc::pollfd {
+				fd:      wake.read,
+				events:  libc::POLLIN,
+				revents: 0,
+			}];
+			// SAFETY: two valid pollfds.
+			let n = unsafe { libc::poll(fds.as_mut_ptr(), 2, ms) };
 			if n < 0 {
 				let err = io::Error::last_os_error();
 				return if err.kind() == io::ErrorKind::Interrupted {
@@ -321,7 +443,10 @@ mod sys {
 					Err(err)
 				};
 			}
-			if n == 0 {
+			if fds[1].revents != 0 {
+				wake.drain();
+			}
+			if n == 0 || fds[0].revents == 0 {
 				return Ok(None);
 			}
 			// SAFETY: reads at most buf.len() bytes into buf.
@@ -359,7 +484,7 @@ mod sys {
 	use std::{io, time::Duration};
 
 	use windows_sys::Win32::{
-		Foundation::{HANDLE, WAIT_OBJECT_0},
+		Foundation::{CloseHandle, FALSE, HANDLE, WAIT_OBJECT_0},
 		Storage::FileSystem::ReadFile,
 		System::{
 			Console::{
@@ -369,9 +494,45 @@ mod sys {
 				GetStdHandle, INPUT_RECORD, KEY_EVENT, PeekConsoleInputW, ReadConsoleInputW,
 				STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, SetConsoleMode,
 			},
-			Threading::{INFINITE, WaitForSingleObject},
+			Threading::{CreateEventW, INFINITE, SetEvent, WaitForMultipleObjects},
 		},
 	};
+
+	/// An auto-reset event that interrupts a console wait.
+	#[derive(Debug)]
+	pub(super) struct Wake {
+		/// The event handle.
+		event: HANDLE,
+	}
+
+	// SAFETY: an event handle may be signaled and waited on from any thread.
+	unsafe impl Send for Wake {}
+	// SAFETY: as above; `SetEvent` and waits are thread-safe.
+	unsafe impl Sync for Wake {}
+
+	impl Wake {
+		pub(super) fn new() -> io::Result<Self> {
+			// SAFETY: default security, auto-reset, initially unsignaled, unnamed.
+			let event = unsafe { CreateEventW(std::ptr::null(), FALSE, FALSE, std::ptr::null()) };
+			if event.is_null() {
+				return Err(io::Error::last_os_error());
+			}
+			Ok(Self { event })
+		}
+
+		/// Signals the event; a wait consumes it.
+		pub(super) fn signal(&self) {
+			// SAFETY: a valid event handle.
+			unsafe { SetEvent(self.event) };
+		}
+	}
+
+	impl Drop for Wake {
+		fn drop(&mut self) {
+			// SAFETY: the handle is owned and closed once.
+			unsafe { CloseHandle(self.event) };
+		}
+	}
 
 	/// Raw mode on the console, with the previous modes to restore.
 	#[derive(Debug)]
@@ -478,11 +639,13 @@ mod sys {
 			&self,
 			buf: &mut [u8],
 			timeout: Option<Duration>,
+			wake: &Wake,
 		) -> io::Result<Option<usize>> {
 			let ms =
 				timeout.map_or(INFINITE, |t| u32::try_from(t.as_millis()).unwrap_or(INFINITE - 1));
-			// SAFETY: a valid handle.
-			if unsafe { WaitForSingleObject(self.input, ms) } != WAIT_OBJECT_0 {
+			let handles = [self.input, wake.event];
+			// SAFETY: two valid handles.
+			if unsafe { WaitForMultipleObjects(2, handles.as_ptr(), FALSE, ms) } != WAIT_OBJECT_0 {
 				return Ok(None);
 			}
 			if !self.key_ready()? {

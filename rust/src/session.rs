@@ -53,7 +53,7 @@ use crate::{
 	keys::{Decoder, Key},
 	reconcile::{Doc, Routes},
 	record::Recorder,
-	term::{self, Terminal},
+	term::{self, Terminal, Waker},
 	ui::View,
 	wire::{
 		Blob, Cell, Close, Encoder, Event, Frame, Message, Mode, Op, Open, Palette, Query, Reply,
@@ -298,6 +298,9 @@ pub enum Input<M> {
 	Event(Event),
 	/// The message of the handler an event was routed to, with the event.
 	Msg(M, Event),
+	/// An `OSC 5522` clipboard packet: the bytes after `5522;`, before the
+	/// terminator.
+	Clipboard(Vec<u8>),
 }
 
 /// One open (or closed) surface.
@@ -414,6 +417,8 @@ pub struct Session<M = ()> {
 	modes:    (bool, bool),
 	/// When input last arrived.
 	last_in:  Instant,
+	/// The terminal's waker, when it has one.
+	waker:    Option<Waker>,
 	/// Closed already.
 	closed:   bool,
 }
@@ -446,19 +451,21 @@ impl<M> Session<M> {
 		options: Options,
 	) -> Result<Option<Self>, Error> {
 		let record = options.record.as_deref().map(Recorder::open).transpose()?;
+		let waker = term.waker();
 		let mut session = Self {
-			out:      Out { term: Box::new(term), enc: Encoder::default(), record },
-			parser:   Parser::new(),
-			keys:     Decoder::new(),
-			caps:     Capabilities::default(),
+			out: Out { term: Box::new(term), enc: Encoder::default(), record },
+			parser: Parser::new(),
+			keys: Decoder::new(),
+			caps: Capabilities::default(),
 			surfaces: Vec::new(),
-			next_id:  1,
-			inbox:    VecDeque::new(),
-			replies:  VecDeque::new(),
-			blobs:    HashSet::new(),
-			modes:    (false, false),
-			last_in:  Instant::now(),
-			closed:   false,
+			next_id: 1,
+			inbox: VecDeque::new(),
+			replies: VecDeque::new(),
+			blobs: HashSet::new(),
+			modes: (false, false),
+			last_in: Instant::now(),
+			waker,
+			closed: false,
 		};
 		let app = options.app.clone().or_else(exe_name);
 		match session.handshake(app, &options) {
@@ -784,9 +791,26 @@ impl<M> Session<M> {
 		}
 	}
 
+	/// The terminal's waker: [`Waker::wake`] from any thread makes the
+	/// current or next [`next`](Self::next) return `Ok(None)`. `None` when
+	/// the terminal has no waker.
+	pub fn waker(&self) -> Option<Waker> {
+		self.waker.clone()
+	}
+
+	/// Writes `bytes` to the terminal as they are (OSC sequences, mode
+	/// switches), outside any surface.
+	///
+	/// # Errors
+	/// When the output fails.
+	pub fn write_raw(&mut self, bytes: &[u8]) -> Result<(), Error> {
+		self.out.term.write(bytes)?;
+		Ok(())
+	}
+
 	/// Waits up to `timeout` (`None`: until something arrives) for the next
-	/// key, unhandled event, or handler message. `Ok(None)` when the time is
-	/// up.
+	/// key, unhandled event, handler message, or clipboard packet.
+	/// `Ok(None)`: the timeout passed or the waker was woken.
 	///
 	/// # Errors
 	/// [`Error::InputClosed`] at the end of input, or I/O.
@@ -795,6 +819,9 @@ impl<M> Session<M> {
 		loop {
 			if let Some(input) = self.inbox.pop_front() {
 				return Ok(Some(input));
+			}
+			if self.waker.as_ref().is_some_and(Waker::take) {
+				return Ok(None);
 			}
 			if deadline.is_some_and(|d| Instant::now() >= d) && !self.read(Some(Duration::ZERO))? {
 				return Ok(self.inbox.pop_front());
@@ -871,6 +898,7 @@ impl<M> Session<M> {
 				self.event(event)?;
 			},
 			Item::Da1 => {},
+			Item::Osc5522(payload) => self.inbox.push_back(Input::Clipboard(payload)),
 		}
 		Ok(())
 	}

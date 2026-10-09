@@ -168,7 +168,7 @@ fn main() -> Result<(), tern_sdk::Error> {
 			},
 			Input::Msg(Msg::Send(text), _) => chat.send(text),
 			Input::Msg(Msg::Focus, _) => session.focus(sf, Some(EDITOR))?,
-			Input::Event(_) => continue,
+			Input::Event(_) | Input::Clipboard(_) => continue,
 		}
 		session.render(sf, chat.view())?;
 	}

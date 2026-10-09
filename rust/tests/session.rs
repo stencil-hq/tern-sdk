@@ -5,7 +5,7 @@ use std::{cell::RefCell, collections::VecDeque, io, rc::Rc, time::Duration};
 
 use serde_json::{Value, json};
 use tern_sdk::{
-	Error, Input, Options, Session, SurfaceOptions, nodes,
+	Error, Input, Options, Session, SurfaceOptions, Waker, nodes,
 	term::Terminal,
 	ui::{self, View, html},
 	wire::Event,
@@ -36,6 +36,8 @@ struct Script {
 	pipes:   Rc<RefCell<Pipes>>,
 	/// Called on every write.
 	respond: Responder,
+	/// What the session gets from `waker()`.
+	waker:   Option<Waker>,
 }
 
 impl Terminal for Script {
@@ -85,6 +87,10 @@ impl Terminal for Script {
 		self.pipes.borrow_mut().restored = true;
 		Ok(())
 	}
+
+	fn waker(&self) -> Option<Waker> {
+		self.waker.clone()
+	}
 }
 
 /// A `hello` reply granting `credits`.
@@ -114,7 +120,7 @@ fn terminal(answer: Vec<Vec<u8>>) -> (Script, Rc<RefCell<Pipes>>) {
 			Vec::new()
 		}
 	});
-	(Script { pipes: Rc::clone(&pipes), respond }, pipes)
+	(Script { pipes: Rc::clone(&pipes), respond, waker: None }, pipes)
 }
 
 /// A connected session with `credits`.
@@ -152,6 +158,20 @@ fn frames(messages: &[(String, Value)]) -> Vec<&Value> {
 /// A view whose `main` is one text node.
 fn text_view(text: &str) -> View {
 	View::new().main([ui::text(text).key("t")])
+}
+
+#[test]
+fn a_wake_ends_an_unbounded_wait() {
+	let (mut term, _pipes) = terminal(vec![hello(4), DA1.to_vec()]);
+	term.waker = Some(Waker::new().expect("waker"));
+	let mut session: Session = Session::with_terminal(term, Options::new().app("test").record(None))
+		.expect("handshake runs")
+		.expect("TSP answers");
+	let waker = session.waker().expect("the terminal's waker");
+	std::thread::spawn(move || waker.wake())
+		.join()
+		.expect("wakes");
+	assert!(session.next(None).expect("reads").is_none());
 }
 
 #[test]

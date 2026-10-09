@@ -222,6 +222,7 @@ fn ask_session<M>(
 				}
 				continue;
 			},
+			Input::Clipboard(_) => continue,
 			Input::Event(event) => (None, event),
 			Input::Msg(msg, event) => (Some(msg), event),
 		};

@@ -119,7 +119,15 @@ An event is routed by its `sf` and `id` to the node with that id in the view
 last rendered (for a list's `select`/`activate`, the item's own handler first,
 then the list's). `Session::next` returns `Input::Msg(msg, event)` for a
 handled event, `Input::Event(event)` for any other (resize, theme, motion,
-errors, `gone`, …) and `Input::Key(key)` for keys. Acks are consumed inside.
+errors, `gone`, …), `Input::Key(key)` for keys and `Input::Clipboard(bytes)`
+for an `OSC 5522` clipboard packet (the bytes after `5522;`; inside a
+bracketed paste it stays keys). Acks are consumed inside.
+
+`Session::waker()` hands out a `Waker` (`Send + Sync`) that interrupts the
+wait from another thread: `next` then returns `Ok(None)`, even with no
+timeout. The process tty polls a pipe (Unix) or an event (Windows) beside
+stdin, so waiting costs no CPU. `Session::write_raw(bytes)` writes OSC and
+mode sequences to the terminal as they are.
 
 ### Flow control and closing
 
@@ -152,7 +160,8 @@ other incomplete key sequences are dropped. Zero-timeout polling dispatches
 already-ready input, including acknowledgements.
 
 Tests and custom transports drive a session over anything implementing
-`term::Terminal` (`Session::with_terminal`).
+`term::Terminal` (`Session::with_terminal`); one that returns a `Waker` from
+`Terminal::waker` gets wakes too.
 
 ## Helpers
 

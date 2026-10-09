@@ -53,6 +53,7 @@ pub use helpers::{Answer, AskOptions, PrintOptions, Submission, ask, ask_with, p
 pub use keys::Key;
 pub use plain::plain;
 pub use session::{Capabilities, Input, Options, Session, Surface, SurfaceOptions};
+pub use term::Waker;
 pub use ui::{Node, View};
 pub use wire::{Event, Mode, Op};
 
