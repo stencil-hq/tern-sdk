@@ -1601,11 +1601,56 @@ declare extern type WindowCx with
 	function action(self, name: string): ()
 	--- Opens Carly and asks a shown question from a plugin callback.
 	function ask_carly(self, text: string): ()
+	--- Asks the user to choose one of `opts.items` in a picker over the focused pane; resolves with
+	--- the chosen item (the table passed in), nil when the user dismissed the picker.
+	function pick(self, opts: PickOptions): Awaitable<PickItem?>
+	--- Asks the user to type a line in a field over the focused pane; resolves with the text,
+	--- nil when the user dismissed it.
+	function prompt(self, opts: PromptOptions?): Awaitable<string?>
 	--- Shows a toast; `sub` is a secondary line.
 	function toast(self, level: ToastLevel, text: string, sub: string?): ()
 	--- Copies `text` to the clipboard.
 	function copy(self, text: string): ()
 end
+
+--- Window only: one choice of `cx:pick`. Other fields ride along to the answer.
+export type PickItem = {
+	--- What the row says; typing filters on it.
+	label: string,
+	--- Dim text after the label.
+	detail: string?,
+	--- Heading over a run of consecutive items with the same group.
+	group: string?,
+	--- A Tern icon name (default: the picker's icon).
+	icon: string?,
+	--- Shows a check: the current choice.
+	current: boolean?,
+	[string]: any,
+}
+
+--- Window only: what `cx:pick` asks.
+export type PickOptions = {
+	--- The choices, listed in this order; at least one.
+	items: { PickItem },
+	--- The empty field's hint, also the picker's accessible name.
+	placeholder: string?,
+	--- The field's Tern icon name (default `puzzle`).
+	icon: string?,
+	--- What ↵ does, in the key legend (default `select`).
+	action: string?,
+}
+
+--- Window only: what `cx:prompt` asks.
+export type PromptOptions = {
+	--- The text the field starts with, selected.
+	value: string?,
+	--- The empty field's hint, also the field's accessible name.
+	placeholder: string?,
+	--- The field's Tern icon name (default `puzzle`).
+	icon: string?,
+	--- What ↵ does, in the key legend (default `confirm`).
+	action: string?,
+}
 
 --- Desktop window only: durable Carly task. Exactly one of when/on is required.
 export type TaskSpec = {
