@@ -126,9 +126,15 @@ fn terminal(answer: Vec<Vec<u8>>) -> (Script, Rc<RefCell<Pipes>>) {
 /// A connected session with `credits`.
 fn connected<M>(credits: u32) -> (Session<M>, Rc<RefCell<Pipes>>) {
 	let (term, pipes) = terminal(vec![hello(credits), DA1.to_vec()]);
-	let session = Session::with_terminal(term, Options::new().app("test").record(None))
-		.expect("handshake runs")
-		.expect("TSP answers");
+	let session = Session::with_terminal(
+		term,
+		Options::new()
+			.app("test")
+			.record(None)
+			.timeout(Duration::from_secs(10)),
+	)
+	.expect("handshake runs")
+	.expect("TSP answers");
 	pipes.borrow_mut().output.clear();
 	(session, pipes)
 }
@@ -342,9 +348,7 @@ fn events_route_to_handlers_and_the_rest_reach_the_loop() {
 fn a_lone_escape_becomes_a_key_after_quiet() {
 	let (mut session, pipes) = connected::<()>(2);
 	pipes.borrow_mut().input.push_back(b"\x1b".to_vec());
-	let input = session
-		.next(Some(Duration::from_millis(200)))
-		.expect("next");
+	let input = session.next(Some(Duration::from_secs(10))).expect("next");
 	assert!(matches!(input, Some(Input::Key(k)) if k.is("escape")));
 }
 

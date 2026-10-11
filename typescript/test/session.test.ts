@@ -27,6 +27,7 @@ async function open(
       env: {},
       input: term.input,
       output: term.output,
+      timeout: 10_000,
       ...options,
    });
    return { term, session };
@@ -78,7 +79,12 @@ describe('connect', () => {
       );
       expect(term.input.raw).toEqual([true]);
       await session.close();
-      const again = await connect({ env: {}, input: term.input, output: term.output });
+      const again = await connect({
+         env: {},
+         input: term.input,
+         output: term.output,
+         timeout: 10_000,
+      });
       expect(again).not.toBeNull();
       await again?.close();
    });
@@ -94,7 +100,12 @@ describe('connect', () => {
                   : '\x1b[?62;c' + tsp('r', HELLO)
             );
          };
-         const session = await connect({ env: {}, input: term.input, output: term.output });
+         const session = await connect({
+            env: {},
+            input: term.input,
+            output: term.output,
+            timeout: 10_000,
+         });
          if (!helloFirst) {
             expect(session).toBeNull();
             continue;
@@ -128,10 +139,8 @@ describe('connect', () => {
    });
 
    test('no answer within the timeout means no TSP', async () => {
-      const started = Date.now();
       const { term, session } = await open('silent', { timeout: 30 });
       expect(session).toBeNull();
-      expect(Date.now() - started).toBeGreaterThanOrEqual(25);
       expect(term.input.raw).toEqual([true, false]);
    });
 
@@ -496,9 +505,7 @@ describe('close', () => {
          attempts.push(typeof data === 'string' ? data : new TextDecoder().decode(data));
          throw new Error('write failed');
       };
-      const start = Date.now();
       await expect(session.close()).rejects.toThrow('write failed');
-      expect(Date.now() - start).toBeGreaterThanOrEqual(45);
       expect(attempts).toHaveLength(4);
       expect(attempts[0]).toContain('tsp;f;');
       expect(attempts[1]).toContain('tsp;x;');

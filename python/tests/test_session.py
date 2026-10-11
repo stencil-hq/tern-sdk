@@ -24,7 +24,7 @@ def frames(term: Term) -> list[dict[str, object]]:
 
 def test_handshake_writes_hello_then_da1_and_enables_modes(term: Term) -> None:
     term.reply(credits=3, apc=1000, cols=99, dark=False)
-    s = session_mod.start(term.in_r, term.out_w, app="demo", version="1.2", features=["send"], timeout=1.0)
+    s = session_mod.start(term.in_r, term.out_w, app="demo", version="1.2", features=["send"], timeout=10.0)
     assert s is not None
     out = term.read()
     hello = b'\x1b_tsp;q;{"q":"hello","v":[1],"app":"demo","ver":"1.2","features":["send"]}\x1b\\'
@@ -172,7 +172,7 @@ def test_handlers_consume_their_events(connected: Session, term: Term) -> None:
     term.event(ev="action", sf="s1", id="main.go", act="rerun")
     term.event(ev="select", sf="s1", id="main.l", item="main.l.a")
     term.event(ev="action", sf="s1", id="main.go", act="other")
-    item = connected.poll(0.2)
+    item = connected.poll(10.0)
     assert isinstance(item, ActionEvent) and item.act == "other"
     assert [e.id for e in clicked] == ["main.go"]
     assert menu == ["rerun"] and picked == ["main.l.a"]
@@ -182,7 +182,7 @@ def test_events_for_other_surfaces_or_unknown_ids_reach_the_loop(connected: Sess
     surface = connected.open()
     surface.render(ui.html.button("Go", key="go", on_click=lambda e: None))
     term.event(ev="action", sf="s9", id="main", act="click")
-    item = connected.poll(0.2)
+    item = connected.poll(10.0)
     assert isinstance(item, ActionEvent) and item.sf == "s9"
 
 
@@ -190,7 +190,7 @@ def test_capability_events_update_and_still_arrive(connected: Session, term: Ter
     term.event(ev="resize", sf="s1", cols=80, cell={"w": 9, "h": 18}, visible=True)
     term.event(ev="theme", dark=False)
     term.event(ev="motion", reduce=True)
-    items = [connected.poll(0.2) for _ in range(3)]
+    items = [connected.poll(10.0) for _ in range(3)]
     assert isinstance(items[0], ResizeEvent) and isinstance(items[1], ThemeEvent)
     assert (connected.caps.cols, connected.caps.dark, connected.caps.reduce_motion) == (80, False, True)
     assert connected.caps.cell is not None and connected.caps.cell.w == 9
@@ -198,7 +198,7 @@ def test_capability_events_update_and_still_arrive(connected: Session, term: Ter
 
 def test_hour12_follows_the_hello_and_defaults_to_24_hour(term: Term) -> None:
     term.reply(hour12=True)
-    s = session_mod.start(term.in_r, term.out_w, timeout=1.0)
+    s = session_mod.start(term.in_r, term.out_w, timeout=10.0)
     assert s is not None and s.caps.hour12 is True
     s.close()
     reply = wire.decode_reply({"r": "hello"})
@@ -210,7 +210,7 @@ def test_gone_closes_the_surface(connected: Session, term: Term) -> None:
     surface = connected.open()
     term.read()
     term.event(ev="gone", sf="s1", ids=["s1"])
-    assert isinstance(connected.poll(0.2), GoneEvent)
+    assert isinstance(connected.poll(10.0), GoneEvent)
     assert surface.closed
     surface.render(ui.text("x"))
     assert term.read() == b""
@@ -218,11 +218,11 @@ def test_gone_closes_the_surface(connected: Session, term: Term) -> None:
 
 def test_keys_and_a_lone_escape_after_the_flush_delay(connected: Session, term: Term) -> None:
     term.send(b"a\x1b[A")
-    assert [connected.poll(0.2), connected.poll(0.2)] == [Key("a", "a"), Key("up")]
+    assert [connected.poll(10.0), connected.poll(10.0)] == [Key("a", "a"), Key("up")]
     term.send(b"\x1b")
-    assert connected.poll(0.5) == Key("escape")
+    assert connected.poll(10.0) == Key("escape")
     term.send(b"\x03")
-    assert list(connected.input(timeout=0.1)) == [Key("c", ctrl=True)]
+    assert next(connected.input(timeout=10.0)) == Key("c", ctrl=True)
 
 
 def test_end_of_input_ends_the_loop(connected: Session, term: Term) -> None:

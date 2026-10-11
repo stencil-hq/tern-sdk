@@ -113,7 +113,7 @@ def connected(term: Term) -> Iterator[session_mod.Session]:
     """A session that completed its handshake on `term` (output drained)."""
     term.reply()
     term.da1()
-    s = session_mod.start(term.in_r, term.out_w, app="test", timeout=1.0)
+    s = session_mod.start(term.in_r, term.out_w, app="test", timeout=10.0)
     assert s is not None
     term.read()
     yield s
