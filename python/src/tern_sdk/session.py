@@ -9,11 +9,12 @@ import ctypes
 import json
 import os
 import signal
+import subprocess
 import sys
 import threading
 import time
 from collections import deque
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import FrameType, TracebackType
@@ -53,6 +54,8 @@ FLUSH_AFTER: Final = 0.03
 """Seconds without input after which held prefixes are released as keys."""
 DRAIN_FOR: Final = 0.05
 """Seconds of input drained on close, so late replies never reach the shell."""
+TMUX_TIMEOUT: Final = 0.5
+"""Seconds a `tmux` command may run before it counts as failed."""
 
 _PASTE_ON: Final = b"\x1b[?2004h"
 _PASTE_OFF: Final = b"\x1b[?2004l"
@@ -354,18 +357,79 @@ def _default_app() -> str:
     return name or Path(sys.executable).stem or "python"
 
 
-def available() -> bool:
-    """Whether detection allows TSP at all: not `TERN_TSP=0`, stdin and stdout
-    ttys, and not inside tmux, screen or zellij."""
-    env = os.environ
-    if env.get("TERN_TSP") == "0":
-        return False
-    if env.get("TMUX") or env.get("STY") or env.get("ZELLIJ"):
-        return False
+_RunTmux: TypeAlias = Callable[[Sequence[str]], "str | None"]
+"""Runs a `tmux` command: its standard output, `None` when it fails."""
+
+
+def _run_tmux(args: Sequence[str]) -> str | None:
+    """Runs `tmux` from `PATH` with the inherited environment: its standard
+    output, or `None` when it fails or outlives `TMUX_TIMEOUT`."""
+    try:
+        done = subprocess.run(
+            ["tmux", *args],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=TMUX_TIMEOUT,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return done.stdout.decode(errors="replace") if done.returncode == 0 else None
+
+
+@dataclass(frozen=True)
+class _TmuxPane:
+    """The tmux pane a session speaks TSP in."""
+
+    pane: str
+    run: _RunTmux
+
+    def titles(self, *, restore: bool) -> bool:
+        """Turns the pane's `allow-set-title` off (tmux makes every APC body
+        the title otherwise), or back to its inherited value: whether tmux
+        agreed."""
+        if restore:
+            return self.run(["set-option", "-pu", "-t", self.pane, "allow-set-title"]) is not None
+        return self.run(["set-option", "-p", "-t", self.pane, "allow-set-title", "off"]) is not None
+
+
+@dataclass(frozen=True)
+class _Probe:
+    """How detection lets a session probe: `hello` alone in the tmux pane
+    `tmux`, else `hello` + DA1."""
+
+    tmux: _TmuxPane | None = None
+
+
+def _probe(env: Mapping[str, str], run: _RunTmux) -> _Probe | None:
+    """Whether and how `env` lets a session probe: never with `TERN_TSP=0` or
+    inside screen or zellij; inside tmux only when the session's `@tern-tsp`
+    option, read through `run`, has a value (Tern sets it while it draws the
+    session)."""
+    if env.get("TERN_TSP") == "0" or env.get("STY") or env.get("ZELLIJ"):
+        return None
+    if not env.get("TMUX"):
+        return _Probe()
+    pane = env.get("TMUX_PANE")
+    if not pane:
+        return None
+    watched = run(["show-options", "-qv", "@tern-tsp"])
+    return _Probe(_TmuxPane(pane, run)) if watched and watched.strip() else None
+
+
+def _ttys() -> bool:
     try:
         return os.isatty(sys.stdin.fileno()) and os.isatty(sys.stdout.fileno())
     except (AttributeError, ValueError, OSError):
         return False
+
+
+def available() -> bool:
+    """Whether detection allows TSP at all: not `TERN_TSP=0`, stdin and stdout
+    ttys, not inside screen or zellij, and inside tmux only while Tern draws
+    the session (its `@tern-tsp` option)."""
+    return _ttys() and _probe(os.environ, _run_tmux) is not None
 
 
 def connect(
@@ -378,8 +442,11 @@ def connect(
     kitty: bool = True,
 ) -> Session | None:
     """Connects to Tern on stdin/stdout, or returns `None` when TSP isn't
-    available (`TERN_TSP=0`, not a tty, a multiplexer, DA1 first, or no
-    answer within `timeout` seconds). Use the session as a context manager:
+    available (`TERN_TSP=0`, not a tty, screen or zellij, tmux whose session
+    Tern doesn't draw, DA1 first, or no answer within `timeout` seconds).
+    Inside tmux it sends `hello` without DA1 (tmux answers DA1 itself) and
+    turns the pane's `allow-set-title` off until the session closes. Use the
+    session as a context manager:
 
         session = tern_sdk.connect(app="deploy")
         if session is None:
@@ -388,11 +455,13 @@ def connect(
             with session:
                 ...
     """
-    if not available():
+    probe = _probe(os.environ, _run_tmux) if _ttys() else None
+    if probe is None:
         return None
-    return start(
+    return _start(
         sys.stdin.fileno(),
         sys.stdout.fileno(),
+        probe.tmux,
         app=app,
         version=version,
         features=features,
@@ -417,6 +486,34 @@ def start(
     environment checks of `connect` (for tests and programs that own their
     pty). A tty input is switched to raw mode before `hello` and restored
     when the handshake fails."""
+    return _start(
+        input,
+        output,
+        None,
+        app=app,
+        version=version,
+        features=features,
+        timeout=timeout,
+        paste=paste,
+        kitty=kitty,
+    )
+
+
+def _start(
+    input: Stream,
+    output: Stream,
+    tmux: _TmuxPane | None,
+    *,
+    app: str | None,
+    version: str | None,
+    features: Sequence[wire.ProgramFeature],
+    timeout: float,
+    paste: bool,
+    kitty: bool,
+) -> Session | None:
+    """`start`, inside the tmux pane `tmux` when given: its title updates go
+    off before `hello`, which goes out without DA1, and come back when the
+    session closes."""
     in_fd = _fileno(input)
     out_fd = output if isinstance(output, int) else None
     tty = _Tty(in_fd, out_fd) if os.isatty(in_fd) else None
@@ -425,7 +522,9 @@ def start(
     try:
         if tty is not None:
             tty.enter()
-        ok = session._handshake(app if app is not None else _default_app(), version, features, timeout)
+        ok = tmux is None or tmux.titles(restore=False)
+        session._tmux = tmux if ok else None
+        ok = ok and session._handshake(app if app is not None else _default_app(), version, features, timeout)
     except BaseException:
         try:
             session.close()
@@ -472,13 +571,16 @@ class Session:
         self._eof = False
         self._closed = False
         self._signals: dict[int, Any] = {}
+        self._tmux: _TmuxPane | None = None
         record = os.environ.get("TERN_TSP_RECORD")
         self._recorder = _Recorder(record) if record else None
 
     # -- lifecycle
 
     def _handshake(self, app: str, version: str | None, features: Sequence[str], timeout: float) -> bool:
-        self._send(wire.hello(app, ver=version, features=features), extra=_DA1_QUERY)
+        # In tmux, which answers DA1 itself, only the reply or the timeout decides.
+        da1 = self._tmux is None
+        self._send(wire.hello(app, ver=version, features=features), extra=_DA1_QUERY if da1 else b"")
         deadline = time.monotonic() + timeout
         early: list[Any] = []
         while True:
@@ -493,7 +595,7 @@ class Session:
             self._last_input = time.monotonic()
             items = self._parser.feed(data)
             for n, item in enumerate(items):
-                if isinstance(item, Da1):
+                if da1 and isinstance(item, Da1):
                     return False
                 if isinstance(item, HelloReply):
                     self._record_in("r", item.raw)
@@ -574,6 +676,9 @@ class Session:
                 error = error or exc
         finally:
             try:
+                if self._tmux is not None:
+                    self._tmux.titles(restore=True)
+                    self._tmux = None
                 if self._tty is not None:
                     self._tty.restore()
             finally:

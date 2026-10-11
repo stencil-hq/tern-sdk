@@ -12,7 +12,7 @@ from typing import Final
 
 from .keys import Key
 from .reconcile import REGIONS, AnyView, Region, as_view
-from .session import Session, available, connect
+from .session import Session, connect
 from .ui import Node
 from .wire import ActionEvent, Json
 
@@ -43,7 +43,7 @@ def show(
     close with `keep`. Without TSP it prints `plain(view)`, or `fallback`."""
     own = session is None
     if session is None:
-        session = connect(paste=False, kitty=False) if available() else None
+        session = connect(paste=False, kitty=False)
     if session is None:
         text = fallback if fallback is not None else plain(view)
         sys.stdout.write(text if text.endswith("\n") or not text else text + "\n")
@@ -77,7 +77,7 @@ def ask(
     it waits. Raises `Unsupported` without TSP."""
     own = session is None
     if session is None:
-        session = connect() if available() else None
+        session = connect()
     if session is None:
         raise Unsupported("no Tern Surface Protocol on this terminal")
     try:

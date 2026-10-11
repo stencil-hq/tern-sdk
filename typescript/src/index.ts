@@ -64,6 +64,7 @@ export {
    Session,
    type Capabilities,
    type ConnectOptions,
+   type RunTmux,
    type SessionInput,
    type TermInput,
    type TermOutput,

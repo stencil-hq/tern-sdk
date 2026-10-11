@@ -5,8 +5,10 @@ import (
 	"errors"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -16,9 +18,9 @@ import (
 
 // Errors a session reports.
 var (
-	// ErrUnsupported means TSP is not available: TERN_TSP=0, no tty, a
-	// multiplexer, or the terminal did not answer hello. Fall back to plain
-	// output.
+	// ErrUnsupported means TSP is not available: TERN_TSP=0, no tty, screen
+	// or zellij, tmux whose session Tern doesn't draw, or the terminal did
+	// not answer hello. Fall back to plain output.
 	ErrUnsupported = errors.New("tern: TSP is not available")
 	// ErrClosed is returned by a closed session or surface.
 	ErrClosed = errors.New("tern: closed")
@@ -35,6 +37,8 @@ const (
 	// DrainDelay is how long Close keeps reading input so late replies
 	// never reach the shell.
 	DrainDelay = 50 * time.Millisecond
+	// tmuxTimeout is how long a tmux command may run before it fails.
+	tmuxTimeout = 500 * time.Millisecond
 )
 
 // Terminal mode sequences a session sets and undoes.
@@ -80,6 +84,11 @@ type Options struct {
 	NoPaste bool
 	// NoKitty leaves the kitty keyboard protocol alone.
 	NoKitty bool
+	// RunTmux runs a tmux command and returns its standard output. Inside
+	// tmux Connect reads the session's @tern-tsp option and switches the
+	// pane's allow-set-title with it. Default: tmux from PATH with the
+	// inherited environment, failing after 500 ms.
+	RunTmux func(args ...string) (string, error)
 }
 
 // Caps are what the terminal said it supports, kept current by resize,
@@ -134,6 +143,11 @@ type Session struct {
 	cancelRead func() error
 	ownsTTY    bool
 	modesArmed bool
+	// tmuxPane is the tmux pane spoken in (TMUX_PANE), empty outside tmux;
+	// titlesOff whether its allow-set-title is off until Close.
+	tmuxPane  string
+	runTmux   func(args ...string) (string, error)
+	titlesOff bool
 
 	done       chan struct{}
 	readerDone chan struct{}
@@ -141,17 +155,60 @@ type Session struct {
 	stopSignal func()
 }
 
-// Connect detects Tern and says hello. It returns ErrUnsupported (and
-// leaves the terminal as it was) when TSP is not available.
-func Connect(ctx context.Context, opts Options) (*Session, error) {
-	if os.Getenv("TERN_TSP") == "0" || os.Getenv("TMUX") != "" || os.Getenv("STY") != "" || os.Getenv("ZELLIJ") != "" {
-		return nil, ErrUnsupported
+// execTmux runs tmux from PATH with the inherited environment and returns
+// its standard output; it fails after tmuxTimeout.
+func execTmux(args ...string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), tmuxTimeout)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "tmux", args...).Output()
+	return string(out), err
+}
+
+// probe reports whether the environment lets a session probe: never with
+// TERN_TSP=0 or inside screen or zellij; inside tmux (tmuxPane set) only
+// when the session's @tern-tsp option, read through run, has a value. Tern
+// sets it while it draws the session.
+func probe(getenv func(string) string, run func(args ...string) (string, error)) (tmuxPane string, ok bool) {
+	if getenv("TERN_TSP") == "0" || getenv("STY") != "" || getenv("ZELLIJ") != "" {
+		return "", false
 	}
+	if getenv("TMUX") == "" {
+		return "", true
+	}
+	tmuxPane = getenv("TMUX_PANE")
+	if tmuxPane == "" {
+		return "", false
+	}
+	watched, err := run("show-options", "-qv", "@tern-tsp")
+	if err != nil || strings.TrimSpace(watched) == "" {
+		return "", false
+	}
+	return tmuxPane, true
+}
+
+// Connect detects Tern and says hello. It returns ErrUnsupported (and
+// leaves the terminal as it was) when TSP is not available. Inside tmux it
+// sends hello without DA1 (tmux answers DA1 itself) and turns the pane's
+// allow-set-title off until Close.
+func Connect(ctx context.Context, opts Options) (*Session, error) {
 	if opts.In == nil {
 		opts.In = os.Stdin
 	}
 	if opts.Out == nil {
 		opts.Out = os.Stdout
+	}
+	in, inFile := opts.In.(*os.File)
+	out, outFile := opts.Out.(*os.File)
+	if opts.MakeRaw == nil && (!inFile || !outFile || !term.IsTerminal(int(in.Fd())) || !term.IsTerminal(int(out.Fd()))) {
+		return nil, ErrUnsupported
+	}
+	runTmux := opts.RunTmux
+	if runTmux == nil {
+		runTmux = execTmux
+	}
+	tmuxPane, ok := probe(os.Getenv, runTmux)
+	if !ok {
+		return nil, ErrUnsupported
 	}
 	if opts.Timeout <= 0 {
 		opts.Timeout = DefaultTimeout
@@ -172,11 +229,6 @@ func Connect(ctx context.Context, opts Options) (*Session, error) {
 	}
 	makeRaw := opts.MakeRaw
 	if makeRaw == nil {
-		in, ok := opts.In.(*os.File)
-		out, ok2 := opts.Out.(*os.File)
-		if !ok || !ok2 || !term.IsTerminal(int(in.Fd())) || !term.IsTerminal(int(out.Fd())) {
-			return nil, ErrUnsupported
-		}
 		makeRaw = func() (func() error, error) {
 			fd := int(in.Fd())
 			state, err := term.GetState(fd)
@@ -199,6 +251,8 @@ func Connect(ctx context.Context, opts Options) (*Session, error) {
 		handshake:  make(chan *HelloReply, 1),
 		done:       make(chan struct{}),
 		readerDone: make(chan struct{}),
+		tmuxPane:   tmuxPane,
+		runTmux:    runTmux,
 	}
 	s.mu.Lock()
 	if opts.MakeRaw == nil {
@@ -223,9 +277,27 @@ func Connect(ctx context.Context, opts Options) (*Session, error) {
 	go s.process(chunks)
 	s.mu.Unlock()
 
+	// In tmux, which answers DA1 itself, only the reply or the timeout decides.
+	trailer := da1Request
+	if tmuxPane != "" {
+		trailer = ""
+		if _, err := runTmux("set-option", "-p", "-t", tmuxPane, "allow-set-title", "off"); err != nil {
+			s.abort()
+			return nil, ErrUnsupported
+		}
+		s.mu.Lock()
+		closed := s.closed
+		s.titlesOff = !closed
+		s.mu.Unlock()
+		if closed {
+			// Closed meanwhile (a signal): Close found the titles still on.
+			_, _ = runTmux("set-option", "-pu", "-t", tmuxPane, "allow-set-title")
+			return nil, ErrClosed
+		}
+	}
 	hello, _ := Marshal(HelloQuery{Q: "hello", V: []int{ProtocolVersion}, App: opts.App, Ver: opts.Version, Features: opts.Features})
 	s.mu.Lock()
-	err = s.sendLocked(VerbQuery, nil, hello, da1Request)
+	err = s.sendLocked(VerbQuery, nil, hello, trailer)
 	s.mu.Unlock()
 	if err != nil {
 		s.abort()
@@ -349,7 +421,7 @@ func (s *Session) process(chunks <-chan readResult) {
 			case it.Event != nil:
 				s.rec.record("in", VerbEvent, nil, it.Event.Raw())
 				s.event(it.Event)
-			case it.DA1 && !handshakeDone:
+			case it.DA1 && !handshakeDone && s.tmuxPane == "":
 				handshakeDone = true
 				s.handshake <- nil
 			}
@@ -645,10 +717,15 @@ func (s *Session) Close() error {
 			}
 		}
 		s.closed = true
+		titlesOff := s.titlesOff
+		s.titlesOff = false
 		s.mu.Unlock()
 		time.Sleep(DrainDelay)
 		close(s.done)
 		s.waitReader()
+		if titlesOff {
+			_, _ = s.runTmux("set-option", "-pu", "-t", s.tmuxPane, "allow-set-title")
+		}
 		if s.stopSignal != nil {
 			s.stopSignal()
 		}

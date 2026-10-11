@@ -144,13 +144,110 @@ describe('connect', () => {
       expect(term.input.raw).toEqual([true, false]);
    });
 
-   test('TERN_TSP=0 and multiplexers skip the probe', async () => {
-      for (const env of [{ TERN_TSP: '0' }, { TMUX: '/tmp/tmux' }, { STY: 's' }, { ZELLIJ: '0' }]) {
-         const { term, session } = await open('tern', { env });
+   test('TERN_TSP=0, screen and zellij skip the probe', async () => {
+      const runTmux = (): Promise<string | null> => {
+         throw new Error('tmux ran');
+      };
+      for (const env of [
+         { TERN_TSP: '0' },
+         { STY: 's' },
+         { ZELLIJ: '0' },
+         { TMUX: '/tmp/tmux' },
+         { TMUX: '/tmp/tmux', TMUX_PANE: '%3', TERN_TSP: '0' },
+      ]) {
+         const { term, session } = await open('tern', { env, runTmux });
          expect(session).toBeNull();
          expect(term.output.chunks).toHaveLength(0);
          expect(term.input.raw).toEqual([]);
       }
+   });
+
+   describe('inside tmux', () => {
+      const env = { TMUX: '/tmp/tmux,1,0', TMUX_PANE: '%3' };
+
+      /** A scripted tmux whose session Tern draws (`watched`), logging next to the output. */
+      function tmux(term: Terminal, watched = '1\n', titles: string | null = '') {
+         const log: string[] = [];
+         term.output.onWrite = text => {
+            log.push(`out ${text}`);
+            if (text.includes('tsp;q;'))
+               queueMicrotask(() => term.input.type('\x1b[?62;c' + tsp('r', HELLO)));
+         };
+         const runTmux = (args: readonly string[]): Promise<string | null> => {
+            log.push(`tmux ${args.join(' ')}`);
+            return Promise.resolve(args[0] === 'show-options' ? watched : titles);
+         };
+         return { log, runTmux };
+      }
+
+      test('probes only while Tern draws the session', async () => {
+         for (const watched of ['', '\n']) {
+            const term = new Terminal('silent');
+            const { log, runTmux } = tmux(term, watched);
+            const session = await connect({ env, runTmux, input: term.input, output: term.output });
+            expect(session).toBeNull();
+            expect(log).toEqual(['tmux show-options -qv @tern-tsp']);
+            expect(term.input.raw).toEqual([]);
+         }
+         const failing = (): Promise<string | null> => Promise.reject(new Error('no tmux'));
+         const { term, session } = await open('silent', { env, runTmux: failing });
+         expect(session).toBeNull();
+         expect(term.input.raw).toEqual([]);
+      });
+
+      test('sends hello alone, ignores DA1 and restores titles on close', async () => {
+         const term = new Terminal('silent');
+         const { log, runTmux } = tmux(term);
+         const session = await connect({
+            app: 'test',
+            env,
+            runTmux,
+            input: term.input,
+            output: term.output,
+            timeout: 10_000,
+         });
+         expect(session).not.toBeNull();
+         await session?.close();
+         expect(log.slice(0, 2)).toEqual([
+            'tmux show-options -qv @tern-tsp',
+            'tmux set-option -p -t %3 allow-set-title off',
+         ]);
+         expect(log[2]).toStartWith('out \x1b_tsp;q;');
+         expect(log.some(line => line.includes('\x1b[c'))).toBe(false);
+         expect(log.at(-1)).toBe('tmux set-option -pu -t %3 allow-set-title');
+      });
+
+      test('no reply restores titles and the tty', async () => {
+         const term = new Terminal('silent');
+         const { log, runTmux } = tmux(term);
+         term.output.onWrite = text => log.push(`out ${text}`);
+         const session = await connect({
+            env,
+            runTmux,
+            input: term.input,
+            output: term.output,
+            timeout: 30,
+         });
+         expect(session).toBeNull();
+         expect(term.input.raw).toEqual([true, false]);
+         expect(log.filter(line => line.startsWith('tmux'))).toEqual([
+            'tmux show-options -qv @tern-tsp',
+            'tmux set-option -p -t %3 allow-set-title off',
+            'tmux set-option -pu -t %3 allow-set-title',
+         ]);
+      });
+
+      test('titles that stay on mean no TSP', async () => {
+         const term = new Terminal('silent');
+         const { log, runTmux } = tmux(term, '1', null);
+         const session = await connect({ env, runTmux, input: term.input, output: term.output });
+         expect(session).toBeNull();
+         expect(log).toEqual([
+            'tmux show-options -qv @tern-tsp',
+            'tmux set-option -p -t %3 allow-set-title off',
+         ]);
+         expect(term.input.raw).toEqual([true, false]);
+      });
    });
 
    test('modes can be left off', async () => {

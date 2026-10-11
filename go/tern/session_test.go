@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -35,7 +36,7 @@ type fakeTerm struct {
 // newTerm starts a terminal and returns it with Options wired to it.
 func newTerm(t *testing.T) (*fakeTerm, Options) {
 	t.Helper()
-	for _, k := range []string{"TERN_TSP", "TMUX", "STY", "ZELLIJ", "TERN_TSP_RECORD"} {
+	for _, k := range []string{"TERN_TSP", "TMUX", "TMUX_PANE", "STY", "ZELLIJ", "TERN_TSP_RECORD"} {
 		t.Setenv(k, "")
 	}
 	inR, inW := io.Pipe()
@@ -286,11 +287,17 @@ func TestConnectTimeoutIsUnsupported(t *testing.T) {
 }
 
 func TestConnectOptOuts(t *testing.T) {
-	for _, env := range []string{"TERN_TSP=0", "TMUX=/tmp/tmux", "STY=1.pts", "ZELLIJ=0"} {
+	for _, env := range []string{"TERN_TSP=0", "STY=1.pts", "ZELLIJ=0", "TMUX=/tmp/tmux", "TMUX=/tmp/tmux TMUX_PANE=%3 TERN_TSP=0"} {
 		t.Run(env, func(t *testing.T) {
 			ft, opts := newTerm(t)
-			k, v, _ := strings.Cut(env, "=")
-			t.Setenv(k, v)
+			for _, kv := range strings.Fields(env) {
+				k, v, _ := strings.Cut(kv, "=")
+				t.Setenv(k, v)
+			}
+			opts.RunTmux = func(...string) (string, error) {
+				t.Error("tmux ran")
+				return "", nil
+			}
 			if _, err := Connect(context.Background(), opts); !errors.Is(err, ErrUnsupported) {
 				t.Fatalf("err %v", err)
 			}
@@ -300,6 +307,136 @@ func TestConnectOptOuts(t *testing.T) {
 				t.Fatalf("touched the terminal: %v", ft.order)
 			}
 		})
+	}
+}
+
+func TestProbe(t *testing.T) {
+	env := func(vars ...string) func(string) string {
+		return func(k string) string {
+			for _, kv := range vars {
+				if name, v, _ := strings.Cut(kv, "="); name == k {
+					return v
+				}
+			}
+			return ""
+		}
+	}
+	never := func(...string) (string, error) {
+		t.Error("tmux ran")
+		return "", nil
+	}
+	answer := func(out string, err error) func(...string) (string, error) {
+		return func(args ...string) (string, error) {
+			if strings.Join(args, " ") != "show-options -qv @tern-tsp" {
+				t.Errorf("tmux %v", args)
+			}
+			return out, err
+		}
+	}
+	tmux := []string{"TMUX=/tmp/tmux,1,0", "TMUX_PANE=%3"}
+	cases := []struct {
+		name string
+		env  func(string) string
+		run  func(...string) (string, error)
+		pane string
+		ok   bool
+	}{
+		{"direct", env(), never, "", true},
+		{"empty TMUX", env("TMUX="), never, "", true},
+		{"TERN_TSP=0", env(append(tmux, "TERN_TSP=0")...), never, "", false},
+		{"screen", env("STY=1.pts"), never, "", false},
+		{"zellij", env("ZELLIJ=0"), never, "", false},
+		{"tmux without a pane", env("TMUX=/tmp/tmux,1,0"), never, "", false},
+		{"tmux watched", env(tmux...), answer("1\n", nil), "%3", true},
+		{"tmux unwatched", env(tmux...), answer("\n", nil), "", false},
+		{"tmux failing", env(tmux...), answer("", errors.New("exit status 1")), "", false},
+	}
+	for _, c := range cases {
+		if pane, ok := probe(c.env, c.run); pane != c.pane || ok != c.ok {
+			t.Errorf("%s: probe = %q, %v", c.name, pane, ok)
+		}
+	}
+}
+
+// inTmux puts the session in tmux pane %3, Tern drawing its session, with
+// tmux commands noted in ft's order; titles says whether tmux agrees to
+// set allow-set-title.
+func inTmux(t *testing.T, ft *fakeTerm, opts *Options, titles bool) {
+	t.Helper()
+	t.Setenv("TMUX", "/tmp/tmux,1,0")
+	t.Setenv("TMUX_PANE", "%3")
+	opts.RunTmux = func(args ...string) (string, error) {
+		ft.note("tmux " + strings.Join(args, " "))
+		if args[0] == "show-options" {
+			return "1\n", nil
+		}
+		if !titles {
+			return "", errors.New("exit status 1")
+		}
+		return "", nil
+	}
+}
+
+func TestConnectInTmux(t *testing.T) {
+	ft, opts := newTerm(t)
+	inTmux(t, ft, &opts, true)
+	done := make(chan *Session, 1)
+	go func() {
+		s, err := Connect(context.Background(), opts)
+		if err != nil {
+			t.Error(err)
+		}
+		done <- s
+	}()
+	ft.expect(VerbQuery)
+	// tmux answers DA1 first; only the hello reply decides.
+	ft.send("\x1b[?62;c" + helloReply)
+	s := <-done
+	if s == nil {
+		t.FailNow()
+	}
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(ft.rawOutput(), da1Request) {
+		t.Fatal("DA1 sent in tmux")
+	}
+	ft.orderM.Lock()
+	defer ft.orderM.Unlock()
+	want := []string{"tmux show-options -qv @tern-tsp", "raw", "tmux set-option -p -t %3 allow-set-title off", "msg q"}
+	if !slices.Equal(ft.order[:len(want)], want) {
+		t.Fatalf("order %q", ft.order)
+	}
+	if n := len(ft.order); ft.order[n-2] != "tmux set-option -pu -t %3 allow-set-title" || ft.order[n-1] != "restore" {
+		t.Fatalf("close order %q", ft.order)
+	}
+}
+
+func TestConnectInTmuxTimeoutRestoresTitles(t *testing.T) {
+	ft, opts := newTerm(t)
+	inTmux(t, ft, &opts, true)
+	opts.Timeout = 60 * time.Millisecond
+	if _, err := Connect(context.Background(), opts); !errors.Is(err, ErrUnsupported) {
+		t.Fatalf("err %v", err)
+	}
+	ft.orderM.Lock()
+	defer ft.orderM.Unlock()
+	if n := len(ft.order); n < 2 || ft.order[n-2] != "tmux set-option -pu -t %3 allow-set-title" || ft.order[n-1] != "restore" {
+		t.Fatalf("order %q", ft.order)
+	}
+}
+
+func TestConnectInTmuxTitlesRefused(t *testing.T) {
+	ft, opts := newTerm(t)
+	inTmux(t, ft, &opts, false)
+	if _, err := Connect(context.Background(), opts); !errors.Is(err, ErrUnsupported) {
+		t.Fatalf("err %v", err)
+	}
+	ft.orderM.Lock()
+	defer ft.orderM.Unlock()
+	want := []string{"tmux show-options -qv @tern-tsp", "raw", "tmux set-option -p -t %3 allow-set-title off", "restore"}
+	if !slices.Equal(ft.order, want) {
+		t.Fatalf("order %q", ft.order)
 	}
 }
 

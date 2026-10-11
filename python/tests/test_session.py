@@ -4,6 +4,7 @@ routing and the close sequence."""
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
@@ -71,6 +72,82 @@ def test_connect_reports_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("TMUX")
     # pytest's stdin is not a tty.
     assert session_mod.connect(app="demo") is None
+
+
+TMUX = {"TMUX": "/tmp/tmux-1/default,1,0", "TMUX_PANE": "%3"}
+
+
+def test_probe_follows_the_environment_and_the_tmux_option() -> None:
+    def never(args: Sequence[str]) -> str | None:
+        raise AssertionError("tmux ran")
+
+    assert session_mod._probe({}, never) == session_mod._Probe()
+    assert session_mod._probe({"TMUX": ""}, never) == session_mod._Probe()
+    for env in ({"TERN_TSP": "0"}, {"STY": "1.pts"}, {"ZELLIJ": "0"}, {**TMUX, "TERN_TSP": "0"}):
+        assert session_mod._probe(env, never) is None, env
+    assert session_mod._probe({"TMUX": TMUX["TMUX"]}, never) is None
+    asked: list[list[str]] = []
+
+    def watched(args: Sequence[str]) -> str | None:
+        asked.append(list(args))
+        return "1\n"
+
+    probe = session_mod._probe(TMUX, watched)
+    assert probe is not None and probe.tmux is not None and probe.tmux.pane == "%3"
+    assert asked == [["show-options", "-qv", "@tern-tsp"]]
+    assert session_mod._probe(TMUX, lambda _: "\n") is None
+    assert session_mod._probe(TMUX, lambda _: None) is None
+
+
+class FakeTmux:
+    """Logs tmux commands next to what the terminal received, in order."""
+
+    def __init__(self, term: Term, ok: bool = True) -> None:
+        self.term = term
+        self.ok = ok
+        self.log: list[str] = []
+
+    def __call__(self, args: Sequence[str]) -> str | None:
+        self.log.append("out " + self.term.read().decode())
+        self.log.append("tmux " + " ".join(args))
+        return "" if self.ok else None
+
+
+def tmux_start(term: Term, tmux: FakeTmux, timeout: float = 10.0) -> Session | None:
+    pane = session_mod._TmuxPane("%3", tmux)
+    return session_mod._start(
+        term.in_r, term.out_w, pane, app="demo", version=None, features=(), timeout=timeout, paste=True, kitty=True
+    )
+
+
+def test_tmux_sends_hello_alone_and_restores_titles_on_close(term: Term) -> None:
+    tmux = FakeTmux(term)
+    term.da1()
+    term.reply()
+    s = tmux_start(term, tmux)
+    assert s is not None, "DA1 must not decide in tmux"
+    s.close()
+    assert tmux.log[1] == "tmux set-option -p -t %3 allow-set-title off"
+    sent = tmux.log[2]
+    assert sent.startswith("out \x1b_tsp;q;") and "\x1b[c" not in sent
+    assert tmux.log[3] == "tmux set-option -pu -t %3 allow-set-title"
+
+
+def test_tmux_without_a_reply_restores_titles(term: Term) -> None:
+    tmux = FakeTmux(term)
+    assert tmux_start(term, tmux, timeout=0.05) is None
+    assert [line for line in tmux.log if line.startswith("tmux")] == [
+        "tmux set-option -p -t %3 allow-set-title off",
+        "tmux set-option -pu -t %3 allow-set-title",
+    ]
+
+
+def test_tmux_refusing_titles_off_means_no_tsp(term: Term) -> None:
+    tmux = FakeTmux(term, ok=False)
+    term.reply()
+    assert tmux_start(term, tmux) is None
+    assert tmux.log == ["out ", "tmux set-option -p -t %3 allow-set-title off"]
+    assert b"tsp;q;" not in term.read()
 
 
 def test_surface_ids_count_up_and_open_says_mode(connected: Session, term: Term) -> None:

@@ -148,9 +148,12 @@ err = s.Run(ctx, func(in tern.Input) error {
 ```
 
 - `Connect` returns `ErrUnsupported` when `TERN_TSP=0`, stdin or stdout is
-  not a terminal, inside tmux/screen/zellij, or when DA1 answers before
-  hello or nothing answers within `Timeout` (1 s). It switches the tty to
-  raw mode before writing hello and restores it on failure.
+  not a terminal, inside screen/zellij, inside tmux unless Tern draws the
+  session, or when DA1 answers before hello or nothing answers within
+  `Timeout` (1 s). It switches the tty to raw mode before writing hello and
+  restores it on failure. Inside tmux it sends hello without DA1 and turns
+  the pane's `allow-set-title` off until it closes (`RunTmux` replaces the
+  `tmux` command).
 - After connecting it enables bracketed paste and pushes kitty keyboard
   flag 1 (`NoPaste`, `NoKitty` turn them off).
 - The session's methods are safe for concurrent use: `Render` may run on
@@ -199,7 +202,8 @@ parentheses.
 | --- | --- |
 | `TERN_TSP=0` | Never speak TSP |
 | `TERN_TSP_RECORD=<file>` | Append every TSP message as JSONL (`surface-play` replays it) |
-| `TMUX`, `STY`, `ZELLIJ` | Inside a multiplexer: no TSP |
+| `TMUX`, `TMUX_PANE` | Inside tmux: TSP only when Tern draws the session (`@tern-tsp`), with the pane's `allow-set-title` off while connected |
+| `STY`, `ZELLIJ` | Inside screen or zellij: no TSP |
 
 ## Testing
 

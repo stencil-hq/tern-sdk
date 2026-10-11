@@ -3,6 +3,7 @@
  * surfaces, blobs, the input loop with event routing, recording and a clean
  * exit.
  */
+import { execFile } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
 import { basename, extname } from 'node:path';
 import { InputParser, type InputItem } from './input.js';
@@ -59,6 +60,8 @@ export interface ConnectOptions {
    readonly output?: TermOutput;
    /** The environment read by detection; `process.env` by default. */
    readonly env?: Readonly<Record<string, string | undefined>>;
+   /** Runs `tmux` commands inside tmux; `tmux` from `PATH` by default. */
+   readonly runTmux?: RunTmux;
    /** Enable bracketed paste while connected. Default `true`. */
    readonly bracketedPaste?: boolean;
    /** Push kitty keyboard flag 1 while connected. Default `true`. */
@@ -68,6 +71,9 @@ export interface ConnectOptions {
    /** Restore the tty on process exit and SIGINT/SIGTERM. Default: when using the process's own streams. */
    readonly exitHooks?: boolean;
 }
+
+/** Runs a `tmux` command: its standard output, or `null` when it fails. */
+export type RunTmux = (args: readonly string[]) => Promise<string | null>;
 
 /** What the terminal supports, from the `hello` reply, kept current by events. */
 export interface Capabilities {
@@ -100,6 +106,8 @@ const KITTY_POP = '\x1b[<u';
 const FLUSH_MS = 30;
 /** Input read and dropped after close, so late replies never reach the shell. */
 const DRAIN_MS = 50;
+/** How long a `tmux` command may run before it counts as failed. */
+const TMUX_TIMEOUT_MS = 500;
 
 /** Raw-mode ownership is exclusive for each input stream. */
 const ownedInputs = new WeakSet<TermInput>();
@@ -137,14 +145,21 @@ export class Session implements AsyncIterable<SessionInput>, AsyncDisposable {
    #closed = false;
    #closing: Promise<void> | undefined;
    #record: string | undefined;
+   #tmuxPane: string | undefined;
+   #titlesOff = false;
    #hooks: { exit: () => void; signal: (signal: NodeJS.Signals) => void } | undefined;
    #listener = (chunk: Uint8Array | string): void => this.#onData(chunk);
 
-   /** Use `connect`, which detects Tern and shakes hands first. */
-   constructor(input: TermInput, output: TermOutput, options: ConnectOptions) {
+   /**
+    * Use `connect`, which detects Tern and shakes hands first. In the tmux
+    * pane `tmuxPane` (`TMUX_PANE`), `hello` goes out without DA1 and the
+    * pane's `allow-set-title` is off until the session closes.
+    */
+   constructor(input: TermInput, output: TermOutput, options: ConnectOptions, tmuxPane?: string) {
       this.#input = input;
       this.#output = output;
       this.#options = options;
+      this.#tmuxPane = tmuxPane;
       const record = options.record ?? (options.env ?? process.env)['TERN_TSP_RECORD'];
       this.#record = record === '' ? undefined : record;
       this.#caps = {
@@ -178,8 +193,9 @@ export class Session implements AsyncIterable<SessionInput>, AsyncDisposable {
    }
 
    /**
-    * Switches the tty to raw mode, sends `hello` and a DA1 request, and
-    * waits for the reply; restores the tty when there is none.
+    * Switches the tty to raw mode, sends `hello` and a DA1 request (`hello`
+    * alone in tmux, where only the reply or the timeout decides), and waits
+    * for the reply; restores the tty when there is none.
     */
    async handshake(): Promise<boolean> {
       const options = this.#options;
@@ -188,7 +204,7 @@ export class Session implements AsyncIterable<SessionInput>, AsyncDisposable {
       this.#ownsInput = true;
       this.#wasRaw = this.#input.isRaw === true;
       const { promise, resolve } = Promise.withResolvers<boolean>();
-      const timer = setTimeout(() => resolve(false), options.timeout ?? 1000);
+      let timer: NodeJS.Timeout | undefined;
       this.#handshake = resolve;
       let connected = false;
       try {
@@ -196,6 +212,11 @@ export class Session implements AsyncIterable<SessionInput>, AsyncDisposable {
             this.#installHooks();
          this.#input.setRawMode?.(true);
          this.#attach();
+         if (this.#tmuxPane !== undefined) {
+            const off = ['set-option', '-p', '-t', this.#tmuxPane, 'allow-set-title', 'off'];
+            this.#titlesOff = (await this.#runTmux(off)) !== null;
+            if (!this.#titlesOff || this.#draining || this.#closed) return false;
+         }
          const script = process.argv[1] ?? process.argv0;
          const hello: HelloQuery = {
             q: 'hello',
@@ -205,7 +226,8 @@ export class Session implements AsyncIterable<SessionInput>, AsyncDisposable {
             ...(options.features === undefined ? {} : { features: options.features }),
          };
          this.#send({ verb: 'q', body: hello });
-         this.#output.write(DA1_QUERY);
+         if (this.#tmuxPane === undefined) this.#output.write(DA1_QUERY);
+         timer = setTimeout(() => resolve(false), options.timeout ?? 1000);
          if (!(await promise) || this.#draining || this.#closed) return false;
          this.#modesArmed = true;
          let modes = '';
@@ -337,10 +359,23 @@ export class Session implements AsyncIterable<SessionInput>, AsyncDisposable {
          setTimeout(drained.resolve, DRAIN_MS);
          try {
             await drained.promise;
+            await this.#restoreTitles();
          } finally {
             this.#finish();
          }
       }
+   }
+
+   /** Runs a tmux command; a rejected runner counts as failed. */
+   #runTmux(args: readonly string[]): Promise<string | null> {
+      return (this.#options.runTmux ?? runTmux)(args).catch(() => null);
+   }
+
+   /** Gives the tmux pane its title updates back, once TSP is over. */
+   async #restoreTitles(): Promise<void> {
+      if (!this.#titlesOff || this.#tmuxPane === undefined) return;
+      this.#titlesOff = false;
+      await this.#runTmux(['set-option', '-pu', '-t', this.#tmuxPane, 'allow-set-title']);
    }
 
    /** Attempts every close and mode reset, even after an output failure. */
@@ -489,6 +524,8 @@ export class Session implements AsyncIterable<SessionInput>, AsyncDisposable {
                for (const key of this.#keys.feed(item.bytes)) this.#deliver({ type: 'key', key });
                break;
             case 'da1':
+               // tmux answers DA1 itself: there only the reply or the timeout decides.
+               if (this.#tmuxPane !== undefined) break;
                this.#handshake?.(false);
                this.#handshake = undefined;
                break;
@@ -578,16 +615,38 @@ export class Session implements AsyncIterable<SessionInput>, AsyncDisposable {
 }
 
 /**
+ * Runs `tmux` from `PATH` with the inherited environment: its standard
+ * output, or `null` when it fails or outlives 500 ms.
+ */
+function runTmux(args: readonly string[]): Promise<string | null> {
+   const { promise, resolve } = Promise.withResolvers<string | null>();
+   execFile('tmux', [...args], { timeout: TMUX_TIMEOUT_MS, encoding: 'utf8' }, (error, stdout) =>
+      resolve(error ? null : stdout)
+   );
+   return promise;
+}
+
+/**
  * Connects to Tern: the session, or `null` when TSP isn't available
- * (`TERN_TSP=0`, not a tty, inside tmux/screen/zellij, or no reply before
- * DA1 or the timeout).
+ * (`TERN_TSP=0`, not a tty, inside screen/zellij, inside tmux whose session
+ * Tern doesn't draw, or no reply before DA1 or the timeout). Inside tmux it
+ * sends `hello` without DA1 (tmux answers DA1 itself) and turns the pane's
+ * `allow-set-title` off until the session closes.
  */
 export async function connect(options: ConnectOptions = {}): Promise<Session | null> {
    const env = options.env ?? process.env;
-   if (env['TERN_TSP'] === '0' || env['TMUX'] || env['STY'] || env['ZELLIJ']) return null;
+   if (env['TERN_TSP'] === '0' || env['STY'] || env['ZELLIJ']) return null;
    const input = options.input ?? process.stdin;
    const output = options.output ?? process.stdout;
    if (!input.isTTY || !output.isTTY) return null;
-   const session = new Session(input, output, options);
+   // Inside tmux, probe only while Tern draws the session: it sets `@tern-tsp` then.
+   const tmuxPane = env['TMUX'] ? env['TMUX_PANE'] : undefined;
+   if (env['TMUX']) {
+      if (!tmuxPane) return null;
+      const run = options.runTmux ?? runTmux;
+      const watched = await run(['show-options', '-qv', '@tern-tsp']).catch(() => null);
+      if (!watched?.trim()) return null;
+   }
+   const session = new Session(input, output, options, tmuxPane);
    return (await session.handshake()) ? session : null;
 }

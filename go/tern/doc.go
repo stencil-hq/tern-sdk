@@ -40,6 +40,7 @@
 //	})
 //
 // Environment: TERN_TSP=0 never speaks TSP; TERN_TSP_RECORD=<file> appends
-// every TSP message as JSONL for Tern's surface-play; TMUX, STY and ZELLIJ
-// turn TSP off (multiplexers swallow it).
+// every TSP message as JSONL for Tern's surface-play; STY and ZELLIJ turn
+// TSP off (screen and zellij swallow it); inside tmux (TMUX) a session
+// connects only while Tern draws that tmux session (its @tern-tsp option).
 package tern

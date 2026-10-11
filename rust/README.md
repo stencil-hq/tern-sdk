@@ -201,7 +201,8 @@ across cards, sections, overlays, tools and agents.
 | --- | --- |
 | `TERN_TSP=0` | Never speak TSP |
 | `TERN_TSP_RECORD=<file>` | Append every message, both ways, as JSONL |
-| `TMUX`, `STY`, `ZELLIJ` | Inside a multiplexer: no TSP |
+| `TMUX`, `TMUX_PANE` | Inside tmux: TSP only when Tern draws the session (`@tern-tsp`), with the pane's `allow-set-title` off while connected |
+| `STY`, `ZELLIJ` | Inside screen or zellij: no TSP |
 
 ## Examples
 

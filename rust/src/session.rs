@@ -67,6 +67,9 @@ const FLUSH_AFTER: Duration = Duration::from_millis(30);
 const DRAIN: Duration = Duration::from_millis(50);
 /// How long [`Session::blobs`] waits for its reply.
 const QUERY_TIMEOUT: Duration = Duration::from_secs(2);
+/// How long a `tmux` command may run before it counts as failed.
+#[cfg(any(unix, windows))]
+const TMUX_TIMEOUT: Duration = Duration::from_millis(500);
 
 /// How to connect.
 #[derive(Clone, Debug)]
@@ -419,25 +422,127 @@ pub struct Session<M = ()> {
 	last_in:  Instant,
 	/// The terminal's waker, when it has one.
 	waker:    Option<Waker>,
+	/// The tmux pane whose title updates are off while TSP is spoken.
+	tmux:     Option<TmuxPane>,
 	/// Closed already.
 	closed:   bool,
+}
+
+/// Runs a `tmux` command: its standard output, `None` when it fails.
+type RunTmux = fn(&[&str]) -> Option<String>;
+
+/// The tmux pane a session speaks TSP in.
+struct TmuxPane {
+	/// The pane id (`TMUX_PANE`, like `%3`).
+	pane: String,
+	/// Runs `tmux`.
+	run:  RunTmux,
+}
+
+impl TmuxPane {
+	/// Turns the pane's `allow-set-title` off (tmux makes every APC body the
+	/// title otherwise), or back to its inherited value: whether tmux agreed.
+	fn titles(&self, restore: bool) -> bool {
+		let args: &[&str] = if restore {
+			&["set-option", "-pu", "-t", &self.pane, "allow-set-title"]
+		} else {
+			&["set-option", "-p", "-t", &self.pane, "allow-set-title", "off"]
+		};
+		(self.run)(args).is_some()
+	}
+}
+
+/// How detection lets a session probe.
+#[cfg(any(unix, windows))]
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum Probe {
+	/// `hello` + DA1.
+	Direct,
+	/// Inside tmux whose session Tern draws: `hello` alone, in this pane.
+	Tmux(String),
+}
+
+/// Whether and how the environment `env` lets a session probe: never with
+/// `TERN_TSP=0` or inside screen or zellij; inside tmux only when the
+/// session's `@tern-tsp` option, read through `run`, has a value.
+#[cfg(any(unix, windows))]
+fn probe(
+	env: impl Fn(&str) -> Option<std::ffi::OsString>,
+	run: impl FnOnce(&[&str]) -> Option<String>,
+) -> Option<Probe> {
+	let set = |name: &str| env(name).is_some_and(|v| !v.is_empty());
+	if env("TERN_TSP").is_some_and(|v| v == "0") || set("STY") || set("ZELLIJ") {
+		return None;
+	}
+	if !set("TMUX") {
+		return Some(Probe::Direct);
+	}
+	let pane = env("TMUX_PANE")
+		.filter(|v| !v.is_empty())?
+		.into_string()
+		.ok()?;
+	let watched = run(&["show-options", "-qv", "@tern-tsp"])?;
+	(!watched.trim().is_empty()).then_some(Probe::Tmux(pane))
+}
+
+/// Runs `tmux` from `PATH` with the inherited environment: its standard
+/// output, or `None` when it fails or outlives [`TMUX_TIMEOUT`].
+#[cfg(any(unix, windows))]
+fn run_tmux(args: &[&str]) -> Option<String> {
+	use std::{
+		io::Read as _,
+		process::{Command, Stdio},
+	};
+	let mut child = Command::new("tmux")
+		.args(args)
+		.stdin(Stdio::null())
+		.stdout(Stdio::piped())
+		.stderr(Stdio::null())
+		.spawn()
+		.ok()?;
+	let deadline = Instant::now() + TMUX_TIMEOUT;
+	loop {
+		match child.try_wait() {
+			Ok(Some(status)) if status.success() => {
+				let mut out = String::new();
+				child.stdout.take()?.read_to_string(&mut out).ok()?;
+				return Some(out);
+			},
+			Ok(Some(_)) => return None,
+			Ok(None) if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(5)),
+			_ => {
+				let _ = child.kill();
+				let _ = child.wait();
+				return None;
+			},
+		}
+	}
 }
 
 impl<M> Session<M> {
 	/// Connects to the process's terminal (Unix and Windows only): `Ok(None)`
 	/// when TSP isn't available (`TERN_TSP=0`, stdin or stdout not a tty,
-	/// inside tmux, screen or zellij, or the terminal answers DA1 first or not
-	/// in time).
+	/// inside screen or zellij, inside tmux unless Tern draws its session, or
+	/// the terminal answers DA1 first or not in time). Inside tmux it sends
+	/// `hello` without DA1 (tmux answers DA1 itself) and turns the pane's
+	/// `allow-set-title` off until the session ends.
 	///
 	/// # Errors
 	/// When the tty can't be switched to raw mode or I/O fails.
 	#[cfg(any(unix, windows))]
 	pub fn connect(options: Options) -> Result<Option<Self>, Error> {
-		if !available() {
+		if !term::is_tty() {
 			return Ok(None);
 		}
+		let Some(probe) = probe(|name| std::env::var_os(name), run_tmux) else {
+			return Ok(None);
+		};
+		let tmux = match probe {
+			Probe::Direct => None,
+			Probe::Tmux(pane) => Some(TmuxPane { pane, run: run_tmux }),
+		};
 		let tty = Tty::open()?;
-		Self::with_terminal(tty, options)
+		Self::start(tty, options, tmux)
 	}
 
 	/// Runs the handshake over `term` (already in raw mode): writes `hello`
@@ -449,6 +554,17 @@ impl<M> Session<M> {
 	pub fn with_terminal(
 		term: impl Terminal + 'static,
 		options: Options,
+	) -> Result<Option<Self>, Error> {
+		Self::start(term, options, None)
+	}
+
+	/// [`with_terminal`](Self::with_terminal), inside the tmux pane `tmux`
+	/// when given: its title updates go off before `hello`, which goes out
+	/// without DA1, and come back when the session ends.
+	fn start(
+		term: impl Terminal + 'static,
+		options: Options,
+		tmux: Option<TmuxPane>,
 	) -> Result<Option<Self>, Error> {
 		let record = options.record.as_deref().map(Recorder::open).transpose()?;
 		let waker = term.waker();
@@ -465,18 +581,29 @@ impl<M> Session<M> {
 			modes: (false, false),
 			last_in: Instant::now(),
 			waker,
+			tmux: None,
 			closed: false,
 		};
+		if let Some(tmux) = tmux {
+			if !tmux.titles(false) {
+				session.closed = true;
+				session.out.term.restore()?;
+				return Ok(None);
+			}
+			session.tmux = Some(tmux);
+		}
 		let app = options.app.clone().or_else(exe_name);
 		match session.handshake(app, &options) {
 			Ok(true) => {},
 			Ok(false) => {
 				session.closed = true;
+				session.release_tmux();
 				session.out.term.restore()?;
 				return Ok(None);
 			},
 			Err(err) => {
 				session.closed = true;
+				session.release_tmux();
 				let _ = session.out.term.restore();
 				return Err(err);
 			},
@@ -497,12 +624,16 @@ impl<M> Session<M> {
 		Ok(Some(session))
 	}
 
-	/// Sends `hello` + DA1 and waits: whether the hello reply came first.
+	/// Sends `hello` + DA1 (`hello` alone in tmux, where only the reply or
+	/// the timeout decides) and waits: whether the hello reply came first.
 	fn handshake(&mut self, app: Option<String>, options: &Options) -> Result<bool, Error> {
 		let hello =
 			Query::Hello { app, ver: options.version.clone(), features: options.features.clone() };
 		let mut bytes = self.out.enc.encode(&Message::Query(hello.clone()))?;
-		bytes.extend_from_slice(b"\x1b[c");
+		let da1 = self.tmux.is_none();
+		if da1 {
+			bytes.extend_from_slice(b"\x1b[c");
+		}
 		if let Some(record) = &mut self.out.record {
 			record.log("out", "q", &[], serde_json::to_value(&hello)?);
 		}
@@ -542,7 +673,7 @@ impl<M> Session<M> {
 						self.out.enc.set_limit(self.caps.apc);
 						accepted = true;
 					},
-					Item::Da1 if !accepted => return Ok(false),
+					Item::Da1 if !accepted && da1 => return Ok(false),
 					other => self.item(other)?,
 				}
 			}
@@ -966,6 +1097,15 @@ impl<M> Session<M> {
 		self.shutdown()
 	}
 
+	/// Gives the tmux pane its title updates back, once TSP is over.
+	fn release_tmux(&mut self) {
+		if let Some(tmux) = self.tmux.take()
+			&& !tmux.titles(true)
+		{
+			tracing::warn!(pane = %tmux.pane, "could not restore the tmux pane's allow-set-title");
+		}
+	}
+
 	/// The close sequence (idempotent).
 	fn shutdown(&mut self) -> Result<(), Error> {
 		if self.closed {
@@ -1003,6 +1143,7 @@ impl<M> Session<M> {
 				_ => break,
 			}
 		}
+		self.release_tmux();
 		note(self.out.term.restore().map_err(Error::from));
 		first.map_or(Ok(()), Err)
 	}
@@ -1026,21 +1167,147 @@ fn open<M>(surfaces: &mut [State<M>], sf: Surface) -> Result<&mut State<M>, Erro
 	}
 }
 
-/// Whether the environment allows TSP on the process's terminal.
-#[cfg(any(unix, windows))]
-fn available() -> bool {
-	let set = |name: &str| std::env::var_os(name).is_some_and(|v| !v.is_empty());
-	if std::env::var_os("TERN_TSP").is_some_and(|v| v == "0") {
-		return false;
-	}
-	if set("TMUX") || set("STY") || set("ZELLIJ") {
-		return false;
-	}
-	term::is_tty()
-}
-
 /// The executable's file name, without extension.
 fn exe_name() -> Option<String> {
 	let exe = std::env::current_exe().ok()?;
 	Some(exe.file_stem()?.to_string_lossy().into_owned())
+}
+
+#[cfg(test)]
+mod tests {
+	use std::{cell::RefCell, collections::VecDeque, ffi::OsString, io, time::Duration};
+
+	use super::{Options, Session, TmuxPane};
+	use crate::term::Terminal;
+
+	thread_local! {
+		/// What the terminal was sent and which tmux commands ran, in order.
+		static LOG: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+	}
+
+	fn log(line: String) {
+		LOG.with(|log| log.borrow_mut().push(line));
+	}
+
+	fn take_log() -> Vec<String> {
+		LOG.with(|log| log.take())
+	}
+
+	/// A tmux that agrees to every command.
+	#[allow(clippy::unnecessary_wraps, reason = "a RunTmux")]
+	fn tmux_ok(args: &[&str]) -> Option<String> {
+		log(format!("tmux {}", args.join(" ")));
+		Some(String::new())
+	}
+
+	/// A tmux that fails every command.
+	fn tmux_fails(args: &[&str]) -> Option<String> {
+		log(format!("tmux {}", args.join(" ")));
+		None
+	}
+
+	/// A terminal that answers with `input`, chunk by chunk, and logs output.
+	struct Script(VecDeque<&'static [u8]>);
+
+	impl Terminal for Script {
+		fn write(&mut self, bytes: &[u8]) -> io::Result<()> {
+			log(format!("out {}", String::from_utf8_lossy(bytes)));
+			Ok(())
+		}
+
+		fn read(&mut self, buf: &mut [u8], _: Option<Duration>) -> io::Result<Option<usize>> {
+			let Some(bytes) = self.0.pop_front() else {
+				return Ok(None);
+			};
+			buf[..bytes.len()].copy_from_slice(bytes);
+			Ok(Some(bytes.len()))
+		}
+	}
+
+	const HELLO: &[u8] = b"\x1b_tsp;r;{\"r\":\"hello\",\"v\":1,\"credits\":2}\x1b\\";
+
+	/// The pane `%3`, run by `run`.
+	fn pane(run: super::RunTmux) -> TmuxPane {
+		TmuxPane { pane: "%3".into(), run }
+	}
+
+	/// An environment of `vars`.
+	#[cfg(any(unix, windows))]
+	fn env(vars: &'static [(&'static str, &'static str)]) -> impl Fn(&str) -> Option<OsString> {
+		move |name| {
+			vars
+				.iter()
+				.find(|(k, _)| *k == name)
+				.map(|(_, v)| OsString::from(v))
+		}
+	}
+
+	#[cfg(any(unix, windows))]
+	#[test]
+	fn probe_follows_the_environment_and_the_tmux_option() {
+		use super::{Probe, probe};
+		let unreachable = |_: &[&str]| -> Option<String> { panic!("tmux ran") };
+		assert_eq!(probe(env(&[]), unreachable), Some(Probe::Direct));
+		assert_eq!(probe(env(&[("TMUX", "")]), unreachable), Some(Probe::Direct));
+		let off: [&'static [(&str, &str)]; 4] = [
+			&[("TERN_TSP", "0")],
+			&[("STY", "1.pts")],
+			&[("ZELLIJ", "0")],
+			&[("TMUX", "/tmp/t,1,0"), ("TMUX_PANE", "%3"), ("TERN_TSP", "0")],
+		];
+		for vars in off {
+			assert_eq!(probe(env(vars), unreachable), None, "{vars:?}");
+		}
+		let tmux = &[("TMUX", "/tmp/t,1,0"), ("TMUX_PANE", "%3")];
+		let mut asked = Vec::new();
+		let watched = probe(env(tmux), |args| {
+			asked = args.iter().map(ToString::to_string).collect();
+			Some("1\n".into())
+		});
+		assert_eq!(watched, Some(Probe::Tmux("%3".into())));
+		assert_eq!(asked, ["show-options", "-qv", "@tern-tsp"]);
+		assert_eq!(probe(env(tmux), |_| Some("\n".into())), None);
+		assert_eq!(probe(env(tmux), |_| None), None);
+		assert_eq!(probe(env(&[("TMUX", "/tmp/t,1,0")]), unreachable), None);
+	}
+
+	#[test]
+	fn tmux_sends_hello_alone_and_restores_titles_on_close() {
+		take_log();
+		let term = Script(VecDeque::from([&b"\x1b[?62;c"[..], HELLO]));
+		let session = Session::<()>::start(term, Options::new().record(None), Some(pane(tmux_ok)))
+			.unwrap()
+			.expect("DA1 must not decide in tmux");
+		session.close().unwrap();
+		let log = take_log();
+		assert_eq!(log[0], "tmux set-option -p -t %3 allow-set-title off");
+		assert!(log[1].starts_with("out \x1b_tsp;q;"), "{log:?}");
+		assert!(!log[1].contains("\x1b[c"), "{log:?}");
+		assert_eq!(log.last().unwrap(), "tmux set-option -pu -t %3 allow-set-title");
+	}
+
+	#[test]
+	fn tmux_without_a_reply_restores_titles() {
+		take_log();
+		let options = Options::new()
+			.record(None)
+			.timeout(Duration::from_millis(20));
+		let session = Session::<()>::start(Script(VecDeque::new()), options, Some(pane(tmux_ok)));
+		assert!(session.unwrap().is_none());
+		let log = take_log();
+		assert_eq!(log.len(), 3, "{log:?}");
+		assert_eq!(log[2], "tmux set-option -pu -t %3 allow-set-title");
+	}
+
+	#[test]
+	fn tmux_refusing_titles_off_means_no_tsp() {
+		take_log();
+		let session = Session::<()>::start(
+			Script(VecDeque::from([HELLO])),
+			Options::new().record(None),
+			Some(pane(tmux_fails)),
+		);
+		assert!(session.unwrap().is_none());
+		assert_eq!(take_log(), ["tmux set-option -p -t %3 allow-set-title off"]);
+	}
 }
