@@ -278,6 +278,15 @@ func (p plainer) node(t *tree) []string {
 			alt = "image"
 		}
 		return []string{"[" + alt + "]"}
+	case KindMedia:
+		path := str(pr, "path")
+		if path == "" {
+			path = "media"
+		}
+		if rev := str(pr, "rev"); rev != "" {
+			path += " @ " + rev
+		}
+		return []string{"[" + path + "]"}
 	case KindList:
 		var lines []string
 		for _, c := range t.children {

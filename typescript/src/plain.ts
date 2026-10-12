@@ -269,6 +269,11 @@ class Plain {
             return [];
          case 'image':
             return [`[${prop(p, 'alt') || 'image'}]`];
+         case 'media': {
+            const rev = prop(p, 'rev');
+            const path = prop(p, 'path') || 'media';
+            return [rev ? `[${path} @ ${rev}]` : `[${path}]`];
+         }
          case 'item': {
             const parts = [prop(p, 'label'), prop(p, 'detail'), prop(p, 'value')].filter(Boolean);
             return [`- ${parts.join('  ')}`];

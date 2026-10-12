@@ -69,6 +69,8 @@ pub mod kind {
 	pub const ICON: &str = "icon";
 	/// An image from a blob.
 	pub const IMAGE: &str = "image";
+	/// A file Tern loads by path and shows in its media viewer.
+	pub const MEDIA: &str = "media";
 	/// A selectable list.
 	pub const LIST: &str = "list";
 	/// One list row.
@@ -119,11 +121,11 @@ pub mod kind {
 	pub const EL: &str = "el";
 
 	/// Every kind of protocol version 1.
-	pub const ALL: [&str; 44] = [
+	pub const ALL: [&str; 45] = [
 		COL, ROW, CARD, SECTION, RULE, SPACER, TEXT, MD, CODE, DIFF, ANSI, ROWS, MATH, KV, TABLE,
-		TREE, BADGE, KBD, ICON, IMAGE, LIST, ITEM, TABS, PICKER, SPINNER, SHIMMER, ELAPSED, RATE,
-		PROGRESS, METER, CHART, EFFORT, EDITOR, INPUT, STATUS, SEG, TOAST, OVERLAY, TOOL, AGENT,
-		CHECKLIST, BLOCK, PREFS, EL,
+		TREE, BADGE, KBD, ICON, IMAGE, MEDIA, LIST, ITEM, TABS, PICKER, SPINNER, SHIMMER, ELAPSED,
+		RATE, PROGRESS, METER, CHART, EFFORT, EDITOR, INPUT, STATUS, SEG, TOAST, OVERLAY, TOOL,
+		AGENT, CHECKLIST, BLOCK, PREFS, EL,
 	];
 
 	/// The kinds whose `text` prop is primary text, updated with `text` and

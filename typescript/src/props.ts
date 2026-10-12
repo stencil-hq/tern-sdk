@@ -523,6 +523,16 @@ export interface ImageProps {
    readonly path?: string;
 }
 
+/** Props of `media`: a file Tern loads by path and shows in its media viewer. */
+export interface MediaProps {
+   /** The file: absolute, or relative to the pane's working directory. */
+   readonly path: string;
+   /** Read the file from git instead of disk (`HEAD`, a sha, `:0` for the index). */
+   readonly rev?: string;
+   /** `media` nodes sharing this link pan and zoom together. */
+   readonly link?: string;
+}
+
 /** One pair of a `kv`. */
 export interface KvItem {
    readonly k: Spans;
@@ -1178,6 +1188,7 @@ export interface KindProps {
    rows: RowsProps;
    math: MathProps;
    image: ImageProps;
+   media: MediaProps;
    kv: KvProps;
    table: TableProps;
    tree: TreeProps;

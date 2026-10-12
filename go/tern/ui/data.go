@@ -184,3 +184,17 @@ type Image struct {
 
 // Node builds the image.
 func (i Image) Node() tern.Node { return Build(tern.KindImage, i, nil) }
+
+// Media is a file Tern loads by path and shows in its media viewer (kind media).
+type Media struct {
+	Common
+	// Path is the file: absolute, or relative to the pane's working directory.
+	Path string `json:"path"`
+	// Rev reads the file from git instead of disk (HEAD, a sha, ":0" for the index).
+	Rev string `json:"rev,omitzero"`
+	// Link makes media nodes sharing it pan and zoom together.
+	Link string `json:"link,omitzero"`
+}
+
+// Node builds the media node.
+func (m Media) Node() tern.Node { return Build(tern.KindMedia, m, nil) }

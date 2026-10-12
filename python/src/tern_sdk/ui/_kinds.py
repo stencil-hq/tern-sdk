@@ -292,6 +292,11 @@ def image(
     return make("image", {"blob": blob, "builtin": builtin, "alt": alt, "w": w, "h": h, "path": path}, (), common)
 
 
+def media(path: str, *, rev: str | None = None, link: str | None = None, **common: Unpack[Common]) -> Node:
+    """A file Tern loads by path (or from git at `rev`) and shows in its media viewer."""
+    return make("media", {"path": path, "rev": rev, "link": link}, (), common)
+
+
 # Lists, tabs and pickers
 
 

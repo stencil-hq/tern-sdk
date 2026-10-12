@@ -106,6 +106,7 @@ func TestPlainSanitizesEveryOutputPath(t *testing.T) {
 		{KindKbd, map[string]any{"keys": []string{dirty}}},
 		{KindIcon, map[string]any{"aria": dirty}},
 		{KindImage, map[string]any{"alt": dirty}},
+		{KindMedia, map[string]any{"path": dirty, "rev": dirty}},
 		{KindList, map[string]any{"empty": dirty}},
 		{KindItem, map[string]any{"label": dirty, "detail": dirty, "value": dirty}},
 		{KindTabs, map[string]any{"items": []any{map[string]any{"label": dirty}}}},

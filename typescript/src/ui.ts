@@ -21,6 +21,7 @@ export type LeafKind =
    | 'diff'
    | 'rows'
    | 'image'
+   | 'media'
    | 'kv'
    | 'table'
    | 'tree'
@@ -110,6 +111,7 @@ export const ui: { readonly [K in BuildKind]: Builder<K> } = {
    rows: builder('rows'),
    math: builder('math'),
    image: builder('image'),
+   media: builder('media'),
    kv: builder('kv'),
    table: builder('table'),
    tree: builder('tree'),

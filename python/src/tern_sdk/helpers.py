@@ -265,6 +265,10 @@ def _render(node: Mapping[str, Json], cols: int) -> list[str]:
             return []
         case "image":
             return [f"[image: {_text(p.get('alt')) or _text(p.get('title')) or 'image'}]"]
+        case "media":
+            rev = _text(p.get("rev"))
+            path = _text(p.get("path")) or "media"
+            return [f"[media: {path} @ {rev}]" if rev else f"[media: {path}]"]
         case "list":
             out = _block([], cols, kids)
             if not out and p.get("empty") is not None:

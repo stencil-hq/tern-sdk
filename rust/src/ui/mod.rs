@@ -131,9 +131,9 @@ macro_rules! from_node {
 
 from_node!(
 	Col, Row, Card, Section, Rule, Spacer, TextNode, Md, Code, Diff, Ansi, Rows, Math, Kv, Table,
-	Tree, Badge, Kbd, IconNode, Image, List, Item, Tabs, Picker, Spinner, Shimmer, Elapsed, Rate,
-	Progress, Meter, Chart, Effort, Editor, Input, StatusBar, Seg, Toast, Overlay, Tool, Agent,
-	Checklist, Prefs
+	Tree, Badge, Kbd, IconNode, Image, Media, List, Item, Tabs, Picker, Spinner, Shimmer, Elapsed,
+	Rate, Progress, Meter, Chart, Effort, Editor, Input, StatusBar, Seg, Toast, Overlay, Tool,
+	Agent, Checklist, Prefs
 );
 
 // ---------------------------------------------------------------------------
@@ -608,6 +608,28 @@ impl<M> Image<M> {
 /// An image.
 pub fn image<M>() -> Image<M> {
 	new("image")
+}
+
+common_kind!(
+	/// `media`: a file Tern loads by path and shows in its media viewer.
+	Media
+);
+
+impl<M> Media<M> {
+	props! {
+		/// A git revision to read the file from (`HEAD`, a sha, `:0` for the index).
+		rev(String) = "rev";
+		/// `media` nodes sharing this link pan and zoom together.
+		link(String) = "link";
+	}
+}
+
+/// A file at `path` (absolute, or relative to the pane's working directory) in
+/// Tern's media viewer.
+pub fn media<M>(path: impl Into<String>) -> Media<M> {
+	let mut node = new::<M, Media<M>>("media");
+	node.0.set("path", &path.into());
+	node
 }
 
 // ---------------------------------------------------------------------------

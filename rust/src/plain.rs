@@ -414,6 +414,10 @@ fn inline<M>(node: &Node<M>) -> String {
 		],
 		"icon" => vec![string(node, "aria").unwrap_or_default().to_owned()],
 		"image" => vec![format!("[image: {}]", string(node, "alt").unwrap_or("image"))],
+		"media" => vec![match string(node, "rev") {
+			Some(rev) => format!("[media: {} @ {rev}]", string(node, "path").unwrap_or("media")),
+			None => format!("[media: {}]", string(node, "path").unwrap_or("media")),
+		}],
 		"spinner" => vec![text(node, "label").unwrap_or_else(|| "...".into())],
 		"elapsed" => {
 			vec![duration(

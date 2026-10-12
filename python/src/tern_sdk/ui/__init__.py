@@ -22,6 +22,7 @@ from ._kinds import (
     elapsed,
     icon,
     image,
+    media,
     item,
     kbd,
     kv,
@@ -168,7 +169,7 @@ __all__ = [
     "ToolFrame", "TreeNode", "Truncate", "Wrap",
     "agent", "ansi", "badge", "card", "chart", "checklist", "code", "col", "diff", "editor",
     "effort", "el", "elapsed", "html", "icon", "image", "input", "item", "kbd", "kv", "list",
-    "math", "md", "meter", "node", "overlay", "picker", "prefs", "progress", "rate", "row",
+    "math", "md", "media", "meter", "node", "overlay", "picker", "prefs", "progress", "rate", "row",
     "rows", "rule", "section", "seg", "shimmer", "spacer", "span", "spinner", "status", "table",
     "tabs", "text", "toast", "tool", "tree",
 ]  # fmt: skip

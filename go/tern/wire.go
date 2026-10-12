@@ -46,6 +46,7 @@ const (
 	KindKbd       = "kbd"
 	KindIcon      = "icon"
 	KindImage     = "image"
+	KindMedia     = "media"
 	KindList      = "list"
 	KindItem      = "item"
 	KindTabs      = "tabs"
@@ -76,7 +77,7 @@ const (
 var Kinds = []string{
 	KindCol, KindRow, KindCard, KindSection, KindRule, KindSpacer, KindText, KindMd, KindCode,
 	KindDiff, KindAnsi, KindRows, KindMath, KindKV, KindTable, KindTree, KindBadge, KindKbd,
-	KindIcon, KindImage, KindList, KindItem, KindTabs, KindPicker, KindSpinner, KindShimmer,
+	KindIcon, KindImage, KindMedia, KindList, KindItem, KindTabs, KindPicker, KindSpinner, KindShimmer,
 	KindElapsed, KindRate, KindProgress, KindMeter, KindChart, KindEffort, KindEditor, KindInput,
 	KindStatus, KindSeg, KindToast, KindOverlay, KindTool, KindAgent, KindChecklist, KindBlock,
 	KindPrefs, KindEl,
