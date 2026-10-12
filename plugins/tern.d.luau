@@ -609,10 +609,21 @@ export type AgentMessage = {
 	role: "user" | "assistant", text: string, tools: { { [string]: any } },
 }
 
---- Window only: agent conversations; targets are pane ids or session resolve specs.
+--- Window only: an agent block `cx.agents:get` found; it keeps working after the call that got it.
+export type Agent = {
+	--- Pane id.
+	pane: number,
+	--- Sends Carly `message` as a scheduled run when the agent's turn ends (done, failed, exited or
+	--- closed), once, within 12 hours; the task id cancels it (`tern.carly.cancel`).
+	tocarly: (self: Agent, event: "finished", message: string) -> number,
+}
+
+--- Window only: agent conversations; targets are pane ids, session resolve specs or `Agent` handles.
 declare extern type AgentsCx with
 	--- Synchronously lists agent blocks across all sessions, with progress/input state and last assistant text.
 	function list(self): { AgentBlock }
+	--- The agent block a pane id or resolve spec names; errors when none does or the pane runs no agent.
+	function get(self, agent: number | string): Agent
 	--- Synchronously opens an agent; the window retains prompt until its composer reports sendable=true.
 	--- Omitted command/how use agent settings; queued prompts survive a Carly/plugin VM reset.
 	--- cwd "~"/"~/…" expands using the launch host's home. Native omp requires TSP send.
@@ -623,18 +634,18 @@ declare extern type AgentsCx with
 	--- Synchronously queues/submits one prompt; native omp uses one atomic TSP send event.
 	--- Native prompts queue until sendable=true, even if already editable/focused; bootstrap false is not an error.
 	--- Blank/concurrent pending prompts or unsupported native omp error.
-	function ask(self, agent: number | string, text: string): ()
+	function ask(self, agent: number | string | Agent, text: string): ()
 	--- Desktop async: resolves with last assistant text when idle; timeout is ms (default 30000).
 	--- Queued/newly submitted prompts are not idle; delivery errors reject the awaitable.
 	--- Carly uses await(...); plugins use :next(function(message, err, cx) ... end).
-	function wait(self, agent: number | string, opts: { timeout: number? }?): Awaitable<string?>
+	function wait(self, agent: number | string | Agent, opts: { timeout: number? }?): Awaitable<string?>
 	--- Last messages in chronological order (default 50, max 1000); last=0 returns none.
 	--- Reads the omp.session TSP chat, excluding chrome/thinking; non-omp agents return {}.
-	function transcript(self, agent: number | string, opts: { last: number? }?): { AgentMessage }
+	function transcript(self, agent: number | string | Agent, opts: { last: number? }?): { AgentMessage }
 	--- Sends Ctrl-C to interrupt the current turn without closing its block.
-	function interrupt(self, agent: number | string): ()
+	function interrupt(self, agent: number | string | Agent): ()
 	--- Closes the agent block and ends its program, without an interactive confirmation.
-	function stop(self, agent: number | string): ()
+	function stop(self, agent: number | string | Agent): ()
 end
 
 --- A palette action, including unavailable commands and plugin registrations.
@@ -1104,6 +1115,15 @@ export type FocusEvent = {
 	pane: number,
 	--- Its tab id.
 	tab: number,
+}
+
+--- Window only: `agent_finished` payload: an agent's turn ended, or the agent did. A turn that ends while a
+--- prompt waits for the agent is not reported.
+export type AgentFinishedEvent = {
+	--- Pane id.
+	pane: number,
+	--- "done" or "failed" as it reported, "exited" when its program exited, "closed" when its block closed.
+	result: "done" | "failed" | "exited" | "closed",
 }
 
 --- Window only: `pane_created` / `pane_closed` payload.
@@ -1661,7 +1681,7 @@ export type TaskSpec = {
 	--- Intervals >= 5 minutes for model turns; >= 1 minute for promptless checks.
 	when: string?,
 	--- Window event: command_finished, command_started, pane_closed, pane_created,
-	--- tab_created, tab_closed, title, cwd or focus. Needs a check or pane.
+	--- tab_created, tab_closed, title, cwd, focus or agent_finished. Needs a check or pane.
 	on: string?,
 	--- Luau source returning function(ev, cx, state), never a saved closure.
 	--- nil is quiet; false ends the task; string/table escalates with prompt.
@@ -1950,7 +1970,7 @@ declare tern: {
 	--- Host: `spawn(spec: SpawnSpec) -> SpawnSpec?` (sync filter) and `(ev, cx: EffectCx)` for `command_started`,
 	--- `command_finished`, `cwd`, `title`, `pane_exited`. Window: `window_start(cx: WindowCx)` and `(ev, cx: WindowCx)`
 	--- for `focus`, `pane_created`, `pane_closed`, `tab_created`, `tab_closed`, `command_started`, `command_finished`, `cwd`,
-	--- `title` and `canvas_action(ev: CanvasAction, cx) -> boolean?` (truthy consumes the owner's click).
+	--- `title`, `agent_finished` and `canvas_action(ev: CanvasAction, cx) -> boolean?` (truthy consumes the owner's click).
 	--- `window_start` runs once per plugin per window. The `spawn` wait (50 ms) counts from when the request is queued.
 	on: (name: string, fn: (...any) -> ...any) -> (),
 
