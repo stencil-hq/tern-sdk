@@ -181,6 +181,46 @@ bun examples/progress.tsx   # a flow surface with a running card
 bun examples/chat.tsx       # an inline surface with an editor in the dock
 ```
 
+### Native local-file links
+
+`local-links.ts` compares Markdown destinations with native span `href`s,
+without omp, a model call or a Markdown rewriter. Run it in a Tern pane:
+
+```sh
+bun examples/local-links.ts                    # use the example's own source file
+bun examples/local-links.ts "/path/to/report.html"
+```
+
+The target must be an existing local file. The example requires a native TSP
+connection and fails outside Tern instead of treating plain-text output as a
+rendering check. It does not open any destination automatically.
+
+Observed on macOS arm64 with Tern `0.8.3 (e2b8656)`:
+
+- The Markdown `file://` destination becomes plain text, with no `a` element.
+- The encoded absolute path, relative path and HTTPS Markdown controls produce
+  `a` elements.
+- Both native span controls produce `span.sf-link`, including the unchanged
+  `file://` URL used in the first Markdown row.
+
+This also reproduces with a non-HTML target. The difference is in Tern's
+Markdown link rendering, not HTML page loading or SDK URL rewriting. See
+[tern-sdk#19](https://github.com/stencil-hq/tern-sdk/issues/19). This example
+documents the behavior; it does not fix the renderer or close that issue.
+
+For an affected native Markdown renderer, using the encoded absolute local
+path as the destination is a client-side workaround. Keep percent-encoded
+filename bytes intact (`%20` for spaces, `%23` for a literal `#`); keep the
+original file URL for native spans and OSC 8 hyperlinks. Resolve relative
+paths against the intended session directory before constructing the target.
+Do not replace `file://` throughout Markdown source or change other URL schemes.
+The path controls here use the local file URL's `pathname`; Windows/UNC,
+remote hosts and fragment navigation have not been verified.
+
+To inspect what the SDK actually sent, set `TERN_TSP_RECORD` to a local JSONL
+file before running the example. The recording retains the original Markdown
+`file://` destination, so it can distinguish client output from rendering.
+
 ## Development
 
 ```sh
