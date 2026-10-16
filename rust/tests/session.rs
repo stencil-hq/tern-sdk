@@ -174,6 +174,11 @@ fn a_wake_ends_an_unbounded_wait() {
 		.expect("handshake runs")
 		.expect("TSP answers");
 	let waker = session.waker().expect("the terminal's waker");
+	#[allow(
+		clippy::disallowed_methods,
+		reason = "the SDK is published on its own and cannot depend on stencil-thread; its own \
+		          repository does not ban the method, so `expect` would warn there"
+	)]
 	std::thread::spawn(move || waker.wake())
 		.join()
 		.expect("wakes");
