@@ -324,6 +324,19 @@ class ChartPoint(TypedDict, total=False):
     value: Required[float]
     label: str
     title: str
+    tone: Tone
+    """This bar's fill instead of the chart's `token`."""
+
+
+class ChartMark(TypedDict, total=False):
+    """A dashed reference line (a target, a limit) across a `bars` or `spark`
+    chart, in value units; outside the domain it is clamped to its edge."""
+
+    value: Required[float]
+    tone: Tone
+    """The line's color (default muted foreground)."""
+    title: str
+    """The line's tooltip."""
 
 
 class ChartCol(TypedDict):

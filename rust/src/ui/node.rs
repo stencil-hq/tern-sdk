@@ -154,6 +154,19 @@ impl<M> Node<M> {
 		};
 		Ok(Self { kind: kind.to_owned(), props, children, handlers: Vec::new() })
 	}
+
+	/// The node's wire form without ids `{k, p?, c?}` (handlers dropped).
+	pub fn to_json(&self) -> Value {
+		let mut obj = Map::new();
+		obj.insert("k".into(), Value::String(self.kind.clone()));
+		if !self.props.is_empty() {
+			obj.insert("p".into(), Value::Object(self.props.clone()));
+		}
+		if !self.children.is_empty() {
+			obj.insert("c".into(), Value::Array(self.children.iter().map(Self::to_json).collect()));
+		}
+		Value::Object(obj)
+	}
 }
 
 /// Joins the `t` of spans (strings count as themselves).
@@ -443,6 +456,15 @@ macro_rules! base_methods {
 			self
 		}
 
+		/// A floating card of `card`'s tree shown while the pointer rests on
+		/// the node, in place of `title`. Sent id-less (ids, keys and handlers
+		/// inside are ignored); an older Tern ignores it.
+		pub fn hovercard<N>(mut self, card: impl Into<$crate::ui::Node<N>>) -> Self {
+			let card = card.into().to_json();
+			$crate::ui::node::AsNode::as_node(&mut self).set("hovercard", &card);
+			self
+		}
+
 		/// A link: ⌘-click opens it; `copy` and `open` use it.
 		pub fn href(mut self, href: impl Into<String>) -> Self {
 			$crate::ui::node::AsNode::as_node(&mut self).set("href", &href.into());
@@ -467,12 +489,6 @@ macro_rules! base_methods {
 			self
 		}
 
-		/// Lower size bounds.
-		pub fn min(mut self, min: $crate::ui::Bound) -> Self {
-			$crate::ui::node::AsNode::as_node(&mut self).set("min", &min);
-			self
-		}
-
 		/// Sets any prop untyped; `null` removes it.
 		pub fn prop(mut self, name: &str, value: impl ::serde::Serialize) -> Self {
 			$crate::ui::node::AsNode::as_node(&mut self).set(name, &value);
@@ -487,6 +503,17 @@ macro_rules! title_method {
 		/// A tooltip.
 		pub fn title(mut self, title: impl Into<String>) -> Self {
 			$crate::ui::node::AsNode::as_node(&mut self).set("title", &title.into());
+			self
+		}
+	};
+}
+
+/// The common `min` prop.
+macro_rules! min_method {
+	() => {
+		/// Lower size bounds.
+		pub fn min(mut self, min: $crate::ui::Bound) -> Self {
+			$crate::ui::node::AsNode::as_node(&mut self).set("min", &min);
 			self
 		}
 	};
@@ -760,11 +787,14 @@ pub(crate) use children_methods;
 pub(crate) use event_methods;
 pub(crate) use kind_type;
 pub(crate) use max_method;
+pub(crate) use min_method;
 pub(crate) use props;
 pub(crate) use title_method;
 
 impl<M> Node<M> {
 	base_methods!();
+
+	min_method!();
 
 	title_method!();
 

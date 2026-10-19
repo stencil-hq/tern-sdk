@@ -71,20 +71,24 @@ class BaseProps(Handlers, total=False):
     tone: Tone | None
     hidden: bool | None
     mark: Mark | None
+    hovercard: Node | Mapping[str, Json] | None
+    """A floating card shown while the pointer rests on the node, in place of
+    `title`: an id-less node tree (ids, keys and handlers inside are ignored).
+    An older Tern ignores it."""
     aria: str | None
     href: str | None
     grow: float | None
     shrink: float | None
     basis: float | Literal["content"] | None
-    min: Bounds | None
     props: Mapping[str, Json] | None
     """Extra props set untyped, merged last (an escape hatch for newer props)."""
 
 
 class Common(BaseProps, total=False):
-    """Every common prop: `BaseProps` plus `title`, `max` and `actions`."""
+    """Every common prop: `BaseProps` plus `title`, `min`, `max` and `actions`."""
 
     title: str | None
+    min: Bounds | None
     max: Bounds | None
     actions: Actions | None
 
@@ -92,6 +96,7 @@ class Common(BaseProps, total=False):
 class CommonNoTitle(BaseProps, total=False):
     """Common props for kinds whose `title` is their own."""
 
+    min: Bounds | None
     max: Bounds | None
     actions: Actions | None
 
@@ -100,12 +105,21 @@ class CommonNoMax(BaseProps, total=False):
     """Common props for kinds whose `max` is their own."""
 
     title: str | None
+    min: Bounds | None
+    actions: Actions | None
+
+
+class CommonNoBounds(BaseProps, total=False):
+    """Common props for kinds whose `min` and `max` are their own (`chart`)."""
+
+    title: str | None
     actions: Actions | None
 
 
 class PickerCommon(BaseProps, total=False):
     """Common props for `picker`, whose `title` and `actions` are its own."""
 
+    min: Bounds | None
     max: Bounds | None
 
 
@@ -121,8 +135,8 @@ _EVENT_HANDLERS = (
 )
 _EVENT_ROUTES = frozenset(r for _, r in _EVENT_HANDLERS)
 _COMMON = (
-    "key", "role", "tone", "hidden", "mark", "title", "aria", "href", "grow", "shrink",
-    "basis", "min", "max", "actions",
+    "key", "role", "tone", "hidden", "mark", "title", "hovercard", "aria", "href", "grow",
+    "shrink", "basis", "min", "max", "actions",
 )  # fmt: skip
 
 
@@ -136,9 +150,12 @@ def text_props(text: Text | None) -> dict[str, Json]:
 
 
 def jsonify(value: Any) -> Json:
-    """A prop value as plain JSON data: mappings to dicts, sequences to lists."""
+    """A prop value as plain JSON data: mappings to dicts, sequences to lists,
+    a node to its id-less wire form."""
     if isinstance(value, (str, int, float, bool)) or value is None:
         return value
+    if isinstance(value, Node):
+        return value.to_json()
     if isinstance(value, Mapping):
         return {str(k): jsonify(v) for k, v in value.items()}
     if isinstance(value, (list, tuple)):

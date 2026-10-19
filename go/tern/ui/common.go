@@ -38,6 +38,9 @@ type Common struct {
 	Actions *Actions `json:"actions,omitzero"`
 	// Title is a tooltip.
 	Title string `json:"title,omitzero"`
+	// Hovercard is a floating card shown while the pointer rests on the
+	// node, in place of Title. An older Tern ignores it.
+	Hovercard Hovercard `json:"hovercard,omitzero"`
 	// Aria is the accessible name of a node that shows no text.
 	Aria string `json:"aria,omitzero"`
 	// Href is a link for the node.
@@ -91,6 +94,7 @@ type CommonWithoutTitle struct {
 	Hidden     bool                          `json:"hidden,omitzero"`
 	Mark       Mark                          `json:"mark,omitzero"`
 	Actions    *Actions                      `json:"actions,omitzero"`
+	Hovercard  Hovercard                     `json:"hovercard,omitzero"`
 	Aria       string                        `json:"aria,omitzero"`
 	Href       string                        `json:"href,omitzero"`
 	Grow       float64                       `json:"grow,omitzero"`
@@ -131,6 +135,7 @@ type CommonWithoutMax struct {
 	Mark       Mark                          `json:"mark,omitzero"`
 	Actions    *Actions                      `json:"actions,omitzero"`
 	Title      string                        `json:"title,omitzero"`
+	Hovercard  Hovercard                     `json:"hovercard,omitzero"`
 	Aria       string                        `json:"aria,omitzero"`
 	Href       string                        `json:"href,omitzero"`
 	Grow       float64                       `json:"grow,omitzero"`
@@ -169,6 +174,7 @@ type PickerCommon struct {
 	Tone       Tone                          `json:"tone,omitzero"`
 	Hidden     bool                          `json:"hidden,omitzero"`
 	Mark       Mark                          `json:"mark,omitzero"`
+	Hovercard  Hovercard                     `json:"hovercard,omitzero"`
 	Aria       string                        `json:"aria,omitzero"`
 	Href       string                        `json:"href,omitzero"`
 	Grow       float64                       `json:"grow,omitzero"`
@@ -210,6 +216,37 @@ func (c Common) handlers() tern.Handlers {
 		OnToggle: c.OnToggle, OnSelect: c.OnSelect, OnActivate: c.OnActivate, OnChange: c.OnChange,
 		OnFocus: c.OnFocus, OnEdit: c.OnEdit, OnUndo: c.OnUndo, OnSend: c.OnSend,
 	}
+}
+
+// Hovercard is a node tree sent as a prop value without ids ({k, p?, c?}): a
+// hovercard. Keys and handlers inside are ignored; its nodes are not
+// addressable by ops. The zero Hovercard is left out.
+type Hovercard struct{ tern.Element }
+
+// MarshalJSON writes the tree as {k, p?, c?}.
+func (c Hovercard) MarshalJSON() ([]byte, error) {
+	if c.Element == nil {
+		return []byte("null"), nil
+	}
+	return tern.Marshal(cardJSON(c.Node()))
+}
+
+// cardJSON is n's id-less wire form.
+func cardJSON(n tern.Node) map[string]any {
+	out := map[string]any{"k": n.Kind}
+	if len(n.Props) > 0 {
+		out["p"] = n.Props
+	}
+	var c []any
+	for _, child := range n.Children {
+		if child != nil {
+			c = append(c, cardJSON(child.Node()))
+		}
+	}
+	if len(c) > 0 {
+		out["c"] = c
+	}
+	return out
 }
 
 // Actions say what a pointer does on a node: an action name per gesture.

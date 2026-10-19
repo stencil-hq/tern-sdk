@@ -148,7 +148,8 @@ type MeterMark struct {
 // Node builds the meter.
 func (m Meter) Node() tern.Node { return Build(tern.KindMeter, m, nil) }
 
-// Chart is bars, a sparkline or a heatmap (kind chart).
+// Chart is bars, a sparkline or a heatmap (kind chart). Its Min and Max are
+// the value domain and shadow Common's size bounds.
 type Chart struct {
 	Common
 	// Kind is heatmap (default), bars or spark.
@@ -161,6 +162,14 @@ type Chart struct {
 	Summary Rich `json:"summary,omitzero"`
 	// Series are the bars of bars and spark charts.
 	Series []Point `json:"series,omitzero"`
+	// Min is the low end of a bars or spark chart's value domain (default 0);
+	// values are clamped into it.
+	Min *float64 `json:"min,omitzero"`
+	// Max is the high end of a bars or spark chart's value domain (default
+	// the largest series or mark value).
+	Max *float64 `json:"max,omitzero"`
+	// Marks are dashed reference lines across a bars or spark chart.
+	Marks []ChartMark `json:"marks,omitzero"`
 	// Cells are a heatmap's rows of intensities, 0–1; nil cells are transparent.
 	Cells [][]*float64 `json:"cells,omitzero"`
 	// Tips are a heatmap's tooltips, indexed like Cells.
@@ -186,6 +195,18 @@ type Point struct {
 	Value float64 `json:"value"`
 	Label string  `json:"label,omitzero"`
 	Title string  `json:"title,omitzero"`
+	// Tone fills this bar instead of the chart's Token.
+	Tone Tone `json:"tone,omitzero"`
+}
+
+// ChartMark is a dashed reference line (a target, a limit) at Value, in
+// value units; outside the domain it is clamped to its edge.
+type ChartMark struct {
+	Value float64 `json:"value"`
+	// Tone colors the line (default muted foreground).
+	Tone Tone `json:"tone,omitzero"`
+	// Title is the line's tooltip.
+	Title string `json:"title,omitzero"`
 }
 
 // ChartCol labels a heatmap column.

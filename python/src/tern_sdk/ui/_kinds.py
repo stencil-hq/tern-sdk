@@ -7,7 +7,9 @@ from collections.abc import Mapping, Sequence
 from typing import Any, Literal, Unpack
 
 from ..wire import Json
-from ._node import Common, CommonNoTitle, Handlers, Node, PickerCommon, make, text_props
+from ._node import (
+    Common, CommonNoBounds, CommonNoTitle, Handlers, Node, PickerCommon, make, text_props,
+)  # fmt: skip
 from ._types import (
     AgentRetry,
     AgentStats,
@@ -18,6 +20,7 @@ from ._types import (
     CaretAnchor,
     ChartCol,
     ChartKind,
+    ChartMark,
     ChartPoint,
     ChecklistMode,
     CodeMark,
@@ -435,16 +438,22 @@ def chart(
     token: str | None = None,
     summary: Text | None = None,
     series: Sequence[ChartPoint] | None = None,
+    min: float | None = None,
+    max: float | None = None,
+    marks: Sequence[ChartMark] | None = None,
     cells: Sequence[Sequence[float | None]] | None = None,
     tips: Sequence[Sequence[str | None]] | None = None,
     rows: Sequence[str] | None = None,
     cols: Sequence[ChartCol] | None = None,
-    **common: Unpack[Common],
+    **common: Unpack[CommonNoBounds],
 ) -> Node:
-    """A heatmap, a bar chart or a sparkline."""
+    """A heatmap, a bar chart or a sparkline. For `bars`/`spark`, `min`/`max`
+    fix the value domain (default 0 to the largest series or mark value) and
+    `marks` draw dashed reference lines."""
     own = {
         "kind": kind, "size": size, "token": token, "summary": summary, "series": series,
-        "cells": cells, "tips": tips, "rows": rows, "cols": cols,
+        "min": min, "max": max, "marks": marks, "cells": cells, "tips": tips, "rows": rows,
+        "cols": cols,
     }  # fmt: skip
     return make("chart", own, (), common)
 

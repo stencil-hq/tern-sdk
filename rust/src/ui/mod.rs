@@ -38,8 +38,8 @@ pub use node::{Node, View};
 pub use types::*;
 
 use self::node::{
-	actions_methods, base_methods, children_methods, event_methods, kind_type, max_method, props,
-	title_method,
+	actions_methods, base_methods, children_methods, event_methods, kind_type, max_method,
+	min_method, props, title_method,
 };
 
 /// The status chip of a card (the same values as tools).
@@ -94,6 +94,7 @@ macro_rules! common_kind {
 
 		impl<M> $name<M> {
 			base_methods!();
+			min_method!();
 			title_method!();
 			max_method!();
 			actions_methods!();
@@ -644,6 +645,8 @@ kind_type!(
 impl<M> List<M> {
 	base_methods!();
 
+	min_method!();
+
 	title_method!();
 
 	actions_methods!();
@@ -740,6 +743,8 @@ kind_type!(
 
 impl<M> Picker<M> {
 	base_methods!();
+
+	min_method!();
 
 	max_method!();
 
@@ -962,12 +967,21 @@ pub fn meter<M>() -> Meter<M> {
 	new("meter")
 }
 
-common_kind!(
-	/// `chart`: bars, a sparkline or a heatmap.
+kind_type!(
+	/// `chart`: bars, a sparkline or a heatmap. Its `min`/`max` are a number
+	/// value domain, not the common size bounds.
 	Chart
 );
 
 impl<M> Chart<M> {
+	base_methods!();
+
+	title_method!();
+
+	actions_methods!();
+
+	event_methods!();
+
 	props! {
 		/// Which chart.
 		kind(ChartKind) = "kind";
@@ -979,6 +993,14 @@ impl<M> Chart<M> {
 		summary(Text) = "summary";
 		/// `bars`/`spark`: one bar per entry.
 		series(Vec<Point>) = "series";
+		/// `bars`/`spark`: the value domain's low end (default 0); values are
+		/// clamped into it.
+		min(f64) = "min";
+		/// `bars`/`spark`: the value domain's high end (default the largest
+		/// series or mark value).
+		max(f64) = "max";
+		/// `bars`/`spark`: dashed reference lines in value units.
+		marks(Vec<ChartMark>) = "marks";
 		/// `heatmap`: rows of intensities 0–1.
 		cells(Vec<Vec<Option<f64>>>) = "cells";
 		/// `heatmap`: a tooltip per cell.
@@ -1197,6 +1219,8 @@ kind_type!(
 impl<M> Tool<M> {
 	base_methods!();
 
+	min_method!();
+
 	max_method!();
 
 	actions_methods!();
@@ -1317,6 +1341,8 @@ kind_type!(
 
 impl<M> Prefs<M> {
 	base_methods!();
+
+	min_method!();
 
 	max_method!();
 

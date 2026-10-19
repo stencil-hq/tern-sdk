@@ -52,7 +52,9 @@ from ._kinds import (
     tool,
     tree,
 )
-from ._node import BaseProps, Common, CommonNoMax, CommonNoTitle, Handler, Handlers, Node, PickerCommon
+from ._node import (
+    BaseProps, Common, CommonNoBounds, CommonNoMax, CommonNoTitle, Handler, Handlers, Node, PickerCommon,
+)  # fmt: skip
 from ._shadow import input, list  # noqa: A004
 from ._types import (
     ActionControl,
@@ -67,6 +69,7 @@ from ._types import (
     CaretAnchor,
     ChartCol,
     ChartKind,
+    ChartMark,
     ChartPoint,
     ChecklistItem,
     ChecklistMode,
@@ -153,8 +156,9 @@ from ._types import (
 __all__ = [
     "ActionControl", "Actions", "AgentRetry", "AgentStats", "AgentStatus", "AgentTool", "Align",
     "AttrValue", "Badge", "BaseProps", "Bounds", "CaretAnchor", "ChartCol", "ChartKind",
-    "ChartPoint", "ChecklistItem", "ChecklistMode", "ChoiceControl", "ChoiceOption", "CodeMark",
-    "ColumnFormat", "Common", "CommonNoMax", "CommonNoTitle", "Decor", "DiffMode", "EffortLevel",
+    "ChartMark", "ChartPoint", "ChecklistItem", "ChecklistMode", "ChoiceControl", "ChoiceOption",
+    "CodeMark", "ColumnFormat", "Common", "CommonNoBounds", "CommonNoMax", "CommonNoTitle", "Decor",
+    "DiffMode", "EffortLevel",
     "ElapsedFormat", "ElementBuilder", "Extent", "Fx", "Gap", "Handler", "Handlers", "Html",
     "Hunk", "IconName", "InputBuilder", "InputType", "ItemStatus", "Justify", "KeysControl",
     "KvItem", "KvLayout", "LinesPreview", "ListMax", "Mark", "MeterCell", "MeterCellProps", "MeterMark",

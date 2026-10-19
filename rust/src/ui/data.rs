@@ -306,6 +306,23 @@ pub struct Point {
 	/// A tooltip.
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub title: Option<String>,
+	/// This bar's fill instead of the chart's `token`.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub tone:  Option<Tone>,
+}
+
+/// A dashed reference line (a target, a limit) across a `bars` or `spark`
+/// chart. Outside the domain it is clamped to its edge.
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
+pub struct ChartMark {
+	/// Where the line sits, in value units.
+	pub value: f64,
+	/// The line's color (default muted foreground).
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub tone:  Option<Tone>,
+	/// The line's tooltip.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub title: Option<String>,
 }
 
 /// A heatmap column label.

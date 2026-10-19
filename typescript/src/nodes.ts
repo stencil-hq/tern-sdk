@@ -309,7 +309,7 @@ export function createNode(
             continue;
          }
          if (takeHandler(handlers, key, value)) continue;
-         const json = toJson(value);
+         const json = toJson(key === 'hovercard' && value instanceof Node ? value.toJSON() : value);
          if (json !== undefined) props[key] = json;
       }
    }

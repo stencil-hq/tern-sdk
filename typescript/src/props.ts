@@ -4,6 +4,8 @@
  * `(string & {})` escape hatch for values newer than the SDK.
  */
 
+import type { Node, NodeJson } from './nodes.js';
+
 /** The semantic color of a node's chrome. */
 export type Tone =
    | 'neutral'
@@ -381,6 +383,13 @@ export interface CommonProps {
    readonly actions?: Actions;
    /** A tooltip. */
    readonly title?: string;
+   /**
+    * A floating card shown when the pointer rests on the node, in place of
+    * `title` while open: an id-less node tree (a `Node` is sent as its JSON;
+    * its handlers, ids and keys are ignored). `null` removes it. An older
+    * Tern ignores it.
+    */
+   readonly hovercard?: Node | NodeJson | null;
    /** The accessible name of a node that shows no text. */
    readonly aria?: string;
    /** A link for the node. */
@@ -841,6 +850,19 @@ export interface ChartProps {
    readonly series?: readonly {
       readonly value: number;
       readonly label?: string;
+      readonly title?: string;
+      /** This bar's fill instead of `token`. */
+      readonly tone?: Tone;
+   }[];
+   /** `bars`/`spark`: the value domain's low end (default 0); values are clamped into it. */
+   readonly min?: number;
+   /** `bars`/`spark`: the value domain's high end (default the largest series or mark value). */
+   readonly max?: number;
+   /** `bars`/`spark`: dashed reference lines in value units; `title` is the line's tooltip. */
+   readonly marks?: readonly {
+      readonly value: number;
+      /** The line's color (default muted foreground). */
+      readonly tone?: Tone;
       readonly title?: string;
    }[];
    readonly cells?: readonly (readonly (number | null)[])[];

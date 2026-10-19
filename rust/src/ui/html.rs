@@ -27,8 +27,8 @@ use serde_json::{Map, Value};
 use super::{
 	InputType, Node,
 	node::{
-		actions_methods, base_methods, children_methods, event_methods, kind_type, max_method, props,
-		title_method,
+		actions_methods, base_methods, children_methods, event_methods, kind_type, max_method,
+		min_method, props, title_method,
 	},
 };
 
@@ -40,6 +40,8 @@ kind_type!(
 
 impl<M> El<M> {
 	base_methods!();
+
+	min_method!();
 
 	title_method!();
 
