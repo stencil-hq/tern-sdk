@@ -8,6 +8,8 @@ not a pane list. Tested with desktop Tern 0.9.4.
 2. Type a number displayed over a pane and press **Enter** to focus it.
 3. **Escape** cancels and removes the numbers without changing focus.
 
+![Large numeric hints on two tiled panes and a picture-in-picture pane](screenshots/pane-hints.png)
+
 Numbers follow the split tree (left/top before right/bottom), then floating
 panes in their layout order. Other tabs and parked panes are excluded. Zoomed
 layouts only offer the focused tiled pane and floating panes; hidden panes
