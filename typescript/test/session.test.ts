@@ -403,17 +403,15 @@ describe('surfaces', () => {
       await session.close();
    });
 
-   test('stylesheets and palettes go to the surface', async () => {
+   test('stylesheets go to the surface', async () => {
       const { term, session } = await connected();
       const surface = session.open({ id: 'pick', mode: 'flow' });
       surface.stylesheet('main', '.a{color:red}');
       surface.stylesheet('main', null);
-      surface.palette({ dark: { accent: '#00b4ff' } });
       expect(term.output.bodies('s')).toEqual([
          { sf: 'pick', name: 'main', css: '.a{color:red}' },
          { sf: 'pick', name: 'main' },
       ]);
-      expect(term.output.bodies('t')).toEqual([{ sf: 'pick', dark: { accent: '#00b4ff' } }]);
       await session.close();
    });
 

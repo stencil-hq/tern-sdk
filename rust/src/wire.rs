@@ -7,7 +7,7 @@
 //! Tern's own `tsp_chunks` cuts it, and each piece is sent with `c=<id>`
 //! (and `m=1` on all but the last).
 
-use std::{collections::BTreeMap, fmt};
+use std::fmt;
 
 use base64::Engine as _;
 use serde::{Deserialize, Serialize, Serializer, de::DeserializeOwned, ser::SerializeSeq};
@@ -155,8 +155,6 @@ pub mod feature {
 	pub const ADOPT: &str = "adopt";
 	/// Terminal: the `dock` region sticks to the pane's bottom.
 	pub const DOCK: &str = "dock";
-	/// Terminal: the `t` verb colors the surface.
-	pub const PROGRAM_PALETTE: &str = "program-palette";
 	/// Terminal: `reduceMotion` and `motion` events are reported.
 	pub const REDUCE_MOTION: &str = "reduce-motion";
 	/// Terminal: a `prefs` node in an inline surface's `layer` docks beside
@@ -471,34 +469,6 @@ impl Serialize for Op {
 	}
 }
 
-/// The names of a palette's two variants.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
-pub struct PaletteNames {
-	/// The dark variant's name.
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub dark:  Option<String>,
-	/// The light variant's name.
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub light: Option<String>,
-}
-
-/// A `t` message: the program palette, token → `#rrggbb` per variant.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
-pub struct Palette {
-	/// The surface (the live one when absent).
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub sf:    Option<String>,
-	/// The dark variant.
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub dark:  Option<BTreeMap<String, String>>,
-	/// The light variant.
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub light: Option<BTreeMap<String, String>>,
-	/// The variants' names.
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub name:  Option<PaletteNames>,
-}
-
 /// An `s` message: install, replace or (without `css`) remove a stylesheet.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
 pub struct Sheet {
@@ -568,8 +538,6 @@ pub enum Message {
 	Frame(Frame),
 	/// `b`.
 	Blob(Blob),
-	/// `t`.
-	Palette(Palette),
 	/// `s`.
 	Sheet(Sheet),
 	/// `x`.
@@ -584,7 +552,6 @@ impl Message {
 			Self::Open(_) => "o",
 			Self::Frame(_) => "f",
 			Self::Blob(_) => "b",
-			Self::Palette(_) => "t",
 			Self::Sheet(_) => "s",
 			Self::Close(_) => "x",
 		}
@@ -608,7 +575,6 @@ impl Message {
 			Self::Open(m) => serde_json::to_string(m)?,
 			Self::Frame(m) => serde_json::to_string(m)?,
 			Self::Blob(b) => base64::engine::general_purpose::STANDARD.encode(&b.data),
-			Self::Palette(m) => serde_json::to_string(m)?,
 			Self::Sheet(m) => serde_json::to_string(m)?,
 			Self::Close(m) => serde_json::to_string(m)?,
 		})

@@ -56,8 +56,8 @@ use crate::{
 	term::{self, Terminal, Waker},
 	ui::View,
 	wire::{
-		Blob, Cell, Close, Encoder, Event, Frame, Message, Mode, Op, Open, Palette, Query, Reply,
-		RevealAt, ScrollBy, Sheet,
+		Blob, Cell, Close, Encoder, Event, Frame, Message, Mode, Op, Open, Query, Reply, RevealAt,
+		ScrollBy, Sheet,
 	},
 };
 
@@ -848,17 +848,6 @@ impl<M> Session<M> {
 			name: name.to_owned(),
 			css:  css.map(str::to_owned),
 		}))
-	}
-
-	/// Sends the program palette of `sf` (its `sf` is filled in).
-	///
-	/// # Errors
-	/// A closed surface, or I/O.
-	pub fn palette(&mut self, sf: Surface, palette: Palette) -> Result<(), Error> {
-		let id = open(&mut self.surfaces, sf)?.id.clone();
-		self
-			.out
-			.send(&Message::Palette(Palette { sf: Some(id), ..palette }))
 	}
 
 	/// Closes `sf`: sends what still waits (credits or not), then `x`.

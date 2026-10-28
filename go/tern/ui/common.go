@@ -295,7 +295,7 @@ type Span struct {
 	T string `json:"t"`
 	// S is space-separated style tokens: muted, dim, strong, em, accent,
 	// success, warning, error, info, code, mono, path, key, link, num, ins,
-	// del, mark, typo, icon, hide, or a program palette token.
+	// del, mark, typo, icon, hide, or an omp theme token.
 	S string `json:"s,omitzero"`
 	// Fx is an effect.
 	Fx Fx `json:"fx,omitzero"`

@@ -1,13 +1,12 @@
 /**
  * A surface: a document the program shows in its pane, rendered from views
- * under credit-based flow control, with view ops, stylesheets, a palette and
- * event routing to node handlers.
+ * under credit-based flow control, with view ops, stylesheets and event
+ * routing to node handlers.
  */
 import { View, type Renderable } from './reconcile.js';
 import type {
    OutMessage,
    Op,
-   PaletteColors,
    RevealAt,
    ScrollTo,
    SurfaceMode,
@@ -36,13 +35,6 @@ export interface OpenOptions {
 export interface CloseOptions {
    /** Leave the surface's `main` in the scrollback. Default `true`. */
    readonly keep?: boolean;
-}
-
-/** The program palette: one token map per appearance and their names. */
-export interface Palette {
-   readonly dark?: PaletteColors;
-   readonly light?: PaletteColors;
-   readonly name?: { readonly dark?: string; readonly light?: string };
 }
 
 /** What a surface needs from its session. */
@@ -133,12 +125,6 @@ export class Surface implements AsyncDisposable {
          verb: 's',
          body: css === null || css === '' ? { sf: this.id, name } : { sf: this.id, name, css },
       });
-   }
-
-   /** Sends the program palette. */
-   palette(palette: Palette): void {
-      if (this.#closed) return;
-      this.#link.send({ verb: 't', body: { sf: this.id, ...palette } });
    }
 
    /** Gives the caret to an `editor` or `input`, or to none. */

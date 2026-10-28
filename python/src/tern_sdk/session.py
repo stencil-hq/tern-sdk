@@ -962,17 +962,6 @@ class Surface:
         if not self._closed:
             self.session._send(wire.stylesheet(self.id, name, css))
 
-    def palette(
-        self,
-        *,
-        dark: Mapping[str, str] | None = None,
-        light: Mapping[str, str] | None = None,
-        name: Mapping[str, str] | None = None,
-    ) -> None:
-        """Sends the program palette for this surface."""
-        if not self._closed:
-            self.session._send(wire.palette(self.id, dark=dark, light=light, name=name))
-
     def close(self, keep: bool | None = None) -> None:
         """Sends what is still pending as a last frame (even without credit,
         so a kept surface shows its final view), then closes the surface;

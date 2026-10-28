@@ -177,23 +177,6 @@ func (sf *Surface) Stylesheet(name, css string) error {
 	return sf.s.sendJSON(VerbSheet, msg)
 }
 
-// Palette is a program palette: token → #rrggbb per appearance.
-type Palette struct {
-	Dark  map[string]string
-	Light map[string]string
-	Name  *PaletteNames
-}
-
-// Palette sends the surface's program palette, replacing the last one.
-func (sf *Surface) Palette(p Palette) error {
-	sf.s.mu.Lock()
-	defer sf.s.mu.Unlock()
-	if sf.closed {
-		return ErrClosed
-	}
-	return sf.s.sendJSON(VerbPalette, PaletteMsg{SF: sf.id, Dark: p.Dark, Light: p.Light, Name: p.Name})
-}
-
 // Close sends what is still pending and closes the surface, keeping it in
 // the scrollback unless it was opened with Discard.
 func (sf *Surface) Close() error {

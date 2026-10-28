@@ -56,7 +56,6 @@ export {
    type CloseOptions,
    type Dispatch,
    type OpenOptions,
-   type Palette,
    type SurfaceLink,
 } from './surface.js';
 export {

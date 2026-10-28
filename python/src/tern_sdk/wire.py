@@ -32,7 +32,7 @@ TEXT_KINDS: Final = frozenset(("text", "md", "code", "ansi", "math", "editor", "
 PROGRAM_FEATURES: Final = ("edit", "undo", "send")
 """Features a program may announce in its `hello`."""
 TERMINAL_FEATURES: Final = (
-    "blobs", "settle", "adopt", "dock", "program-palette", "reduce-motion", "aside",
+    "blobs", "settle", "adopt", "dock", "reduce-motion", "aside",
     "scroll", "styles", "flow",
 )  # fmt: skip
 """Features a terminal may list in its `hello` reply."""
@@ -282,25 +282,6 @@ def blob(data: bytes, mime: str | None = None) -> Outgoing:
         raise ValueError(f"blob of {len(data)} bytes is over {MAX_BLOB}")
     params = (("mime", mime),) if mime is not None else ()
     return Outgoing("b", base64.b64encode(data).decode("ascii"), params)
-
-
-def palette(
-    sf: str | None = None,
-    *,
-    dark: Mapping[str, str] | None = None,
-    light: Mapping[str, str] | None = None,
-    name: Mapping[str, str] | None = None,
-) -> Outgoing:
-    """The program palette (`t`)."""
-    body = _drop_none(
-        {
-            "sf": sf,
-            "dark": dict(dark) if dark is not None else None,
-            "light": dict(light) if light is not None else None,
-            "name": dict(name) if name is not None else None,
-        }
-    )
-    return Outgoing("t", body)
 
 
 def stylesheet(sf: str | None, name: str, css: str | None) -> Outgoing:

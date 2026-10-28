@@ -60,7 +60,7 @@ Each layer is usable without the ones above it.
 
 | Module | What it provides |
 | --- | --- |
-| `tern_sdk.wire` | Constants (`VERSION`, `APC_LIMIT`, `CREDITS`, `KINDS`, `TEXT_KINDS`, features), program -> terminal messages (`hello`, `blobs_query`, `open_surface`, `frame`, `blob`, `palette`, `stylesheet`, `close_surface`, `Ops.*` for the twelve frame ops), the encoder (`encode`, `chunks`, `ChunkIds`) and typed replies and events (`decode_reply`, `decode_event`; every one keeps its `raw` object) |
+| `tern_sdk.wire` | Constants (`VERSION`, `APC_LIMIT`, `CREDITS`, `KINDS`, `TEXT_KINDS`, features), program -> terminal messages (`hello`, `blobs_query`, `open_surface`, `frame`, `blob`, `stylesheet`, `close_surface`, `Ops.*` for the twelve frame ops), the encoder (`encode`, `chunks`, `ChunkIds`) and typed replies and events (`decode_reply`, `decode_event`; every one keeps its `raw` object) |
 | `tern_sdk.input` | `InputParser`: feed pty input, get key bytes, `Reply`, `Event` and `DA1` items; `flush()` releases undecided prefixes |
 | `tern_sdk.keys` | `KeyDecoder`: key bytes to `Key(name, text, ctrl, alt, shift, meta)`, legacy xterm, kitty `CSI u` and bracketed paste |
 | `tern_sdk.ui` | Builders for every kind but `block`, `span`, `el` builders per tag under `ui.html`, and `node(kind, props, children)` |
@@ -129,7 +129,7 @@ render those meters too.
   sends only the difference. A node given for a region is that region's
   root, whose own kind and props Tern doesn't draw (only its children); a
   list region is wrapped in a `col`; a bare node or list passed as the whole
-  view becomes `main`'s children. Also `stylesheet(name, css)`, `palette(dark=, light=, name=)`,
+  view becomes `main`'s children. Also `stylesheet(name, css)`,
   `focus`, `reveal`, `scroll`, `settle`, `suspend`, `resume`, raw
   `send(ops)` and `close(keep=None)`.
 - Flow control: at most `credits` frames in flight; a render while blocked

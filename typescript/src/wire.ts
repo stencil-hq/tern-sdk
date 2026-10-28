@@ -103,7 +103,6 @@ export const TERMINAL_FEATURES = [
    'settle',
    'adopt',
    'dock',
-   'program-palette',
    'reduce-motion',
    'aside',
    'scroll',
@@ -189,17 +188,6 @@ export interface FrameMessage {
    readonly ops: readonly Op[];
 }
 
-/** One palette variant: token name to `#rrggbb`. */
-export type PaletteColors = Readonly<Record<string, string>>;
-
-/** The program palette (`t`). */
-export interface PaletteMessage {
-   readonly sf?: string;
-   readonly dark?: PaletteColors;
-   readonly light?: PaletteColors;
-   readonly name?: { readonly dark?: string; readonly light?: string };
-}
-
 /** A stylesheet (`s`); an absent `css` removes the sheet. */
 export interface StylesheetMessage {
    readonly sf?: string;
@@ -218,7 +206,6 @@ export type OutMessage =
    | { readonly verb: 'q'; readonly body: Query }
    | { readonly verb: 'o'; readonly body: OpenMessage }
    | { readonly verb: 'f'; readonly body: FrameMessage }
-   | { readonly verb: 't'; readonly body: PaletteMessage }
    | { readonly verb: 's'; readonly body: StylesheetMessage }
    | { readonly verb: 'x'; readonly body: CloseMessage };
 

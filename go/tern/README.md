@@ -56,7 +56,7 @@ values, without tracking radio changes. Outside Tern it asks on the command line
 
 1. **Wire.** Constants (`ProtocolVersion`, `DefaultAPC`, `DefaultCredits`,
    `Kind*`, `TextKinds`, `Feature*`, `TermFeature*`), message bodies
-   (`HelloQuery`, `OpenMsg`, `FrameMsg`, `SheetMsg`, `PaletteMsg`,
+   (`HelloQuery`, `OpenMsg`, `FrameMsg`, `SheetMsg`,
    `CloseMsg`), the twelve ops (`OpAdd` … `OpResume`), `Encode` (Tern's
    chunker, `Chunks`), `EncodeBlob`, `SplitMessage`, `DecodeEvent`. JSON is
    compact and absent fields are omitted.
@@ -75,7 +75,7 @@ values, without tracking radio changes. Outside Tern it asks on the command line
    Tern's plugin worker; two siblings with one id return a
    `*DuplicateKeyError` and send nothing.
 5. **Session.** `Connect` → `Session.Open` → `Surface.Render`, with
-   `Stylesheet`, `Palette`, `Focus`, `Reveal`, `Scroll`, `Settle`,
+   `Stylesheet`, `Focus`, `Reveal`, `Scroll`, `Settle`,
    `Suspend`, `Resume`, `Send` (raw ops), `Close` (keep) and `Remove`.
    `Session.Blob`, `Session.HaveBlobs`, `Session.Caps`.
 6. **Helpers.** `Print`, `Ask` (`*Answer`, nil when cancelled) and

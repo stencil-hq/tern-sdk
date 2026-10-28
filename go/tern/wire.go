@@ -108,29 +108,27 @@ const (
 
 // Terminal features listed in the hello reply.
 const (
-	TermFeatureBlobs          = "blobs"
-	TermFeatureSettle         = "settle"
-	TermFeatureAdopt          = "adopt"
-	TermFeatureDock           = "dock"
-	TermFeatureProgramPalette = "program-palette"
-	TermFeatureReduceMotion   = "reduce-motion"
-	TermFeatureAside          = "aside"
-	TermFeatureScroll         = "scroll"
-	TermFeatureStyles         = "styles"
-	TermFeatureFlow           = "flow"
+	TermFeatureBlobs        = "blobs"
+	TermFeatureSettle       = "settle"
+	TermFeatureAdopt        = "adopt"
+	TermFeatureDock         = "dock"
+	TermFeatureReduceMotion = "reduce-motion"
+	TermFeatureAside        = "aside"
+	TermFeatureScroll       = "scroll"
+	TermFeatureStyles       = "styles"
+	TermFeatureFlow         = "flow"
 )
 
 // Message verbs, program to terminal and terminal to program.
 const (
-	VerbQuery   = "q"
-	VerbOpen    = "o"
-	VerbFrame   = "f"
-	VerbBlob    = "b"
-	VerbPalette = "t"
-	VerbSheet   = "s"
-	VerbClose   = "x"
-	VerbReply   = "r"
-	VerbEvent   = "e"
+	VerbQuery = "q"
+	VerbOpen  = "o"
+	VerbFrame = "f"
+	VerbBlob  = "b"
+	VerbSheet = "s"
+	VerbClose = "x"
+	VerbReply = "r"
+	VerbEvent = "e"
 )
 
 // Param is one key=value parameter of a TSP message.
@@ -168,20 +166,6 @@ type FrameMsg struct {
 	SF  string `json:"sf"`
 	S   int64  `json:"s"`
 	Ops []Op   `json:"ops"`
-}
-
-// PaletteMsg is the body of t: the program palette of a surface.
-type PaletteMsg struct {
-	SF    string            `json:"sf,omitempty"`
-	Dark  map[string]string `json:"dark,omitempty"`
-	Light map[string]string `json:"light,omitempty"`
-	Name  *PaletteNames     `json:"name,omitempty"`
-}
-
-// PaletteNames names the two variants of a palette.
-type PaletteNames struct {
-	Dark  string `json:"dark,omitempty"`
-	Light string `json:"light,omitempty"`
 }
 
 // SheetMsg is the body of s: a stylesheet installed or removed (nil CSS).
