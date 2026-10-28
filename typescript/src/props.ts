@@ -910,6 +910,8 @@ export interface InputProps {
    readonly readonly?: boolean;
    /** The owner accepts an atomic `send`. */
    readonly sendable?: boolean;
+   /** The program cannot read input yet: Tern keeps what is typed and sends it once this clears. */
+   readonly typeahead?: boolean;
 }
 
 /** Props of `editor`. */

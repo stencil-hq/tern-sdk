@@ -356,7 +356,7 @@ export type SpawnSpec = {
 	--- Working directory (always set; only the daemon expands a leading `~` in a returned one).
 	cwd: string,
 	--- Only the variables the daemon sets for the pane (`TERN_IDENTITY`, `TERN_PANE`, `TERN_PANE_SOCKET`,
-	--- `TERN_WINDOW_KEY`, `TERN_WINDOW_SOCKET`, `TERN_LENSES`, `TERN_COMPLETE`, `TERN_BLOB_DIR`); the pane's base environment is the
+	--- `TERN_WINDOW_KEY`, `TERN_WINDOW_SOCKET`, `TERN_EXE`, `TERN_LENSES`, `TERN_COMPLETE`, `TERN_BLOB_DIR`); the pane's base environment is the
 	--- login environment, not the daemon's (`tern.getenv` here reads the daemon's).
 	env: { [string]: string },
 }

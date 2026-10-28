@@ -486,6 +486,7 @@ def editor(
     lang: str | None = None,
     readonly: bool | None = None,
     sendable: bool | None = None,
+    typeahead: bool | None = None,
     max_lines: int | None = None,
     **common: Unpack[Common],
 ) -> Node:
@@ -493,7 +494,8 @@ def editor(
     own = {
         "text": text, "cursor": cursor, "anchor": anchor, "decor": decor, "ghost": ghost,
         "placeholder": placeholder, "prompt": prompt, "mode": mode, "lang": lang,
-        "readonly": readonly, "sendable": sendable, "maxLines": max_lines,
+        "readonly": readonly, "sendable": sendable, "typeahead": typeahead,
+        "maxLines": max_lines,
     }  # fmt: skip
     return make("editor", own, (), common)
 

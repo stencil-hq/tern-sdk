@@ -37,12 +37,13 @@ def input(  # noqa: A001
     lang: str | None = None,
     readonly: bool | None = None,
     sendable: bool | None = None,
+    typeahead: bool | None = None,
     **common: Unpack[Common],
 ) -> Node:
     """A single-line text field; the program owns its text and caret."""
     own = {
         "text": text, "cursor": cursor, "anchor": anchor, "decor": decor, "ghost": ghost,
         "placeholder": placeholder, "prompt": prompt, "mode": mode, "lang": lang,
-        "readonly": readonly, "sendable": sendable,
+        "readonly": readonly, "sendable": sendable, "typeahead": typeahead,
     }  # fmt: skip
     return make("input", own, (), common)

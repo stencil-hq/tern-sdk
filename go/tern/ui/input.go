@@ -27,6 +27,9 @@ type Field struct {
 	Readonly bool `json:"readonly,omitzero"`
 	// Sendable says the owner accepts a send event now.
 	Sendable bool `json:"sendable,omitzero"`
+	// Typeahead says the program cannot read input yet: Tern keeps what is
+	// typed into the field and sends it once this clears.
+	Typeahead bool `json:"typeahead,omitzero"`
 }
 
 // Decor styles UTF-16 range [From, To) of a field's text.

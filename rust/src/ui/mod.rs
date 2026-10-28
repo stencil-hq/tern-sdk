@@ -1088,6 +1088,8 @@ impl<M> Editor<M> {
 		readonly(bool) = "readonly";
 		/// Accepts an atomic `send`.
 		sendable(bool) = "sendable";
+		/// Input cannot be read yet: Tern keeps what is typed until this clears.
+		typeahead(bool) = "typeahead";
 		/// Cap the height at this many lines.
 		max_lines(u32) = "maxLines";
 	}
@@ -1127,6 +1129,8 @@ impl<M> Input<M> {
 		readonly(bool) = "readonly";
 		/// Accepts an atomic `send`.
 		sendable(bool) = "sendable";
+		/// Input cannot be read yet: Tern keeps what is typed until this clears.
+		typeahead(bool) = "typeahead";
 	}
 }
 
