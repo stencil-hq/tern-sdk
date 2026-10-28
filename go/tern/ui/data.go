@@ -136,6 +136,19 @@ type TreeNode struct {
 // Node builds the tree.
 func (t Tree) Node() tern.Node { return Build(tern.KindTree, t, nil) }
 
+// JSON is a JSON value Tern draws natively as a foldable tree (kind json).
+// Check the hello reply's kinds for json and fall back to Tree otherwise.
+type JSON struct {
+	Common
+	// Value is any JSON-marshalable value; absent reads as null.
+	Value any `json:"value,omitzero"`
+	// Open is how many levels of containers start expanded.
+	Open int `json:"open,omitzero"`
+}
+
+// Node builds the json node.
+func (j JSON) Node() tern.Node { return Build(tern.KindJSON, j, nil) }
+
 // Badge is a pill chip (kind badge).
 type Badge struct {
 	Common

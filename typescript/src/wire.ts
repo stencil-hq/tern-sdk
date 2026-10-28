@@ -33,6 +33,7 @@ export const KINDS = [
    'kv',
    'table',
    'tree',
+   'json',
    'badge',
    'kbd',
    'icon',

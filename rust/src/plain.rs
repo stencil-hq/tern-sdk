@@ -316,6 +316,12 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 		},
 		"table" => table(node, out),
 		"tree" => tree(list(node, "nodes"), 0, out),
+		"json" => {
+			let value = node.props.get("value").unwrap_or(&Value::Null);
+			if let Ok(text) = serde_json::to_string_pretty(value) {
+				out.extend(text.lines().map(str::to_owned));
+			}
+		},
 		"list" => {
 			for child in &node.children {
 				out.push(format!("- {}", inline(child)));

@@ -87,6 +87,11 @@ def test_tuples_become_lists_and_kv_pairs() -> None:
     assert ui.kbd("cmd", "k").props == {"keys": ["cmd", "k"]}
 
 
+def test_json_value_and_open() -> None:
+    n = ui.json({"a": [1, None]}, open=1)
+    assert n.to_json() == {"k": "json", "p": {"value": {"a": [1, None]}, "open": 1}}
+
+
 def test_untyped_node() -> None:
     n = ui.node("future-kind", {"x": 1}, [ui.text("a")], on_toggle=noop)
     assert n.to_json() == {"k": "future-kind", "p": {"x": 1}, "c": [{"k": "text", "p": {"text": "a"}}]}

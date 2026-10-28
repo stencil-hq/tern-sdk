@@ -25,6 +25,7 @@ export type LeafKind =
    | 'kv'
    | 'table'
    | 'tree'
+   | 'json'
    | 'kbd'
    | 'icon'
    | 'item'
@@ -115,6 +116,7 @@ export const ui: { readonly [K in BuildKind]: Builder<K> } = {
    kv: builder('kv'),
    table: builder('table'),
    tree: builder('tree'),
+   json: builder('json'),
    badge: builder('badge'),
    kbd: builder('kbd'),
    icon: builder('icon'),

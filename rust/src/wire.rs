@@ -61,6 +61,8 @@ pub mod kind {
 	pub const TABLE: &str = "table";
 	/// A disclosure tree.
 	pub const TREE: &str = "tree";
+	/// A JSON value Tern draws as a foldable tree.
+	pub const JSON: &str = "json";
 	/// A pill chip.
 	pub const BADGE: &str = "badge";
 	/// Keycaps.
@@ -121,11 +123,11 @@ pub mod kind {
 	pub const EL: &str = "el";
 
 	/// Every kind of protocol version 1.
-	pub const ALL: [&str; 45] = [
+	pub const ALL: [&str; 46] = [
 		COL, ROW, CARD, SECTION, RULE, SPACER, TEXT, MD, CODE, DIFF, ANSI, ROWS, MATH, KV, TABLE,
-		TREE, BADGE, KBD, ICON, IMAGE, MEDIA, LIST, ITEM, TABS, PICKER, SPINNER, SHIMMER, ELAPSED,
-		RATE, PROGRESS, METER, CHART, EFFORT, EDITOR, INPUT, STATUS, SEG, TOAST, OVERLAY, TOOL,
-		AGENT, CHECKLIST, BLOCK, PREFS, EL,
+		TREE, JSON, BADGE, KBD, ICON, IMAGE, MEDIA, LIST, ITEM, TABS, PICKER, SPINNER, SHIMMER,
+		ELAPSED, RATE, PROGRESS, METER, CHART, EFFORT, EDITOR, INPUT, STATUS, SEG, TOAST, OVERLAY,
+		TOOL, AGENT, CHECKLIST, BLOCK, PREFS, EL,
 	];
 
 	/// The kinds whose `text` prop is primary text, updated with `text` and

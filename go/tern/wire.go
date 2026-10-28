@@ -42,6 +42,7 @@ const (
 	KindKV        = "kv"
 	KindTable     = "table"
 	KindTree      = "tree"
+	KindJSON      = "json"
 	KindBadge     = "badge"
 	KindKbd       = "kbd"
 	KindIcon      = "icon"
@@ -76,7 +77,7 @@ const (
 // Kinds lists every node kind of the TSP vocabulary.
 var Kinds = []string{
 	KindCol, KindRow, KindCard, KindSection, KindRule, KindSpacer, KindText, KindMd, KindCode,
-	KindDiff, KindAnsi, KindRows, KindMath, KindKV, KindTable, KindTree, KindBadge, KindKbd,
+	KindDiff, KindAnsi, KindRows, KindMath, KindKV, KindTable, KindTree, KindJSON, KindBadge, KindKbd,
 	KindIcon, KindImage, KindMedia, KindList, KindItem, KindTabs, KindPicker, KindSpinner, KindShimmer,
 	KindElapsed, KindRate, KindProgress, KindMeter, KindChart, KindEffort, KindEditor, KindInput,
 	KindStatus, KindSeg, KindToast, KindOverlay, KindTool, KindAgent, KindChecklist, KindBlock,

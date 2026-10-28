@@ -21,7 +21,7 @@ MAX_BLOB: Final = 16 << 20
 
 KINDS: Final = (
     "col", "row", "card", "section", "rule", "spacer", "text", "md", "code", "diff", "ansi",
-    "math", "image", "media", "kv", "table", "tree", "badge", "kbd", "icon", "spinner", "shimmer",
+    "math", "image", "media", "kv", "table", "tree", "json", "badge", "kbd", "icon", "spinner", "shimmer",
     "elapsed", "progress", "rate", "list", "item", "tabs", "editor", "input", "status", "seg",
     "overlay", "toast", "rows", "picker", "prefs", "tool", "checklist", "agent", "chart",
     "meter", "block", "effort", "el",
@@ -39,7 +39,7 @@ TERMINAL_FEATURES: Final = (
 
 Kind: TypeAlias = Literal[
     "col", "row", "card", "section", "rule", "spacer", "text", "md", "code", "diff", "ansi",
-    "math", "image", "media", "kv", "table", "tree", "badge", "kbd", "icon", "spinner", "shimmer",
+    "math", "image", "media", "kv", "table", "tree", "json", "badge", "kbd", "icon", "spinner", "shimmer",
     "elapsed", "progress", "rate", "list", "item", "tabs", "editor", "input", "status", "seg",
     "overlay", "toast", "rows", "picker", "prefs", "tool", "checklist", "agent", "chart",
     "meter", "block", "effort", "el",

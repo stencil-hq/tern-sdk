@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 import unicodedata
@@ -257,6 +258,8 @@ def _render(node: Mapping[str, Json], cols: int) -> list[str]:
             return _plain_table(p, cols)
         case "tree":
             return _tree([n for n in p.get("nodes") or [] if isinstance(n, Mapping)])
+        case "json":
+            return json.dumps(p.get("value"), indent=2, ensure_ascii=False).split("\n")
         case "badge":
             return [f"[{_text(p.get('text'))}]"]
         case "kbd":

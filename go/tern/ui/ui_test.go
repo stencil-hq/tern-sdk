@@ -35,6 +35,13 @@ func TestZeroPropsStayAbsent(t *testing.T) {
 	}
 }
 
+func TestJSONCarriesValueAndOpen(t *testing.T) {
+	got := props(t, ui.JSON{Value: map[string]any{"a": 1}, Open: 1})
+	if want := `{"open":1,"value":{"a":1}}`; got != want {
+		t.Errorf("got %s, want %s", got, want)
+	}
+}
+
 func TestPointersSayZero(t *testing.T) {
 	cases := []struct {
 		e    tern.Element

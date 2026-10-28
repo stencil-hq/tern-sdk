@@ -132,9 +132,9 @@ macro_rules! from_node {
 
 from_node!(
 	Col, Row, Card, Section, Rule, Spacer, TextNode, Md, Code, Diff, Ansi, Rows, Math, Kv, Table,
-	Tree, Badge, Kbd, IconNode, Image, Media, List, Item, Tabs, Picker, Spinner, Shimmer, Elapsed,
-	Rate, Progress, Meter, Chart, Effort, Editor, Input, StatusBar, Seg, Toast, Overlay, Tool,
-	Agent, Checklist, Prefs
+	Tree, Json, Badge, Kbd, IconNode, Image, Media, List, Item, Tabs, Picker, Spinner, Shimmer,
+	Elapsed, Rate, Progress, Meter, Chart, Effort, Editor, Input, StatusBar, Seg, Toast, Overlay,
+	Tool, Agent, Checklist, Prefs
 );
 
 // ---------------------------------------------------------------------------
@@ -531,6 +531,27 @@ impl<M> Tree<M> {
 /// A disclosure tree.
 pub fn tree<M>() -> Tree<M> {
 	new("tree")
+}
+
+common_kind!(
+	/// `json`: a JSON value Tern draws as a foldable tree.
+	Json
+);
+
+impl<M> Json<M> {
+	/// How many levels of containers start expanded (default 0).
+	pub fn open(mut self, levels: u32) -> Self {
+		self.0.set("open", &levels);
+		self
+	}
+}
+
+/// A JSON value Tern draws natively as an interactive tree. Check the hello
+/// reply's `kinds` for `json` and fall back to [`tree`] otherwise.
+pub fn json<M>(value: impl Into<serde_json::Value>) -> Json<M> {
+	let mut node: Json<M> = new("json");
+	node.0.set("value", &value.into());
+	node
 }
 
 common_kind!(
@@ -1415,6 +1436,14 @@ mod tests {
 		);
 		// Switching back to plain text drops the spans.
 		assert_eq!(wire(styled.text("c")), json!({"k": "text", "p": {"text": "c"}}));
+	}
+
+	#[test]
+	fn json_carries_its_value_and_open_levels() {
+		assert_eq!(
+			wire::<()>(super::json(json!({"a": 1})).open(1)),
+			json!({"k": "json", "p": {"value": {"a": 1}, "open": 1}})
+		);
 	}
 
 	#[test]

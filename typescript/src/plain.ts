@@ -248,6 +248,8 @@ class Plain {
             }
             return columns(rows, right);
          }
+         case 'json':
+            return JSON.stringify(p['value'] ?? null, null, 2).split('\n');
          case 'tree': {
             const out: string[] = [];
             const walk = (items: JsonObject[], depth: number): void => {

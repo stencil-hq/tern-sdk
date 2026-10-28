@@ -5,6 +5,7 @@
  */
 
 import type { Node, NodeJson } from './nodes.js';
+import type { Json } from './wire.js';
 
 /** The semantic color of a node's chrome. */
 export type Tone =
@@ -615,6 +616,14 @@ export interface TreeProps {
    readonly nodes?: readonly TreeItem[];
 }
 
+/** Props of `json`. */
+export interface JsonProps {
+   /** The JSON value to draw; absent reads as null. */
+   readonly value?: Json;
+   /** How many levels of containers start expanded (default 0). */
+   readonly open?: number;
+}
+
 /** Props of `badge`. */
 export interface BadgeProps {
    readonly text?: string;
@@ -1214,6 +1223,7 @@ export interface KindProps {
    kv: KvProps;
    table: TableProps;
    tree: TreeProps;
+   json: JsonProps;
    badge: BadgeProps;
    kbd: KbdProps;
    icon: IconProps;

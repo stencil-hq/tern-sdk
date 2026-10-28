@@ -256,6 +256,15 @@ func (p plainer) node(t *tree) []string {
 	case KindTree:
 		list, _ := pr["nodes"].([]any)
 		return treeLines(list)
+	case KindJSON:
+		var b strings.Builder
+		enc := json.NewEncoder(&b)
+		enc.SetEscapeHTML(false)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(pr["value"]); err != nil {
+			return nil
+		}
+		return strings.Split(strings.TrimSuffix(b.String(), "\n"), "\n")
 	case KindBadge:
 		if s := str(pr, "text"); s != "" {
 			return []string{"[" + s + "]"}

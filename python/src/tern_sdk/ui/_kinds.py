@@ -266,6 +266,13 @@ def tree(nodes: Sequence[TreeNode], **common: Unpack[Common]) -> Node:
     return make("tree", {"nodes": nodes}, (), common)
 
 
+def json(value: Json, *, open: int | None = None, **common: Unpack[Common]) -> Node:  # noqa: A002
+    """A JSON value Tern draws natively as a foldable tree; `open` levels of
+    containers start expanded. Check the hello reply's `kinds` for `json` and
+    fall back to `tree` otherwise."""
+    return make("json", {"value": value, "open": open}, (), common)
+
+
 def badge(text: str, **common: Unpack[Common]) -> Node:
     """A pill chip (its color is the `tone` prop)."""
     return make("badge", {"text": text}, (), common)

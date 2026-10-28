@@ -51,6 +51,12 @@ describe('TSX', () => {
       expect(View.from(<Row key="row" />).find('main.label')?.kind).toBe('text');
    });
 
+   test('json carries its value and open levels and prints pretty', () => {
+      const n = ui.json({ value: { a: 1 }, open: 1 });
+      expect(json(n)).toEqual({ k: 'json', p: { value: { a: 1 }, open: 1 } });
+      expect(plain(n)).toBe('{\n  "a": 1\n}');
+   });
+
    test('kind-specific props, agent statuses and picker reasons survive the builders', () => {
       const title = [span('Styled', 'accent')];
       expect(ui.tool({ title }).props['title']).toEqual([{ t: 'Styled', s: 'accent' }]);
