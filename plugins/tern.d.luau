@@ -2,6 +2,15 @@
 -- `tern plugin types DIR` writes this file into DIR; add its path to the
 -- `luau-lsp.types.definitionFiles` setting so `host.luau` and `window.luau` type-check.
 -- Members only one context has say `host only` or `window only` in their docs.
+--
+-- Budgets: every call into a plugin may run 2 s of Lua in the host half, 50 ms in the
+-- window half and 4 ms in chrome formatters and `available`; native calls (the `cx` API,
+-- `tern.fs`, `tern.kv`, starting a process, `require`'s compile) don't count, but a call
+-- may take at most ten budgets of wall time with them. A call past either raises
+-- `tern: <hook> exceeded <n> ms` and pauses that hook (every timer callback, say): 5 s, doubling
+-- for each trip within 10 min of the last pause's end, up to 5 min; due timer, process and fetch
+-- callbacks wait for the pause to end. Window halves hear `tern.on("budget")` as hooks pause and
+-- resume. A native call that never returns hangs its thread: in the window half, the window.
 
 --- `"host"` in `host.luau` (daemon side), `"window"` in `window.luau` (UI side).
 export type Context = "host" | "window"
@@ -1126,6 +1135,27 @@ export type AgentFinishedEvent = {
 	result: "done" | "failed" | "exited" | "closed",
 }
 
+--- Window only: `agent_state` payload: an agent's state, as `cx.agents:list()` gives it, changed.
+export type AgentStateEvent = {
+	--- Pane id.
+	pane: number,
+	--- Its state at the last look; nil for an agent new since.
+	old: ("working" | "waiting_input" | "idle" | "exited")?,
+	--- Its state now.
+	new: "working" | "waiting_input" | "idle" | "exited",
+}
+
+--- Window only: `budget` payload: one of this plugin's own hooks paused for running over its budget, or resumed.
+export type BudgetEvent = {
+	--- The hook: "timer", "command <id>", "status", an event name, ….
+	hook: string,
+	state: "paused" | "resumed",
+	--- The budget it ran over, in ms ("paused" only).
+	ms: number?,
+	--- How long it is paused, in ms ("paused" only).
+	paused_ms: number?,
+}
+
 --- Window only: `pane_created` / `pane_closed` payload.
 export type PaneEvent = {
 	--- Pane id.
@@ -1631,6 +1661,9 @@ declare extern type WindowCx with
 	function toast(self, level: ToastLevel, text: string, sub: string?): ()
 	--- Copies `text` to the clipboard.
 	function copy(self, text: string): ()
+	--- This window's key, as `tern … --window KEY` takes it and `tern inspect` lists it (`""` for the first
+	--- window). Processes `tern.process.run` starts in the window context get it as `TERN_WINDOW_KEY`.
+	function window_key(self): string
 end
 
 --- Window only: one choice of `cx:pick`. Other fields ride along to the answer.
@@ -1839,6 +1872,8 @@ declare tern: {
 		--- Reads raw bytes (no UTF-8 check). With max_bytes, requires a regular
 		--- non-symlink file and rejects oversize input before allocating/reading it.
 		--- Raced growth is bounded too; nonregular targets never block on open.
+		--- Without max_bytes a FIFO or a stalled mount blocks until data comes, the window
+		--- half's UI thread included; no budget interrupts it.
 		read: (path: string, max_bytes: number?) -> string,
 		--- Writes `text` to a file, replacing it.
 		write: (path: string, text: string) -> (),
@@ -1855,6 +1890,7 @@ declare tern: {
 	--- Child processes on this context's machine.
 	process: {
 		--- Runs `argv`; without `cb` returns an awaitable, otherwise calls `cb` (window: plus a fresh `cx`); spawn failures raise. Raises on iOS.
+		--- The process starts on the calling thread (the UI thread in the window half) before this returns.
 		run: ((argv: { string }, opts: ProcessOptions?, cb: (result: ProcessResult, cx: WindowCx?) -> ()) -> ())
 			& ((argv: { string }, cb: (result: ProcessResult, cx: WindowCx?) -> ()) -> ())
 			& ((argv: { string }, opts: ProcessOptions?) -> Awaitable<ProcessResult>),
@@ -1970,7 +2006,8 @@ declare tern: {
 	--- Host: `spawn(spec: SpawnSpec) -> SpawnSpec?` (sync filter) and `(ev, cx: EffectCx)` for `command_started`,
 	--- `command_finished`, `cwd`, `title`, `pane_exited`. Window: `window_start(cx: WindowCx)` and `(ev, cx: WindowCx)`
 	--- for `focus`, `pane_created`, `pane_closed`, `tab_created`, `tab_closed`, `command_started`, `command_finished`, `cwd`,
-	--- `title`, `agent_finished` and `canvas_action(ev: CanvasAction, cx) -> boolean?` (truthy consumes the owner's click).
+	--- `title`, `agent_finished`, `agent_state` (AgentStateEvent), `budget` (BudgetEvent) and
+	--- `canvas_action(ev: CanvasAction, cx) -> boolean?` (truthy consumes the owner's click).
 	--- `window_start` runs once per plugin per window. The `spawn` wait (50 ms) counts from when the request is queued.
 	on: (name: string, fn: (...any) -> ...any) -> (),
 

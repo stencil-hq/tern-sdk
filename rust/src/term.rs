@@ -221,6 +221,71 @@ mod tests {
 	}
 }
 
+/// Writes console text `units` (UTF-16) into `buf` as UTF-8 and returns the
+/// bytes written: a high surrogate `high` held from the last read goes
+/// first, one `units` ends on is held there for the next, and unpaired
+/// surrogates become U+FFFD. `buf` takes 3 bytes per unit, plus 3.
+#[cfg(any(windows, test))]
+fn utf16_to_utf8(high: &mut Option<u16>, units: &[u16], buf: &mut [u8]) -> usize {
+	let mut units = high
+		.take()
+		.into_iter()
+		.chain(units.iter().copied())
+		.peekable();
+	let mut n = 0;
+	while let Some(unit) = units.next() {
+		let ch = if (0xd800..0xdc00).contains(&unit) {
+			match units.peek().copied() {
+				None => {
+					*high = Some(unit);
+					break;
+				},
+				Some(low) if (0xdc00..0xe000).contains(&low) => {
+					units.next();
+					char::decode_utf16([unit, low])
+						.next()
+						.and_then(Result::ok)
+						.unwrap_or(char::REPLACEMENT_CHARACTER)
+				},
+				Some(_) => char::REPLACEMENT_CHARACTER,
+			}
+		} else {
+			char::from_u32(u32::from(unit)).unwrap_or(char::REPLACEMENT_CHARACTER)
+		};
+		n += ch.encode_utf8(&mut buf[n..]).len();
+	}
+	n
+}
+
+#[cfg(test)]
+mod utf16_tests {
+	use super::utf16_to_utf8;
+
+	/// UTF-8 of `units` read in the given pieces, one buffer per read.
+	fn read(pieces: &[&[u16]]) -> String {
+		let mut high = None;
+		let mut out = Vec::new();
+		for units in pieces {
+			let mut buf = [0u8; 64];
+			let n = utf16_to_utf8(&mut high, units, &mut buf);
+			out.extend_from_slice(&buf[..n]);
+		}
+		String::from_utf8(out).expect("UTF-8")
+	}
+
+	#[test]
+	fn console_text_reaches_the_program_as_utf8() {
+		let units = |s: &str| s.encode_utf16().collect::<Vec<_>>();
+		// One committed Chinese character, as a Pinyin input method types it.
+		assert_eq!(read(&[&units("中")]), "中");
+		assert_eq!(read(&[&units("\x1b[Aa中文")]), "\x1b[Aa中文");
+		// A pair split across two reads is held, not lost.
+		let emoji = units("😀");
+		assert_eq!(read(&[&emoji[..1], &emoji[1..]]), "😀");
+		assert_eq!(read(&[&[0xdc00], &[0xd800, 0x61]]), "\u{fffd}\u{fffd}a");
+	}
+}
+
 /// The bytes that undo the input modes a session enabled.
 pub(crate) const fn mode_reset(paste: bool, kitty: bool) -> &'static [u8] {
 	match (paste, kitty) {
@@ -485,14 +550,13 @@ mod sys {
 
 	use windows_sys::Win32::{
 		Foundation::{CloseHandle, FALSE, HANDLE, WAIT_OBJECT_0},
-		Storage::FileSystem::ReadFile,
 		System::{
 			Console::{
 				CONSOLE_SCREEN_BUFFER_INFO, ENABLE_ECHO_INPUT, ENABLE_LINE_INPUT,
 				ENABLE_PROCESSED_INPUT, ENABLE_PROCESSED_OUTPUT, ENABLE_VIRTUAL_TERMINAL_INPUT,
 				ENABLE_VIRTUAL_TERMINAL_PROCESSING, GetConsoleMode, GetConsoleScreenBufferInfo,
 				GetStdHandle, INPUT_RECORD, KEY_EVENT, PeekConsoleInputW, ReadConsoleInputW,
-				STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, SetConsoleMode,
+				ReadConsoleW, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, SetConsoleMode,
 			},
 			Threading::{CreateEventW, INFINITE, SetEvent, WaitForMultipleObjects},
 		},
@@ -534,6 +598,9 @@ mod sys {
 		}
 	}
 
+	/// UTF-16 units one console read takes at most.
+	const WIDE: usize = 2048;
+
 	/// Raw mode on the console, with the previous modes to restore.
 	#[derive(Debug)]
 	pub(super) struct Raw {
@@ -545,6 +612,8 @@ mod sys {
 		in_mode:  u32,
 		/// The output mode before.
 		out_mode: u32,
+		/// A high surrogate the last read ended on, awaiting its low half.
+		high:     Option<u16>,
 	}
 
 	/// The console mode of `handle`, when it is a console.
@@ -600,7 +669,7 @@ mod sys {
 					return Err(err);
 				}
 			}
-			Ok(Self { input, output, in_mode, out_mode })
+			Ok(Self { input, output, in_mode, out_mode, high: None })
 		}
 
 		/// Whether a key press is queued; other console events are discarded,
@@ -636,7 +705,7 @@ mod sys {
 		}
 
 		pub(super) fn read(
-			&self,
+			&mut self,
 			buf: &mut [u8],
 			timeout: Option<Duration>,
 			wake: &Wake,
@@ -651,15 +720,33 @@ mod sys {
 			if !self.key_ready()? {
 				return Ok(None);
 			}
+			// The text comes as UTF-16 (`ReadConsoleW`), handed on as UTF-8:
+			// bytes (`ReadFile`) come in the console's input code page, which
+			// loses what it lacks and turns the rest of a multi-byte one such
+			// as GBK into no UTF-8 at all (a Chinese input method's single
+			// committed character never arrived).
+			// A unit takes at most 3 UTF-8 bytes, a held high surrogate with
+			// its low half 4.
+			let room = (buf.len() / 3).saturating_sub(1).clamp(1, WIDE);
+			let mut wide = [0u16; WIDE];
 			let mut got = 0;
-			let len = u32::try_from(buf.len()).unwrap_or(u32::MAX);
-			// SAFETY: reads at most len bytes into buf.
-			if unsafe { ReadFile(self.input, buf.as_mut_ptr(), len, &mut got, std::ptr::null_mut()) }
-				== 0
+			// SAFETY: reads at most `room` UTF-16 units into `wide`.
+			if unsafe {
+				ReadConsoleW(
+					self.input,
+					wide.as_mut_ptr().cast(),
+					u32::try_from(room).unwrap_or(u32::MAX),
+					&mut got,
+					std::ptr::null(),
+				)
+			} == 0
 			{
 				return Err(io::Error::last_os_error());
 			}
-			Ok(Some(got as usize))
+			let n = super::utf16_to_utf8(&mut self.high, &wide[..(got as usize).min(room)], buf);
+			// Half a pair alone hands on nothing yet (0 would mean the input
+			// closed).
+			Ok((n > 0).then_some(n))
 		}
 
 		pub(super) fn leave(&mut self) -> io::Result<()> {
