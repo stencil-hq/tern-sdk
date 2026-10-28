@@ -144,8 +144,21 @@ func (sf *Surface) Send(ops ...Op) error {
 	return sf.flushLocked(false)
 }
 
-// Focus gives the caret to editor or input id ("" for none).
-func (sf *Surface) Focus(id string) error { return sf.Send(OpFocus(id)) }
+// Focus gives the caret to editor or input id ("" for none). A focus still
+// waiting for credit is dropped: the caret ends where the last one puts it,
+// and the stale one may name a node of a view Tern never got.
+func (sf *Surface) Focus(id string) error {
+	sf.s.mu.Lock()
+	queue := sf.queue[:0]
+	for _, op := range sf.queue {
+		if len(op) == 0 || op[0] != "focus" {
+			queue = append(queue, op)
+		}
+	}
+	sf.queue = queue
+	sf.s.mu.Unlock()
+	return sf.Send(OpFocus(id))
+}
 
 // Reveal scrolls node id into view at "start", "end" or "nearest".
 func (sf *Surface) Reveal(id, at string) error { return sf.Send(OpReveal(id, at)) }

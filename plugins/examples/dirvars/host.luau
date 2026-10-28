@@ -216,7 +216,7 @@ type State = { cwd: string?, review: { Review } }
 
 local function button(label: string, action: string): Node
 	local node = ui.badge(label, "accent")
-	local props = node.p or {}
+	local props: { [string]: any } = node.p or {}
 	props.actions = { click = action }
 	node.p = props
 	return node
@@ -299,7 +299,7 @@ tern.block.define("approve", {
 			local current = load(review.path)
 			if current == nil or current.text ~= review.text then
 				approved(review.path, current)
-				cx:toast("warn", "File changed; not approved", "Refresh and review the new contents.")
+				cx:toast("error", "File changed; not approved", "Refresh and review the new contents.")
 			else
 				tern.kv.set(APPROVAL .. review.path, review.text)
 				invalidated[review.path] = nil

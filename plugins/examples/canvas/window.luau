@@ -1,5 +1,5 @@
 --!strict
-local tern = require("tern")
+-- `tern` is a global in every plugin context; no require is needed.
 
 local function dashboard(status: string)
 	return tern.ui.col({

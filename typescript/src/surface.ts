@@ -129,6 +129,9 @@ export class Surface implements AsyncDisposable {
 
    /** Gives the caret to an `editor` or `input`, or to none. */
    focus(id: string | null): void {
+      // The caret ends where the last focus puts it: a focus still waiting for credit
+      // is stale and may name a node of a view Tern never got.
+      this.#queue = this.#queue.filter(op => op[0] !== 'focus');
       this.send([['focus', id]]);
    }
 

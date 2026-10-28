@@ -374,6 +374,27 @@ describe('surfaces', () => {
       await session.close();
    });
 
+   test('a blocked focus drops the queued focus of a node never sent', async () => {
+      const { term, session } = await connected();
+      const surface = session.open();
+      surface.render([ui.md('a')]);
+      surface.render([ui.md('ab')]);
+      expect(surface.blocked).toBe(true);
+      surface.render([ui.md('ab'), ui.md('modal')]);
+      surface.focus('main.1');
+      surface.render([ui.md('abc')]);
+      surface.focus('main.0');
+      term.event({ ev: 'ack', sf: 's1', s: 1 });
+      await term.settle();
+      const frames = term.output.bodies('f');
+      expect(frames.map(f => f['s'])).toEqual([1, 2, 3]);
+      expect(frames[2]?.['ops']).toEqual([
+         ['text', 'main.0', 'append', 'c'],
+         ['focus', 'main.0'],
+      ]);
+      await session.close();
+   });
+
    test('an ack covers every frame up to it', async () => {
       const { term, session } = await connected({}, { ...HELLO, credits: 1 });
       const surface = session.open();

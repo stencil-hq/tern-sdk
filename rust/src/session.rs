@@ -794,6 +794,11 @@ impl<M> Session<M> {
 	/// # Errors
 	/// As [`send`](Self::send).
 	pub fn focus(&mut self, sf: Surface, id: Option<&str>) -> Result<(), Error> {
+		// The caret ends where the last focus puts it: a focus still waiting
+		// for credit is stale and may name a node of a view Tern never got.
+		open(&mut self.surfaces, sf)?
+			.queued
+			.retain(|op| !matches!(op, Op::Focus { .. }));
 		self.send(sf, vec![Op::Focus { id: id.map(str::to_owned) }])
 	}
 

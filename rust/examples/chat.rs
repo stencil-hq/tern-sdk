@@ -1,5 +1,6 @@
 //! An `inline` surface: a transcript in `main`, an `editor` in `dock` that
-//! the program edits from keys. Enter sends, Escape quits.
+//! the program edits from keys. Enter sends, Escape quits. Outside Tern it
+//! chats line by line on stdin and stdout.
 
 use tern_sdk::{
 	Input, Options, Session, SurfaceOptions, nodes,
@@ -126,8 +127,7 @@ mod tests {
 
 fn main() -> Result<(), tern_sdk::Error> {
 	let Some(mut session) = Session::connect(Options::new().feature(feature::SEND))? else {
-		println!("chat needs a terminal that speaks TSP (Tern).");
-		return Ok(());
+		return plain();
 	};
 	let sf = session.open(SurfaceOptions::inline().title("chat"))?;
 	let mut chat = Chat::default();
@@ -174,5 +174,27 @@ fn main() -> Result<(), tern_sdk::Error> {
 	}
 	session.close()?;
 	println!("Chat closed after {} messages.", chat.transcript.len());
+	Ok(())
+}
+
+/// Chats line by line on stdin and stdout, outside Tern.
+fn plain() -> Result<(), tern_sdk::Error> {
+	use std::io::{BufRead, Write};
+
+	let mut chat = Chat::default();
+	let mut out = std::io::stdout().lock();
+	write!(out, "> ")?;
+	out.flush()?;
+	for line in std::io::stdin().lock().lines() {
+		let before = chat.transcript.len();
+		chat.send(line?);
+		// `send` adds the message, then the reply; a blank line adds neither.
+		for (_, reply) in chat.transcript.iter().skip(before + 1) {
+			writeln!(out, "{reply}")?;
+		}
+		write!(out, "> ")?;
+		out.flush()?;
+	}
+	writeln!(out)?;
 	Ok(())
 }

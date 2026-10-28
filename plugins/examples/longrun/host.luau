@@ -235,7 +235,8 @@ local function dock(): Node
 			ui.span("+ −", "strong"),
 			ui.span(string.format(" threshold %s", common.duration(threshold())), "muted"),
 		}),
-		badge("Copy", "accent", "copy"),
+		-- Not "copy": that is Tern's own action and would copy the badge's text.
+		badge("Copy", "accent", "copy_line"),
 		badge("Clear", "muted", "clear"),
 	})
 end
@@ -303,7 +304,7 @@ tern.block.define("slow", {
 		if ev.ev ~= "action" then
 			return
 		end
-		if ev.act == "copy" then
+		if ev.act == "copy_line" then
 			copy(state, cx)
 		elseif ev.act == "clear" then
 			clear(state)

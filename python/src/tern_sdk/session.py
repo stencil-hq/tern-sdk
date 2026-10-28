@@ -934,7 +934,10 @@ class Surface:
         self._flush()
 
     def focus(self, id: str | None) -> None:
-        """Gives the caret to an `editor` or `input` (by id), or to none."""
+        """Gives the caret to an `editor` or `input` (by id), or to none. A
+        focus still waiting for credit is dropped: the caret ends where the last
+        one puts it, and the stale one may name a node Tern never got."""
+        self._queued = [op for op in self._queued if not op or op[0] != "focus"]
         self.send([wire.Ops.focus(id)])
 
     def reveal(self, id: str, at: RevealAt = "nearest") -> None:

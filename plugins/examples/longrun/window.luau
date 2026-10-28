@@ -54,7 +54,7 @@ local function reconcile(cx: WindowCx)
 	focused = cx.session:focused()
 	local busy: { [number]: boolean } = {}
 	for _, pane in cx.session:panes() do
-		busy[pane.pane] = pane.busy
+		busy[pane.pane] = pane.busy == true
 	end
 	for pane in running do
 		if not busy[pane] then
