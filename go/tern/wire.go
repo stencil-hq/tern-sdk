@@ -154,12 +154,13 @@ type BlobsQuery struct {
 
 // OpenMsg is the body of o, which opens a surface.
 type OpenMsg struct {
-	ID     string `json:"id"`
-	Mode   Mode   `json:"mode,omitempty"`
-	Title  string `json:"title,omitempty"`
-	Role   string `json:"role,omitempty"`
-	Adopt  bool   `json:"adopt,omitempty"`
-	Listen *bool  `json:"listen,omitempty"`
+	ID       string `json:"id"`
+	Mode     Mode   `json:"mode,omitempty"`
+	Title    string `json:"title,omitempty"`
+	Role     string `json:"role,omitempty"`
+	Adopt    bool   `json:"adopt,omitempty"`
+	Listen   *bool  `json:"listen,omitempty"`
+	Closable bool   `json:"closable,omitempty"`
 }
 
 // FrameMsg is the body of f: an atomic batch of ops for one surface.

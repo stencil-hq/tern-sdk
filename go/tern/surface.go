@@ -36,6 +36,9 @@ type SurfaceOptions struct {
 	// Discard makes Close remove the surface (keep:false) instead of
 	// leaving it in the scrollback.
 	Discard bool
+	// Closable opens with closable:true: closing the pane loses nothing,
+	// so Tern closes it without asking.
+	Closable bool
 }
 
 // Surface is one open document in the pane. Render diffs views into frames
@@ -71,7 +74,14 @@ func (s *Session) Open(opts SurfaceOptions) (*Surface, error) {
 	if opts.Mode == "" {
 		opts.Mode = Inline
 	}
-	msg := OpenMsg{ID: opts.ID, Mode: opts.Mode, Title: opts.Title, Role: opts.Role, Adopt: opts.Adopt}
+	msg := OpenMsg{
+		ID:       opts.ID,
+		Mode:     opts.Mode,
+		Title:    opts.Title,
+		Role:     opts.Role,
+		Adopt:    opts.Adopt,
+		Closable: opts.Closable,
+	}
 	if opts.NoListen {
 		msg.Listen = new(false)
 	}

@@ -29,7 +29,7 @@ impl Recorder {
 	pub fn log(&mut self, dir: &str, verb: &str, params: &[(&str, &str)], body: Value) {
 		let t = SystemTime::now()
 			.duration_since(UNIX_EPOCH)
-			.map_or(0, |d| d.as_millis());
+			.map_or_default(|d| d.as_millis());
 		let params: Map<String, Value> = params
 			.iter()
 			.map(|(k, v)| ((*k).to_owned(), Value::String((*v).to_owned())))

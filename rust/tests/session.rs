@@ -47,10 +47,9 @@ impl Terminal for Script {
 		pipes.output.extend_from_slice(bytes);
 		if pipes
 			.fail
-			.front()
-			.is_some_and(|prefix| bytes.starts_with(prefix))
+			.pop_front_if(|prefix| bytes.starts_with(prefix))
+			.is_some()
 		{
-			pipes.fail.pop_front();
 			return Err(io::Error::other("scripted write failure"));
 		}
 		pipes.input.extend(replies);
@@ -114,7 +113,7 @@ fn terminal(answer: Vec<Vec<u8>>) -> (Script, Rc<RefCell<Pipes>>) {
 	let pipes = Rc::new(RefCell::new(Pipes::default()));
 	let mut answer = Some(answer);
 	let respond: Responder = Box::new(move |bytes| {
-		if bytes.windows(7).any(|w| w == b"tsp;q;{") {
+		if bytes.array_windows().any(|w| w == b"tsp;q;{") {
 			answer.take().unwrap_or_default()
 		} else {
 			Vec::new()

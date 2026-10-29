@@ -27,6 +27,8 @@ export interface OpenOptions {
    readonly listen?: boolean;
    /** Reopen the closed inline surface with this id. */
    readonly adopt?: boolean;
+   /** `true`: closing the pane loses nothing, so Tern closes it without asking. */
+   readonly closable?: boolean;
    /** Also yield these action names after their node handlers run (used by `ask`). */
    readonly forwardActions?: readonly string[];
 }

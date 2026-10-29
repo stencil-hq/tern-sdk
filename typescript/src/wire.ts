@@ -180,6 +180,7 @@ export interface OpenMessage {
    readonly role?: string;
    readonly listen?: boolean;
    readonly adopt?: boolean;
+   readonly closable?: boolean;
 }
 
 /** A frame (`f`): an atomic batch of ops for one surface. */

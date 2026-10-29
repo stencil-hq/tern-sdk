@@ -728,14 +728,24 @@ class Session:
         listen: bool = True,
         adopt: bool | None = None,
         keep: bool = True,
+        closable: bool = False,
     ) -> Surface:
         """Opens a surface (`o`); ids default to `s1`, `s2`, …. `keep` is how
-        the surface closes when the session does."""
+        the surface closes when the session does. `closable=True` tells Tern
+        closing the pane loses nothing, so it closes without asking."""
         if id is None:
             self._next_surface += 1
             id = f"s{self._next_surface}"
         self._send(
-            wire.open_surface(id, mode=mode, title=title, role=role, listen=None if listen else False, adopt=adopt)
+            wire.open_surface(
+                id,
+                mode=mode,
+                title=title,
+                role=role,
+                listen=None if listen else False,
+                adopt=adopt,
+                closable=True if closable else None,
+            )
         )
         surface = Surface(self, id, mode, listen, keep)
         previous = self._retired.pop(id, None)

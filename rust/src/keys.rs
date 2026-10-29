@@ -158,11 +158,10 @@ impl Decoder {
 		while at < self.buf.len() {
 			if let Some(paste) = &mut self.paste {
 				let rest = &self.buf[at..];
-				if let Some(end) = rest.windows(6).position(|w| w == b"\x1b[201~") {
+				if let Some(end) = rest.array_windows().position(|w| w == b"\x1b[201~") {
 					paste.extend_from_slice(&rest[..end]);
 					at += end + 6;
-					let text =
-						String::from_utf8_lossy(&self.paste.take().unwrap_or_default()).into_owned();
+					let text = String::from_utf8_lossy_owned(self.paste.take().unwrap_or_default());
 					out.push(Key { text: Some(text), ..Key::named("paste") });
 					continue;
 				}
@@ -430,7 +429,8 @@ fn kitty(f: &[Vec<u32>]) -> Option<Key> {
 			Some(Key::named(name).with_mods(mods))
 		},
 		57399..=57427 => keypad(code).map(|name| Key::named(name).with_mods(mods)),
-		// Unmapped functional keys, media keys and lone modifiers are not delivered.
+		// Unmapped functional keys, media keys and lone modifiers are not
+		// delivered.
 		57344..=63743 => None,
 		_ => {
 			let ch = char::from_u32(code)?;

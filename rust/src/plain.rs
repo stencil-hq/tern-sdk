@@ -104,7 +104,7 @@ fn list<'a, M>(node: &'a Node<M>, key: &str) -> &'a [Value] {
 		.props
 		.get(key)
 		.and_then(Value::as_array)
-		.map_or(&[], Vec::as_slice)
+		.map_or_default(Vec::as_slice)
 }
 
 /// A node's primary text: `spans` when they are a list, else `text`.
@@ -572,7 +572,7 @@ fn prefs<M>(node: &Node<M>, out: &mut Vec<String>) {
 		{
 			let id = row.get("id").and_then(Value::as_str).unwrap_or_default();
 			let label = row.get("label").and_then(Value::as_str).unwrap_or(id);
-			let value = row.get("control").map_or_else(String::new, |c| {
+			let value = row.get("control").map_or_default(|c| {
 				["on", "value", "values", "label"]
 					.iter()
 					.find_map(|k| c.get(*k))

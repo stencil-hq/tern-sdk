@@ -239,22 +239,26 @@ impl Serialize for Query {
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
 pub struct Open {
 	/// The surface id; frames and events carry it as `sf`.
-	pub id:     String,
+	pub id:       String,
 	/// The mode (`inline` when absent).
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub mode:   Option<Mode>,
+	pub mode:     Option<Mode>,
 	/// Names the pane until the program sets its own title.
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub title:  Option<String>,
+	pub title:    Option<String>,
 	/// `data-surface` on the region elements, for stylesheets.
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub role:   Option<String>,
+	pub role:     Option<String>,
 	/// `false`: the program never reads its input.
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub listen: Option<bool>,
+	pub listen:   Option<bool>,
 	/// `true` reopens a closed inline surface with this id.
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub adopt:  Option<bool>,
+	pub adopt:    Option<bool>,
+	/// `true`: closing the pane loses nothing, so Tern closes it without
+	/// asking.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub closable: Option<bool>,
 }
 
 /// An `f` message: an atomic batch of ops on one surface.

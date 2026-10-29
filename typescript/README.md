@@ -115,6 +115,9 @@ restores the tty after the 50 ms drain if output fails. Raw-mode ownership
 and exit/SIGINT/SIGTERM/SIGHUP cleanup are armed before the handshake; a
 second session cannot acquire the same input.
 
+`open({closable: true})` tells Tern closing the pane loses nothing: while the
+surface is open, the pane closes without the "a program is running" prompt.
+
 `open({id, adopt: true})` reuses this session's last-sent view (without dock
 or layer) and frame sequence for a closed surface. For an unknown id, the
 first frame deletes `main` before adding the new view.

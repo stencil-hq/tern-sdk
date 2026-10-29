@@ -123,8 +123,9 @@ render those meters too.
 - `start(input, output, ...)` runs the handshake on given file descriptors
   or binary streams without the environment checks (tests drive it over
   `os.pipe()`).
-- `session.open(id=None, *, mode="inline", title=None, role=None, listen=True, adopt=None, keep=True)`
-  opens a surface (`s1`, `s2`, ...).
+- `session.open(id=None, *, mode="inline", title=None, role=None, listen=True, adopt=None, keep=True, closable=False)`
+  opens a surface (`s1`, `s2`, ...). `closable=True` tells Tern closing the
+  pane loses nothing, so it closes without the "a program is running" prompt.
 - `surface.render(view)` or `surface.render(main=..., dock=..., layer=...)`
   sends only the difference. A node given for a region is that region's
   root, whose own kind and props Tern doesn't draw (only its children); a

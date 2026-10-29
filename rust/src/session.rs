@@ -200,31 +200,35 @@ impl Capabilities {
 #[derive(Clone, Debug)]
 pub struct SurfaceOptions {
 	/// The id (default `s1`, `s2`, … per session).
-	pub id:     Option<String>,
+	pub id:       Option<String>,
 	/// The mode.
-	pub mode:   Mode,
+	pub mode:     Mode,
 	/// Names the pane until the program sets its own title.
-	pub title:  Option<String>,
+	pub title:    Option<String>,
 	/// `data-surface` for stylesheets.
-	pub role:   Option<String>,
+	pub role:     Option<String>,
 	/// Whether the program reads its events (default `true`).
-	pub listen: bool,
+	pub listen:   bool,
 	/// Reopen a closed inline surface with this id.
-	pub adopt:  bool,
+	pub adopt:    bool,
 	/// Keep it on screen when the session closes it (default `true`).
-	pub keep:   bool,
+	pub keep:     bool,
+	/// Closing the pane loses nothing, so Tern closes it without asking
+	/// (default `false`).
+	pub closable: bool,
 }
 
 impl Default for SurfaceOptions {
 	fn default() -> Self {
 		Self {
-			id:     None,
-			mode:   Mode::default(),
-			title:  None,
-			role:   None,
-			listen: true,
-			adopt:  false,
-			keep:   true,
+			id:       None,
+			mode:     Mode::default(),
+			title:    None,
+			role:     None,
+			listen:   true,
+			adopt:    false,
+			keep:     true,
+			closable: false,
 		}
 	}
 }
@@ -283,6 +287,13 @@ impl SurfaceOptions {
 	/// Sets whether the session's close keeps the surface on screen.
 	pub const fn keep(mut self, keep: bool) -> Self {
 		self.keep = keep;
+		self
+	}
+
+	/// Sets whether closing the pane skips Tern's "a program is running"
+	/// prompt.
+	pub const fn closable(mut self, closable: bool) -> Self {
+		self.closable = closable;
 		self
 	}
 }
@@ -371,7 +382,7 @@ impl Out {
 		let mut ops = state
 			.pending
 			.as_ref()
-			.map_or_else(Vec::new, |doc| state.sent.ops(doc, &state.id));
+			.map_or_default(|doc| state.sent.ops(doc, &state.id));
 		if state.reset_main && (state.pending.is_some() || !state.queued.is_empty()) {
 			ops.insert(0, Op::Del { id: "main".into() });
 		}
@@ -699,12 +710,13 @@ impl<M> Session<M> {
 			id
 		});
 		self.out.send(&Message::Open(Open {
-			id:     id.clone(),
-			mode:   Some(options.mode),
-			title:  options.title,
-			role:   options.role,
-			listen: (!options.listen).then_some(false),
-			adopt:  options.adopt.then_some(true),
+			id:       id.clone(),
+			mode:     Some(options.mode),
+			title:    options.title,
+			role:     options.role,
+			listen:   (!options.listen).then_some(false),
+			adopt:    options.adopt.then_some(true),
+			closable: options.closable.then_some(true),
 		}))?;
 		let previous = options
 			.adopt

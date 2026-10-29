@@ -256,9 +256,20 @@ def open_surface(
     role: str | None = None,
     listen: bool | None = None,
     adopt: bool | None = None,
+    closable: bool | None = None,
 ) -> Outgoing:
-    """Opens a surface (`o`)."""
-    body = _drop_none({"id": id, "mode": mode, "title": title, "role": role, "listen": listen, "adopt": adopt})
+    """Opens a surface (`o`). `closable=True` lets Tern close the pane without asking."""
+    body = _drop_none(
+        {
+            "id": id,
+            "mode": mode,
+            "title": title,
+            "role": role,
+            "listen": listen,
+            "adopt": adopt,
+            "closable": closable,
+        }
+    )
     return Outgoing("o", body)
 
 
