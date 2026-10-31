@@ -26,62 +26,94 @@ const (
 
 // Node kinds of the TSP vocabulary.
 const (
-	KindCol       = "col"
-	KindRow       = "row"
-	KindCard      = "card"
-	KindSection   = "section"
-	KindRule      = "rule"
-	KindSpacer    = "spacer"
-	KindText      = "text"
-	KindMd        = "md"
-	KindCode      = "code"
-	KindDiff      = "diff"
-	KindAnsi      = "ansi"
-	KindRows      = "rows"
-	KindMath      = "math"
-	KindKV        = "kv"
-	KindTable     = "table"
-	KindTree      = "tree"
-	KindJSON      = "json"
-	KindBadge     = "badge"
-	KindKbd       = "kbd"
-	KindIcon      = "icon"
-	KindImage     = "image"
-	KindMedia     = "media"
-	KindList      = "list"
-	KindItem      = "item"
-	KindTabs      = "tabs"
-	KindPicker    = "picker"
-	KindSpinner   = "spinner"
-	KindShimmer   = "shimmer"
-	KindElapsed   = "elapsed"
-	KindRate      = "rate"
-	KindProgress  = "progress"
-	KindMeter     = "meter"
-	KindChart     = "chart"
-	KindEffort    = "effort"
-	KindEditor    = "editor"
-	KindInput     = "input"
-	KindStatus    = "status"
-	KindSeg       = "seg"
-	KindToast     = "toast"
-	KindOverlay   = "overlay"
-	KindTool      = "tool"
-	KindAgent     = "agent"
-	KindChecklist = "checklist"
-	KindBlock     = "block"
-	KindPrefs     = "prefs"
-	KindEl        = "el"
+	KindCol         = "col"
+	KindRow         = "row"
+	KindCard        = "card"
+	KindSection     = "section"
+	KindRule        = "rule"
+	KindSpacer      = "spacer"
+	KindText        = "text"
+	KindMd          = "md"
+	KindCode        = "code"
+	KindDiff        = "diff"
+	KindAnsi        = "ansi"
+	KindRows        = "rows"
+	KindMath        = "math"
+	KindKV          = "kv"
+	KindStats       = "stats"
+	KindTable       = "table"
+	KindTree        = "tree"
+	KindJSON        = "json"
+	KindBadge       = "badge"
+	KindKbd         = "kbd"
+	KindIcon        = "icon"
+	KindImage       = "image"
+	KindMedia       = "media"
+	KindList        = "list"
+	KindItem        = "item"
+	KindTabs        = "tabs"
+	KindPicker      = "picker"
+	KindSpinner     = "spinner"
+	KindShimmer     = "shimmer"
+	KindElapsed     = "elapsed"
+	KindRate        = "rate"
+	KindProgress    = "progress"
+	KindMeter       = "meter"
+	KindChart       = "chart"
+	KindEffort      = "effort"
+	KindEditor      = "editor"
+	KindInput       = "input"
+	KindButton      = "button"
+	KindStatus      = "status"
+	KindSeg         = "seg"
+	KindToast       = "toast"
+	KindOverlay     = "overlay"
+	KindTool        = "tool"
+	KindAgent       = "agent"
+	KindChecklist   = "checklist"
+	KindBlock       = "block"
+	KindPrefs       = "prefs"
+	KindEl          = "el"
+	KindSelect      = "select"
+	KindSwitch      = "switch"
+	KindSlider      = "slider"
+	KindField       = "field"
+	KindOtp         = "otp"
+	KindButtons     = "buttons"
+	KindAvatar      = "avatar"
+	KindAvatars     = "avatars"
+	KindBreadcrumb  = "breadcrumb"
+	KindPager       = "pager"
+	KindEmpty       = "empty"
+	KindSkeleton    = "skeleton"
+	KindCalendar    = "calendar"
+	KindDate        = "date"
+	KindMenu        = "menu"
+	KindMenubar     = "menubar"
+	KindNav         = "nav"
+	KindSplit       = "split"
+	KindScroll      = "scroll"
+	KindCarousel    = "carousel"
+	KindMessage     = "message"
+	KindAttachment  = "attachment"
+	KindTrace       = "trace"
+	KindStacktrace  = "stacktrace"
+	KindSuggestions = "suggestions"
+	KindQuestions   = "questions"
 )
 
 // Kinds lists every node kind of the TSP vocabulary.
 var Kinds = []string{
 	KindCol, KindRow, KindCard, KindSection, KindRule, KindSpacer, KindText, KindMd, KindCode,
-	KindDiff, KindAnsi, KindRows, KindMath, KindKV, KindTable, KindTree, KindJSON, KindBadge, KindKbd,
-	KindIcon, KindImage, KindMedia, KindList, KindItem, KindTabs, KindPicker, KindSpinner, KindShimmer,
-	KindElapsed, KindRate, KindProgress, KindMeter, KindChart, KindEffort, KindEditor, KindInput,
-	KindStatus, KindSeg, KindToast, KindOverlay, KindTool, KindAgent, KindChecklist, KindBlock,
-	KindPrefs, KindEl,
+	KindDiff, KindAnsi, KindRows, KindMath, KindKV, KindStats, KindTable, KindTree, KindJSON,
+	KindBadge, KindKbd, KindIcon, KindImage, KindMedia, KindList, KindItem, KindTabs, KindPicker,
+	KindSpinner, KindShimmer, KindElapsed, KindRate, KindProgress, KindMeter, KindChart, KindEffort,
+	KindEditor, KindInput, KindButton, KindStatus, KindSeg, KindToast, KindOverlay, KindTool,
+	KindAgent, KindChecklist, KindBlock, KindPrefs, KindEl, KindSelect, KindSwitch, KindSlider,
+	KindField, KindOtp, KindButtons, KindAvatar, KindAvatars, KindBreadcrumb, KindPager, KindEmpty,
+	KindSkeleton, KindCalendar, KindDate, KindMenu, KindMenubar, KindNav, KindSplit, KindScroll,
+	KindCarousel, KindMessage, KindAttachment, KindTrace, KindStacktrace, KindSuggestions,
+	KindQuestions,
 }
 
 // TextKinds lists the kinds whose primary text lives in the text prop and
@@ -118,6 +150,8 @@ const (
 	TermFeatureScroll       = "scroll"
 	TermFeatureStyles       = "styles"
 	TermFeatureFlow         = "flow"
+	// TermFeatureFont says Tern honors the open message's font.
+	TermFeatureFont = "font"
 )
 
 // Message verbs, program to terminal and terminal to program.
@@ -161,7 +195,19 @@ type OpenMsg struct {
 	Adopt    bool   `json:"adopt,omitempty"`
 	Listen   *bool  `json:"listen,omitempty"`
 	Closable bool   `json:"closable,omitempty"`
+	Font     Font   `json:"font,omitempty"`
 }
+
+// Font is the base face of a surface's regions.
+type Font string
+
+// Surface fonts.
+const (
+	// FontMono is the terminal face (the default).
+	FontMono Font = "mono"
+	// FontSans is the UI face for apps; machine strings stay mono.
+	FontSans Font = "sans"
+)
 
 // FrameMsg is the body of f: an atomic batch of ops for one surface.
 type FrameMsg struct {

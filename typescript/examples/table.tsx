@@ -1,32 +1,6 @@
-/** `print`: the current directory as a table, sizes right-aligned by a stylesheet. */
+/** `print`: the current directory as a `table`, sizes right-aligned in a mono column. */
 import { readdirSync, statSync } from 'node:fs';
-import { css, html, print } from '@stencil-hq/tern';
-
-const sheet = css`
-   .ls {
-      border-collapse: collapse;
-   }
-   .ls th,
-   .ls td {
-      padding: 1px 0 1px 24px;
-   }
-   .ls th:first-child,
-   .ls td:first-child {
-      padding-left: 0;
-   }
-   .ls th {
-      text-align: left;
-      font-weight: 600;
-      color: var(--sf-c-muted);
-   }
-   .ls .size {
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-   }
-   .ls .dir {
-      color: var(--sf-c-accent);
-   }
-`;
+import { print } from '@stencil-hq/tern';
 
 /** A byte count as `312`, `2.1K`, `14M`. */
 function human(bytes: number): string {
@@ -51,23 +25,17 @@ const entries = readdirSync('.', { withFileTypes: true })
    .sort((a, b) => Number(b.dir) - Number(a.dir) || a.name.localeCompare(b.name));
 
 await print(
-   <html.table class="ls">
-      <html.tr key="head">
-         <html.th key="n">Name</html.th>
-         <html.th key="s" class="size">
-            Size
-         </html.th>
-      </html.tr>
-      {entries.map(entry => (
-         <html.tr key={`entry:${entry.name}`}>
-            <html.td key="n" class={entry.dir ? 'dir' : 'file'}>
-               {entry.name}
-            </html.td>
-            <html.td key="s" class="size">
-               {entry.size}
-            </html.td>
-         </html.tr>
-      ))}
-   </html.table>,
-   { css: sheet }
+   <table
+      cols={[
+         { id: 'name', head: 'Name', mono: true, grow: 1 },
+         { id: 'size', head: 'Size', align: 'end', mono: true },
+      ]}
+      rows={entries.map(entry => ({
+         id: entry.name,
+         cells: {
+            name: { text: entry.name, icon: entry.dir ? 'folder' : 'file' },
+            size: entry.size,
+         },
+      }))}
+   />
 );

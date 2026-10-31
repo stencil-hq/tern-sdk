@@ -1,5 +1,5 @@
 // Command table prints the current directory as a table that stays in the
-// scrollback, with sizes right-aligned by a stylesheet; plain text outside
+// scrollback, with sizes right-aligned in the mono face; plain text outside
 // Tern.
 package main
 
@@ -9,16 +9,8 @@ import (
 	"os"
 
 	"github.com/stencil-hq/tern-sdk/go/tern"
-	"github.com/stencil-hq/tern-sdk/go/tern/el"
 	"github.com/stencil-hq/tern-sdk/go/tern/ui"
 )
-
-// css lays the table out and right-aligns the size column.
-const css = `.ls{border-collapse:collapse;align-self:flex-start}
-.ls th{text-align:left;color:var(--t3);font-weight:600;padding:0 16px 2px 0}
-.ls td{padding:0 16px 0 0}
-.ls .size{text-align:right}
-.ls .dir{color:var(--accent)}`
 
 func main() {
 	entries, err := os.ReadDir(".")
@@ -27,29 +19,35 @@ func main() {
 		os.Exit(1)
 	}
 	view := directoryView(entries)
-	if err := tern.Print(context.Background(), view, tern.PrintOptions{CSS: css}); err != nil {
+	if err := tern.Print(context.Background(), view, tern.PrintOptions{Font: tern.FontSans}); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-// directoryView keeps the header and file rows in separate key namespaces.
+// directoryView is one table row per entry, keyed by its name.
 func directoryView(entries []os.DirEntry) tern.View {
-	rows := ui.Nodes(el.Tr{Common: ui.Common{Key: "head"},
-		Children: ui.Nodes(el.Th{Text: "Name"}, el.Th{Class: "size", Text: "Size"})})
+	table := ui.Table{
+		Common: ui.Common{Key: "ls"},
+		Cols: []ui.Column{
+			{ID: "name", Head: ui.T("Name"), Grow: 1, Truncate: ui.TruncateMiddle, Priority: 2},
+			{ID: "size", Head: ui.T("Size"), Align: ui.AlignEnd, Mono: true, Priority: 1},
+		},
+		Empty: ui.T("Empty directory"),
+	}
 	for _, e := range entries {
-		name, size, class := e.Name(), "", ""
+		name, icon, tone, size := e.Name(), ui.IconFile, ui.Tone(""), ""
 		if e.IsDir() {
-			name, class = name+"/", "dir"
+			name, icon, tone = name+"/", ui.IconFolder, ui.ToneAccent
 		} else if info, err := e.Info(); err == nil {
 			size = human(info.Size())
 		}
-		rows = append(rows, el.Tr{Common: ui.Common{Key: "entry:" + e.Name()}, Children: ui.Nodes(
-			el.Td{Class: class, Text: name},
-			el.Td{Class: "size", Text: size},
-		)})
+		table.Rows = append(table.Rows, ui.TableRow{ID: e.Name(), Cells: map[string]ui.Cell{
+			"name": ui.TextCell{Text: ui.T(name), Icon: icon, Tone: tone},
+			"size": ui.T(size),
+		}})
 	}
-	return tern.View{Main: tern.Nodes{el.Table{Class: "ls", Children: rows}}}
+	return tern.Main(table)
 }
 
 // human is a byte count as 312, 2.1K or 14M.

@@ -23,6 +23,7 @@ export {
    type Handlers,
    type NodeJson,
    type Part,
+   type SpanOptions,
    type TextChildren,
 } from './nodes.js';
 export {

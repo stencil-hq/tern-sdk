@@ -55,7 +55,7 @@ pub use plain::plain;
 pub use session::{Capabilities, Input, Options, Session, Surface, SurfaceOptions};
 pub use term::Waker;
 pub use ui::{Node, View};
-pub use wire::{Event, Mode, Op};
+pub use wire::{Event, Font, Mode, Op};
 
 /// What can go wrong talking TSP.
 #[derive(Debug, thiserror::Error)]

@@ -31,6 +31,7 @@ export const KINDS = [
    'image',
    'media',
    'kv',
+   'stats',
    'table',
    'tree',
    'json',
@@ -47,6 +48,7 @@ export const KINDS = [
    'tabs',
    'editor',
    'input',
+   'button',
    'status',
    'seg',
    'overlay',
@@ -61,6 +63,32 @@ export const KINDS = [
    'meter',
    'block',
    'effort',
+   'select',
+   'switch',
+   'slider',
+   'field',
+   'otp',
+   'buttons',
+   'avatar',
+   'avatars',
+   'breadcrumb',
+   'pager',
+   'empty',
+   'skeleton',
+   'calendar',
+   'date',
+   'menu',
+   'menubar',
+   'nav',
+   'split',
+   'scroll',
+   'carousel',
+   'message',
+   'attachment',
+   'trace',
+   'stacktrace',
+   'suggestions',
+   'questions',
    'el',
 ] as const;
 
@@ -109,6 +137,7 @@ export const TERMINAL_FEATURES = [
    'scroll',
    'styles',
    'flow',
+   'font',
 ] as const;
 
 /** A terminal feature of the `hello` reply, or a newer one. */
@@ -172,6 +201,9 @@ export interface BlobsQuery {
 /** A query (`q`). */
 export type Query = HelloQuery | BlobsQuery;
 
+/** A surface's base face: the UI face for people, or the terminal's mono face. */
+export type SurfaceFont = 'sans' | 'mono';
+
 /** Opening a surface (`o`). */
 export interface OpenMessage {
    readonly id: string;
@@ -181,6 +213,8 @@ export interface OpenMessage {
    readonly listen?: boolean;
    readonly adopt?: boolean;
    readonly closable?: boolean;
+   /** The base face of the surface's regions; Tern's default is `"mono"`. */
+   readonly font?: SurfaceFont;
 }
 
 /** A frame (`f`): an atomic batch of ops for one surface. */
@@ -445,17 +479,22 @@ export interface VisibleEvent {
    readonly raw: JsonObject;
 }
 
-/** A node was folded or unfolded. */
+/**
+ * A node was folded or unfolded (`collapsed`), or a menu, a select or a
+ * trace step opened or closed (`open`, with the menu or step as `item`).
+ */
 export interface ToggleEvent {
    readonly ev: 'toggle';
    readonly sf: string;
    readonly id: string;
-   readonly collapsed: boolean;
+   readonly collapsed?: boolean;
+   readonly open?: boolean;
+   readonly item?: string;
    readonly key?: string;
    readonly raw: JsonObject;
 }
 
-/** An item was selected (`id` the list, `item` the item). */
+/** An item was selected (`id` the list, `item` the item; a stack frame's index as a string). */
 export interface SelectEvent {
    readonly ev: 'select';
    readonly sf: string;
@@ -481,13 +520,26 @@ export interface ActionEvent {
    readonly sf: string;
    readonly id: string;
    readonly act: string;
-   readonly value?: string;
+   /** The row an action ran on (a table row's menu entry or button cell), a menubar's menu, a question. */
+   readonly item?: string;
+   /**
+    * A string after `act=`, a scope, or the action's data: a table's sort
+    * `{ col, dir }` or picked ids, a questionnaire's answers, a cell index.
+    */
+   readonly value?: Json;
+   /** A menu check or radio row's new state. */
+   readonly checked?: boolean;
    readonly mods?: readonly Mod[];
    readonly values?: FormValues;
    readonly raw: JsonObject;
 }
 
-/** An `el` checkbox or radio flipped, or a `prefs` row changed. */
+/**
+ * An `el` checkbox or radio flipped, a `prefs` row changed, or a control
+ * took a new `value` (a switch's state, a slider's number or range, a page,
+ * a pick, picked ids, a question's answer with the question as `item`);
+ * a message reaction flipped (`value` its text, `on` its state).
+ */
 export interface ChangeEvent {
    readonly ev: 'change';
    readonly sf: string;
@@ -496,6 +548,7 @@ export interface ChangeEvent {
    readonly checked?: boolean;
    readonly name?: string;
    readonly item?: string;
+   readonly on?: boolean;
    readonly values?: FormValues;
    readonly raw: JsonObject;
 }
@@ -687,12 +740,18 @@ export function decodeEvent(raw: JsonObject): TspEvent {
       }
       case 'toggle': {
          const collapsed = bool(raw, 'collapsed');
-         if (sf === undefined || id === undefined || collapsed === undefined) return unknown();
-         return defined<ToggleEvent>({ ev, sf, id, collapsed, raw }, { key: str(raw, 'key') });
+         const open = bool(raw, 'open');
+         if (sf === undefined || id === undefined) return unknown();
+         if (collapsed === undefined && open === undefined) return unknown();
+         return defined<ToggleEvent>(
+            { ev, sf, id, raw },
+            { collapsed, open, item: str(raw, 'item'), key: str(raw, 'key') }
+         );
       }
       case 'select':
       case 'activate': {
-         const item = str(raw, 'item') ?? id;
+         const index = num(raw, 'item');
+         const item = index === undefined ? (str(raw, 'item') ?? id) : String(index);
          if (sf === undefined || id === undefined || item === undefined) return unknown();
          return defined<SelectEvent | ActivateEvent>(
             { ev, sf, id, item, raw },
@@ -704,7 +763,13 @@ export function decodeEvent(raw: JsonObject): TspEvent {
          if (sf === undefined || id === undefined || act === undefined) return unknown();
          return defined<ActionEvent>(
             { ev, sf, id, act, raw },
-            { value: str(raw, 'value'), mods: mods(raw), values: formValues(raw) }
+            {
+               item: str(raw, 'item'),
+               value: raw['value'],
+               checked: bool(raw, 'checked'),
+               mods: mods(raw),
+               values: formValues(raw),
+            }
          );
       }
       case 'change': {
@@ -716,6 +781,7 @@ export function decodeEvent(raw: JsonObject): TspEvent {
                checked: bool(raw, 'checked'),
                name: str(raw, 'name'),
                item: str(raw, 'item'),
+               on: bool(raw, 'on'),
                values: formValues(raw),
             }
          );

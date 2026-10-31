@@ -2,7 +2,7 @@
  * The node layer: the node model every builder (TSX, `ui`, `html`, `node`)
  * shares, styled spans, and the handlers a node carries.
  */
-import type { SpanData, SpanFx, SpanToken } from './props.js';
+import type { Cite, SpanData, SpanFx, SpanToken } from './props.js';
 import { isJsonObject } from './wire.js';
 import type {
    ActionEvent,
@@ -61,17 +61,24 @@ export class Node {
    readonly children: readonly Node[];
    /** Handlers routed to by the node's id. */
    readonly handlers: Handlers | undefined;
+   /**
+    * Slot props (`head`, `end`, `foot`) given a node: that node is the child
+    * keyed by the slot name, and the prop goes out as the child's id.
+    */
+   readonly slots: readonly string[];
 
    constructor(
       kind: string,
       props: JsonObject = {},
       children: readonly Node[] = [],
-      handlers?: Handlers
+      handlers?: Handlers,
+      slots: readonly string[] = []
    ) {
       this.kind = kind;
       this.props = props;
       this.children = children;
       this.handlers = handlers;
+      this.slots = slots;
    }
 
    /** The node as JSON without ids (`{k, p?, c?}`). */
@@ -100,17 +107,26 @@ export class Span implements SpanData {
    readonly s?: SpanToken;
    readonly fx?: SpanFx;
    readonly href?: string;
+   readonly cite?: Cite | readonly Cite[];
 
-   constructor(t: string, s?: SpanToken, options: { fx?: SpanFx; href?: string } = {}) {
+   constructor(t: string, s?: SpanToken, options: SpanOptions = {}) {
       this.t = t;
       if (s !== undefined && s !== '') this.s = s;
       if (options.fx !== undefined) this.fx = options.fx;
       if (options.href !== undefined) this.href = options.href;
+      if (options.cite !== undefined) this.cite = options.cite;
    }
 }
 
-/** A styled span: text, style tokens (`"muted"`, `"strong accent"`), effect and link. */
-export function span(t: string, s?: SpanToken, options: { fx?: SpanFx; href?: string } = {}): Span {
+/** A span's effect, link and cited sources. */
+export interface SpanOptions {
+   readonly fx?: SpanFx;
+   readonly href?: string;
+   readonly cite?: Cite | readonly Cite[];
+}
+
+/** A styled span: text, style tokens (`"muted"`, `"strong accent"`), effect, link and citations. */
+export function span(t: string, s?: SpanToken, options: SpanOptions = {}): Span {
    return new Span(t, s, options);
 }
 
@@ -153,7 +169,9 @@ export function toJson(value: unknown): Json | undefined {
          if (Array.isArray(value)) return value.map(item => toJson(item) ?? null);
          const out: Record<string, Json> = {};
          for (const key in value) {
-            const json = toJson(Reflect.get(value, key));
+            const item: unknown = Reflect.get(value, key);
+            // A nested `hovercard` (a code fold's) is an id-less tree, as the common prop.
+            const json = toJson(key === 'hovercard' && item instanceof Node ? item.toJSON() : item);
             if (json !== undefined) out[key] = json;
          }
          return out;
@@ -245,7 +263,12 @@ function withActions(props: Record<string, Json>, handlers: Handlers): void {
    if (handlers.onMenu) {
       const old = actions['menu'];
       const menu: Json[] = Array.isArray(old) ? [...old] : [];
-      for (const name in handlers.onMenu) if (!menu.includes(name)) menu.push(name);
+      for (const name in handlers.onMenu) {
+         const listed = menu.some(
+            entry => entry === name || (isJsonObject(entry) && entry['id'] === name)
+         );
+         if (!listed) menu.push(name);
+      }
       actions['menu'] = menu;
    }
    if (Object.keys(actions).length > 0) props['actions'] = actions;
@@ -253,6 +276,15 @@ function withActions(props: Record<string, Json>, handlers: Handlers): void {
 
 /** Kinds whose string and span children become `text` or `spans`. */
 const SPAN_TEXT: Readonly<Record<string, true>> = { text: true, shimmer: true, seg: true };
+
+/** The props of each kind that take a node, drawn by Tern in place of a body child. */
+const SLOTS: Readonly<Record<string, readonly string[]>> = {
+   card: ['head', 'end'],
+   section: ['head'],
+   overlay: ['end', 'foot'],
+   rule: ['end'],
+   message: ['avatar'],
+};
 
 /** Kinds whose string children become the `text` prop. */
 const PLAIN_TEXT: Readonly<Record<string, true>> = {
@@ -263,6 +295,7 @@ const PLAIN_TEXT: Readonly<Record<string, true>> = {
    editor: true,
    input: true,
    badge: true,
+   button: true,
    toast: true,
 };
 
@@ -300,6 +333,7 @@ export function createNode(
 ): Node {
    const props: Record<string, Json> = {};
    const handlers: Mutable<Handlers> = {};
+   const slotted: Node[] = [];
    let fromProps: unknown;
    if (input) {
       for (const key in input) {
@@ -309,6 +343,15 @@ export function createNode(
             continue;
          }
          if (takeHandler(handlers, key, value)) continue;
+         if ((value instanceof Node || value instanceof Span) && SLOTS[kind]?.includes(key)) {
+            if (value instanceof Span) {
+               slotted.push(new Node('text', { spans: [toJson(value) ?? null], key }));
+            } else {
+               const { kind: k, props: p, children: c, handlers: h, slots: s } = value;
+               slotted.push(new Node(k, { ...p, key }, c, h, s));
+            }
+            continue;
+         }
          const json = toJson(key === 'hovercard' && value instanceof Node ? value.toJSON() : value);
          if (json !== undefined) props[key] = json;
       }
@@ -341,7 +384,8 @@ export function createNode(
    }
    const any = Object.keys(handlers).length > 0;
    if (any) withActions(props, handlers);
-   return new Node(kind, props, nodes, any ? handlers : undefined);
+   const slots = slotted.map(child => String(child.props['key']));
+   return new Node(kind, props, [...nodes, ...slotted], any ? handlers : undefined, slots);
 }
 
 /** A short description of a part for errors. */
@@ -365,7 +409,13 @@ export function withKey(target: Node, key: string | number | undefined): Node {
    if (key === undefined || target.props['key'] !== undefined) return target;
    if (target instanceof FragmentNode)
       return new FragmentNode(target.parts, { ...target.props, key });
-   return new Node(target.kind, { ...target.props, key }, target.children, target.handlers);
+   return new Node(
+      target.kind,
+      { ...target.props, key },
+      target.children,
+      target.handlers,
+      target.slots
+   );
 }
 
 /** Converts a JSON node without ids (`{k, p?, c?}`) into a node. */

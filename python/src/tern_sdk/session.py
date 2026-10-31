@@ -729,10 +729,13 @@ class Session:
         adopt: bool | None = None,
         keep: bool = True,
         closable: bool = False,
+        font: wire.Font | None = None,
     ) -> Surface:
         """Opens a surface (`o`); ids default to `s1`, `s2`, …. `keep` is how
         the surface closes when the session does. `closable=True` tells Tern
-        closing the pane loses nothing, so it closes without asking."""
+        closing the pane loses nothing, so it closes without asking.
+        `font="sans"` draws the surface in the UI face (use it for apps);
+        the default is the terminal's mono."""
         if id is None:
             self._next_surface += 1
             id = f"s{self._next_surface}"
@@ -745,6 +748,7 @@ class Session:
                 listen=None if listen else False,
                 adopt=adopt,
                 closable=True if closable else None,
+                font=font,
             )
         )
         surface = Surface(self, id, mode, listen, keep)

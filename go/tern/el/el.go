@@ -3,10 +3,12 @@
 // each takes a class, allowlisted attrs, text drawn before its children,
 // and the props and handlers of ui.Common.
 //
-//	el.Form{Class: "ask", Children: ui.Nodes(
-//		el.P{Text: "Which size?"},
-//		el.Label{Children: ui.Nodes(el.Input{Type: el.Radio, Name: "size", Value: "s"}, el.Span{Text: "Small"})},
-//		el.Button{Text: "Create", Common: ui.Common{Actions: &ui.Actions{Click: "submit"}}},
+//	el.Form{Common: ui.Common{Key: "ask"}, Children: ui.Nodes(
+//		ui.Card{Head: ui.T("Which size?"), Children: ui.Nodes(
+//			el.Label{Children: ui.Nodes(el.Input{Type: el.Radio, Name: "size", Value: "s"}, el.Span{Text: "Small"})},
+//			ui.Button{Text: "Create", Variant: ui.ButtonPrimary,
+//				Common: ui.Common{Actions: &ui.Actions{Click: "submit"}}},
+//		)},
 //	)}
 package el
 

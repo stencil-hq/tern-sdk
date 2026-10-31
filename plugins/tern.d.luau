@@ -151,6 +151,8 @@ export type Col = {
 	grow: number?,
 	--- Where cells that don't fit are cut (default `"end"`).
 	truncate: Truncate?,
+	--- Cells in the mono face, for machine strings (ids, hashes, sizes) in a sans surface.
+	mono: boolean?,
 }
 
 --- A thin-bar table cell from `tern.ui.meter_cell` or `meter_parts_cell`.
@@ -168,8 +170,145 @@ export type MeterCell = {
 	},
 }
 
---- A table cell: a span list or a meter cell.
-export type Cell = Spans | MeterCell
+--- A text cell: `text` after a status dot (`dot`, a tone) or an icon (12px, colored by `tone`).
+export type TextCell = {
+	text: Spans,
+	--- Named icon before the text.
+	icon: string?,
+	--- A 6px status dot in this tone before the text (wins over `icon`).
+	dot: string?,
+	--- The icon's tone (default quiet ink).
+	tone: string?,
+	--- Tooltip.
+	title: string?,
+}
+
+--- A badge cell: the `badge` look.
+export type BadgeCell = {
+	badge: { text: string, tone: string?, title: string? },
+}
+
+--- A small button cell: a click sends `{ev = "action", id = <table>, act = act, item = <row id>}`
+--- and does not select the row.
+export type ButtonCell = {
+	button: {
+		text: string,
+		act: string,
+		icon: string?,
+		--- Keycaps after the label (display only).
+		keys: { string }?,
+		variant: ButtonVariant?,
+		--- Dimmed and inert; a string is the tooltip reason.
+		disabled: (boolean | string)?,
+	},
+}
+
+--- A sparkline cell the height of the text, 8 cells wide unless its column grows.
+export type SparkCell = {
+	spark: {
+		values: { number },
+		--- Line tone (default accent).
+		tone: string?,
+		--- Domain bottom (default 0).
+		min: number?,
+		--- Domain top (default the largest value).
+		max: number?,
+		title: string?,
+	},
+}
+
+--- A table cell: a span list, a meter, text after a mark, a badge, a button or a sparkline.
+export type Cell = Spans | MeterCell | TextCell | BadgeCell | ButtonCell | SparkCell
+
+--- A `tern.ui.table` row with an id: events name it as `item`.
+export type TableRow = {
+	id: string,
+	--- One cell per column, in order.
+	cells: { Cell },
+	--- Dimmed, no select/activate/menu; a string is the tooltip reason.
+	disabled: (boolean | string)?,
+	--- Right-click actions, each sending `{ev = "action", id = <table>, act = name, item = id}`; Copy row
+	--- follows them.
+	menu: { string }?,
+	--- Row tooltip.
+	title: string?,
+}
+
+--- Options of `tern.ui.table`.
+export type TableOpts = {
+	--- Rows take clicks: `{ev = "select", id, item}`, double-click `{ev = "activate", id, item}`.
+	selectable: boolean?,
+	--- The row id drawn selected, kept in view when it changes.
+	selected: string?,
+	--- Shown, muted and centered, when there are no rows.
+	empty: Spans?,
+}
+
+--- How a `button` looks: `default` (a chip), `primary` (the one main action), `quiet` (no chrome until
+--- hovered) or `danger` (destructive).
+export type ButtonVariant = "default" | "primary" | "quiet" | "danger"
+
+--- Props of `tern.ui.button`, besides any common prop (`title`, `aria`, `key`, `tone`, `actions`, …). A click
+--- sends `{ev = "action", act = actions.click or "click"}`; disabled and busy buttons send nothing.
+export type ButtonProps = {
+	--- Leading icon name; with an empty label the button is icon-only (give it a `title`).
+	icon: string?,
+	--- Key names drawn as keycaps after the label (display only; the tooltip shows them too).
+	keys: { string }?,
+	--- Chrome (default `"default"`).
+	variant: ButtonVariant?,
+	--- `"md"` (28px: bars, heads, forms; the default) or `"sm"` (22px: inline, rows).
+	size: ("md" | "sm")?,
+	--- A pressed toggle.
+	on: boolean?,
+	--- Dimmed and inert; a string is the reason, shown as the tooltip.
+	disabled: (boolean | string)?,
+	--- A spinner in the icon's place; inert.
+	busy: boolean?,
+	[string]: any,
+}
+
+--- A tile of `tern.ui.stats`.
+export type StatItem = {
+	--- What is counted.
+	label: Spans,
+	--- The figure, drawn large with tabular digits.
+	value: Spans,
+	--- A line under it.
+	sub: Spans?,
+	--- Colors the value (`success`, `warning`, `error`, `info`, `accent`, …).
+	tone: string?,
+	--- Tooltip.
+	title: string?,
+}
+
+--- Props of `tern.ui.card`, besides any common prop (`collapsible`, `collapsed`, `status`, `tone`, …).
+export type CardProps = {
+	--- Head icon name (wins over the one a role implies); without one the body lines up with the head text.
+	icon: string?,
+	--- Dim text after the head text.
+	meta: Spans?,
+	--- Id of a child drawn at the head's end instead of the body (buttons, segmented tabs, a badge); clicks
+	--- on it never fold the card.
+	["end"]: string?,
+	[string]: any,
+}
+
+--- A `tabs` strip's look (`p.variant`): `underline` (the default) or `segmented` (a pill well sized to its tabs).
+export type TabsVariant = "underline" | "segmented"
+
+--- Panel props of an `overlay` node (through `tern.ui.node`), besides `head`, `anchor`, `size`, `modal`.
+export type OverlayProps = {
+	--- Head icon name.
+	icon: string?,
+	--- Dim text after the title.
+	meta: Spans?,
+	--- Id of a child drawn at the head's end.
+	["end"]: string?,
+	--- Id of a child drawn in the footer bar under the body (the sheet's actions).
+	foot: string?,
+	[string]: any,
+}
 
 --- A node of `tern.ui.tree`.
 export type TreeNode = {
@@ -294,6 +433,10 @@ export type BlockDef<S> = {
 	--- Opts into native editing of the view's editor/input fields: "edit" (a click places the caret, drag/⇧-arrows
 	--- select, edits arrive as `edit` events) and "undo" (⌃Z/⌘Z arrives as an `undo` event, not a key).
 	features: { "edit" | "undo" }?,
+	--- The face of the block's surface (the `o` `font`): "sans" sets people's text (labels, heads, kv, lists, tables)
+	--- in the UI face on 18px lines while machine strings (`mono`/`code`/`num`/`path`/`key` spans) and kinds (code,
+	--- diff, editor, json, …) stay mono; "mono" (the default) keeps the terminal's face throughout.
+	font: ("sans" | "mono")?,
 	--- Called when the pane resizes to `cols` × `rows` cells, then the block renders and saves; without it the block
 	--- still re-renders (no save), with `cx.cols`/`cx.rows` updated.
 	resize: ((state: S, cols: number, rows: number, cx: BlockCx) -> ())?,
@@ -2002,18 +2145,22 @@ declare tern: {
 		lines: (children: { Node }) -> Node,
 		--- A horizontal row, small gaps between children.
 		row: (children: { Node }) -> Node,
-		--- A card headed by `head`.
-		card: (head: Spans, children: { Node }) -> Node,
+		--- A card headed by `head`; `props` adds `icon`, `meta`, `end` and common props.
+		card: (head: Spans, children: { Node }, props: CardProps?) -> Node,
 		--- A lighter disclosure group headed by `head`.
 		section: (head: Spans, children: { Node }) -> Node,
 		--- A divider, labeled when `label` isn't empty.
 		rule: (label: Spans) -> Node,
 		--- A pill chip of `t` in `tone`.
 		badge: (t: string, tone: string) -> Node,
+		--- A push button labeled `text` (nil or `""` with an `icon`: icon-only).
+		button: (text: string?, props: ButtonProps?) -> Node,
+		--- A well of stat tiles side by side, wrapping when narrow.
+		stats: (items: { StatItem }) -> Node,
 		--- An aligned key/value list of `{keySpans, valueSpans}` pairs.
 		kv: (items: { { Spans } }) -> Node,
-		--- A table; `rows[i][j]` is the cell of `cols[j]`.
-		table: (cols: { Col }, rows: { { Cell } }) -> Node,
+		--- A table; `rows[i][j]` is the cell of `cols[j]` (row id `r<i-1>`), or a `TableRow` with its own id.
+		table: (cols: { Col }, rows: { { Cell } | TableRow }, opts: TableOpts?) -> Node,
 		--- A meter cell at `value` (0–1), tinted warn/bad at or above `thresholds` `{warn, bad}`.
 		meter_cell: (value: number, thresholds: { number }?) -> MeterCell,
 		--- A meter cell stacking `{value, themeToken}` parts from the left.
@@ -2044,7 +2191,8 @@ declare tern: {
 		test_summary: (passed: number, failed: number, skipped: number, took: string?) -> Node,
 		--- A muted "… N more (Raw shows everything)" line.
 		overflow: (hidden: number) -> Node,
-		--- Any TSP node: `{k = kind, p = props, c = children}`.
+		--- Any TSP node: `{k = kind, p = props, c = children}`: a `tabs` strip takes `variant: TabsVariant`, an
+		--- `overlay` takes `OverlayProps`.
 		node: (kind: string, props: { [string]: any }?, children: { Node }?) -> Node,
 		--- A generic HTML-subset element `tag` (`div`, `form`, `label`, `button`, `input`, …); props: `class`,
 		--- `attrs` (`data-*`, `aria-*`, `role`, `colspan`, `rowspan`), `text`, common props; `input` takes `type`

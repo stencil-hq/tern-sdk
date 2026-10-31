@@ -15,13 +15,6 @@ import (
 	"github.com/stencil-hq/tern-sdk/go/tern/ui"
 )
 
-// css is the form's stylesheet from the protocol book.
-const css = `.ask{display:flex;flex-direction:column;gap:8px;max-width:460px;padding:10px 12px;border-radius:8px;background:var(--card);box-shadow:inset 0 0 0 1px var(--l2)}
-.ask p{margin:0}
-.ask .sizes{display:flex;gap:14px}
-.ask :checked+span{color:var(--accent)}
-.ask button{align-self:flex-start;padding:3px 12px;border-radius:6px;background:var(--accent-fill);color:#fff}`
-
 // size is one radio of the form.
 func size(key, value, label string) tern.Element {
 	return el.Label{Common: ui.Common{Key: key}, Children: ui.Nodes(
@@ -31,14 +24,18 @@ func size(key, value, label string) tern.Element {
 }
 
 func main() {
-	form := el.Form{Class: "ask", Common: ui.Common{Key: "ask"}, Children: ui.Nodes(
-		el.P{Common: ui.Common{Key: "q"}, Text: "Which size?"},
-		el.Div{Class: "sizes", Common: ui.Common{Key: "sizes"}, Children: ui.Nodes(
-			size("s", "s", "Small"), size("m", "m", "Medium"), size("l", "l", "Large"),
-		)},
-		el.Button{Text: "Create", Common: ui.Common{Key: "go", Actions: &ui.Actions{Click: "submit"}}},
+	form := el.Form{Common: ui.Common{Key: "ask"}, Children: ui.Nodes(
+		ui.Card{Common: ui.Common{Key: "q", Max: &ui.Bounds{W: ui.Ch(48)}}, Head: ui.T("Which size?"),
+			Children: ui.Nodes(
+				ui.Row{Common: ui.Common{Key: "sizes"}, Gap: ui.GapLG, Children: ui.Nodes(
+					size("s", "s", "Small"), size("m", "m", "Medium"), size("l", "l", "Large"),
+				)},
+				ui.Button{Common: ui.Common{Key: "go", Actions: &ui.Actions{Click: "submit"}},
+					Text: "Create", Variant: ui.ButtonPrimary},
+			)},
 	)}
-	answer, err := tern.Ask(context.Background(), tern.View{Main: tern.Nodes{form}}, tern.AskOptions{CSS: css})
+	answer, err := tern.Ask(context.Background(), tern.View{Main: tern.Nodes{form}},
+		tern.AskOptions{Font: tern.FontSans})
 	switch {
 	case errors.Is(err, tern.ErrUnsupported):
 		fmt.Print("Which size? [s/m/l]: ")

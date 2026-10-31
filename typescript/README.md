@@ -37,28 +37,100 @@ Function components, fragments, arrays and `null`/`false`/`undefined`
 children work as expected.
 
 Kind-specific props replace common props of the same name (`picker.actions`,
-`list.max`, styled `tool.title` and `picker.title`). `agent.status` uses
+`message.actions` and `attachment.actions`, `list.max` and the `max` counts of
+`avatars` and `breadcrumb`, the numeric `min`/`max` of `slider`, the day
+`min`/`max` of `calendar` and `date`, `split.min`, styled `tool.title`,
+`picker.title`, `empty.title` and `trace.title`). `agent.status` uses
 `AgentStatus`: pending, running, done, failed, aborted, idle or parked.
 Table meter cells use `{ meter: { value: 0.5 } }` (or `parts`, thresholds,
 tone and title inside `meter`); picker action `disabled` accepts `true` or
 a reason string.
 
+Controls and panels:
+
+- `<button variant? size? icon? keys? on? disabled? busy?>Label</button>`:
+  the `button` kind. A click sends `action` with `act: 'click'` (or
+  `actions.click`); `onClick` runs on it. `variant` is `default`, `primary`
+  (one per view), `quiet` or `danger`; `size` is `md` (bars, heads, forms)
+  or `sm` (rows).
+- `<stats items={[{ label, value, sub?, tone? }]} />`: a flat strip of stat
+  tiles (at most four), placed directly on the page, never in a card.
+- `<table selectable selected={id} empty="No jobs">`: rows take clicks
+  (`onSelect`/`onActivate` get the row as `event.item`); rows take
+  `disabled`, `menu` and `title`; columns take `mono`. Cells are spans, or
+  `{ meter }`, `{ text, dot?, icon?, tone? }`, `{ badge: { text, tone? } }`,
+  `{ button: { text, act, variant? } }` (sends `act` with the row as
+  `event.item`, handled by `onAction`) or `{ spark: { values } }`.
+  `sort={{ col, dir }}` with `sortable` columns sends `action` `sort`;
+  `multi` with `picked={ids}` sends `change` with the picked ids, and `bar`
+  buttons send their `act` with them as `event.value`.
+- `<tabs>`: underline tabs (the default) switch a page's views;
+  `<tabs variant="segmented">` is the inline well for a switch inside a view.
+- `card` and `overlay` take `icon`, `meta` and `end`; `overlay` takes
+  `foot`. `card.head`, `card.end`, `section.head`, `overlay.end` and
+  `overlay.foot` accept a node: it becomes the child keyed `head`/`end`/
+  `foot` (id `<parent>.end`, …) and its handlers run as usual; so do
+  `rule.end` and `message.avatar`. `overlay` with `side` docks as a sheet
+  (`left`, `right`) or a drawer (`bottom`).
+- `<select>`, `<switch>`, `<slider>`, `<otp>`, `<calendar>`, `<date>`,
+  `<pager>`, `<breadcrumb>`, `<nav>`, `<menu>` and `<menubar>` send `change`,
+  `select`, `toggle` or `action` as their kind says; `<field>` labels its
+  control children and `<buttons>` groups `button` children. `actions.menu`
+  takes the same rows as `<menu items>`: ids, `'-'`, `{ header }` or
+  `{ id, label?, icon?, keys?, checked?, radio?, disabled?, danger?, items? }`.
+- A span's `cite` (`span('text', '', { cite: { href, title } })` or
+  `<span cite={…}>`) marks the run with its sources; `<text cite="note">`
+  picks the look, and `plain()` writes `[1]` after each cited run.
+
+## Design rules
+
+Views built from kinds and tones look like Tern's own; the full guide is
+[Designing views](https://docs.stencil.so/tern/guides/design.html).
+
+- Open apps with `font: 'sans'`; machine strings (versions, paths, numbers)
+  go in `mono` columns or `mono`/`code`/`path` span tokens.
+- Use `button`, `table`, `stats`, `kv`, `tabs` and `card`s, not `html.*`
+  plus CSS; write no stylesheet for looks the kinds already have.
+- A page, not a pile of cards: a head row (`row justify="between"`: a `text`
+  with the name in the `title` span token and muted meta, status badges and
+  global buttons on the right), an optional `stats` strip, underline `tabs`
+  when there are more than two views (Tab/⇧Tab switch; render only the
+  active one), then the view: a full-width table, beside a detail `card`
+  (`min={{ w: '44ch' }} max={{ w: '56ch' }}`) for master/detail. Cards hold
+  objects (a selected item, a confirm strip), never a frame around a table
+  or another card. The dock holds the confirm strip and a key legend.
+- Color carries meaning only: `tone` and span tokens, never custom colors.
+- One `primary` action per view: with a detail card it sits in the card
+  head's `end` and table rows carry no buttons; without one, only the
+  selected row's `sm` button cell is primary. Destructive actions ask first
+  in a `card tone="error"` strip with `quiet` and `danger` buttons.
+- Tables have exactly one `grow` column, the main text one; numbers are
+  `align: 'end'` + `mono`; spark, meter and badge columns never grow.
+  Narrow tables hide the lowest `priority` columns first and a missing
+  `priority` is 0: give the `grow` column the highest, numbers next,
+  sparks, meters and secondary columns the lowest. Show `keys` on buttons
+  that have shortcuts.
+- Design all four states: loading, `empty`, error and success.
+
 ## Quick start
 
 ```tsx
-import { connect, css, html } from '@stencil-hq/tern';
+import { connect } from '@stencil-hq/tern';
 
 const session = await connect({ app: 'deploy' });
 if (session) {
-   const surface = session.open({ mode: 'flow' });
-   surface.stylesheet('main', css`.go { color: var(--sf-c-accent) }`);
+   const surface = session.open({ mode: 'screen', font: 'sans' });
    surface.render(
-      <card head="Deploy" status="running">
+      <card head="Deploy" icon="rocket" meta="api-gateway" status="running">
          <md>{'Uploading **api-gateway**'}</md>
          <progress value={0.4} label="40%" />
-         <html.button class="go" onClick={() => surface.render(<md>{'Cancelled'}</md>)}>
+         <button
+            variant="danger"
+            keys={['esc']}
+            onClick={() => surface.render(<md>{'Cancelled'}</md>)}
+         >
             Cancel
-         </html.button>
+         </button>
       </card>
    );
    for await (const input of session) {
@@ -133,6 +205,11 @@ Nodes carry handlers instead of naming actions by hand:
 | `onAction={{ name: fn }}` | `action` events with that `act` |
 | `onToggle`, `onSelect`, `onActivate`, `onChange`, `onFocus`, `onEdit`, `onUndo`, `onSend` | those events |
 
+`toggle` carries `collapsed` (a fold) or `open` (a menu, a select, a trace
+step, with the menu or step as `item`). `action` and `change` carry the
+kind's `value` as JSON: a string, a number, a pair, ids or an object of
+answers; a menu's check rows add `checked`, a message reaction `on`.
+
 Events route by `sf` and `id` to the node with that id in the view last
 rendered (a list's `select`/`activate` go to the list). Handlers run before
 anything is yielded; a handled event is consumed, everything else reaches
@@ -149,17 +226,38 @@ after 30 ms without input. Incomplete key sequences are dropped, but a
 bracketed paste waits for its terminator across idle flushes. Printable
 Unicode is preserved; unmapped kitty functional codes are dropped.
 
+### Keys
+
+A `Key` is `{ name, text?, ctrl, alt, shift, meta }` (`meta` is Cmd on
+macOS, Super elsewhere). Match on `name`; read `text` only for what the key
+types:
+
+| Key | `name` | `text` |
+| --- | --- | --- |
+| Letters | lowercase: `'a'` (Shift+A is `'a'` with `shift: true`) | `'a'`, `'A'` |
+| Digits, punctuation, other characters | the character: `'1'`, `'+'`, `'é'` | the same |
+| Space | `'space'` | `' '` |
+| Named keys | `'enter'`, `'escape'`, `'tab'`, `'backspace'`, `'up'`, `'down'`, `'left'`, `'right'`, `'home'`, `'end'`, `'page_up'`, `'page_down'`, `'insert'`, `'delete'`, `'f1'`… | none |
+| Bracketed paste | `'paste'` | the pasted text |
+
+With Ctrl, Alt or Meta held a key has no `text` (`Ctrl+C` is
+`{ name: 'c', ctrl: true }`).
+
 ## Helpers
 
-- `print(view, { css?, fallback? })`: a static view kept in the scrollback
+- `print(view, { css?, font?, fallback? })`: a static view kept in the scrollback
   (a `flow` surface with `listen: false`, one frame, closed with `keep`).
   Outside Tern, or when stdout isn't a tty, it writes `plain(view)` or
   `fallback`.
-- `ask(view, { css?, submit? = 'submit' })`: shows a form and resolves to
+- `ask(view, { css?, font?, submit? = 'submit' })`: shows a form and resolves to
   `{ type: 'answer', id, act, values }` on the first `submit` action, `null`
   on Escape, Ctrl+C or Ctrl+D, or `{ type: 'unsupported' }` without TSP so
   the program can ask its own way.
-- `plain(view, cols?)`: readable text without escapes, for fallbacks.
+- `plain(view, cols?)`: readable text without escapes, for fallbacks. It
+  prints a `row`'s children on one line, so build fallback-friendly views
+  (a `col` of cards) or pass `fallback` to `print`.
+- `bar(fraction?, width = 20)`: `[####----] 50%`, the plain form of a
+  progress bar (`[--------]` when unknown).
 - `css`: a tagged template returning the stylesheet as written, for editor
   highlighting.
 
@@ -182,6 +280,7 @@ bun examples/table.tsx      # print: the directory as a table
 bun examples/ask.tsx        # ask: "Which size?"
 bun examples/progress.tsx   # a flow surface with a running card
 bun examples/chat.tsx       # an inline surface with an editor in the dock
+bun examples/dashboard.tsx  # a sans screen app: head row, stats, tabbed views, table + detail
 ```
 
 ## Development

@@ -56,8 +56,8 @@ use crate::{
 	term::{self, Terminal, Waker},
 	ui::View,
 	wire::{
-		Blob, Cell, Close, Encoder, Event, Frame, Message, Mode, Op, Open, Query, Reply, RevealAt,
-		ScrollBy, Sheet,
+		Blob, Cell, Close, Encoder, Event, Font, Frame, Message, Mode, Op, Open, Query, Reply,
+		RevealAt, ScrollBy, Sheet,
 	},
 };
 
@@ -216,6 +216,8 @@ pub struct SurfaceOptions {
 	/// Closing the pane loses nothing, so Tern closes it without asking
 	/// (default `false`).
 	pub closable: bool,
+	/// The base face (default mono; `Font::Sans` for apps).
+	pub font:     Option<Font>,
 }
 
 impl Default for SurfaceOptions {
@@ -229,6 +231,7 @@ impl Default for SurfaceOptions {
 			adopt:    false,
 			keep:     true,
 			closable: false,
+			font:     None,
 		}
 	}
 }
@@ -294,6 +297,13 @@ impl SurfaceOptions {
 	/// prompt.
 	pub const fn closable(mut self, closable: bool) -> Self {
 		self.closable = closable;
+		self
+	}
+
+	/// Sets the base face: `Font::Sans` draws people's text in the UI face
+	/// (machine strings stay mono).
+	pub const fn font(mut self, font: Font) -> Self {
+		self.font = Some(font);
 		self
 	}
 }
@@ -717,6 +727,7 @@ impl<M> Session<M> {
 			listen:   (!options.listen).then_some(false),
 			adopt:    options.adopt.then_some(true),
 			closable: options.closable.then_some(true),
+			font:     options.font,
 		}))?;
 		let previous = options
 			.adopt

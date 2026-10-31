@@ -15,7 +15,7 @@ from .keys import Key
 from .reconcile import REGIONS, AnyView, Region, as_view
 from .session import Session, connect
 from .ui import Node
-from .wire import ActionEvent, Json
+from .wire import ActionEvent, Font, Json
 
 
 class Unsupported(RuntimeError):
@@ -37,11 +37,13 @@ def show(
     *,
     css: str | None = None,
     fallback: str | None = None,
+    font: Font | None = None,
     session: Session | None = None,
 ) -> None:
     """Shows a static view that stays in the scrollback like command output:
     a `flow` surface opened with `listen: false`, its sheet, one frame and a
-    close with `keep`. Without TSP it prints `plain(view)`, or `fallback`."""
+    close with `keep`. Without TSP it prints `plain(view)`, or `fallback`.
+    `font` is the surface's face (`"sans"` for app-like output)."""
     own = session is None
     if session is None:
         session = connect(paste=False, kitty=False)
@@ -51,7 +53,7 @@ def show(
         sys.stdout.flush()
         return
     try:
-        surface = session.open(mode="flow", listen=False)
+        surface = session.open(mode="flow", listen=False, font=font)
         if css is not None:
             surface.stylesheet("main", css)
         surface.render(as_view(view))
@@ -70,19 +72,20 @@ def ask(
     *,
     css: str | None = None,
     submit: str = "submit",
+    font: Font | None = None,
     session: Session | None = None,
 ) -> Answer | None:
     """Shows a form in a `flow` surface and returns the first `action` whose
     `act` is `submit`, or `None` when the user presses Escape, Ctrl+C or
     Ctrl+D. The form stays in the scrollback; handlers on its nodes run while
-    it waits. Raises `Unsupported` without TSP."""
+    it waits. `font` is the surface's face. Raises `Unsupported` without TSP."""
     own = session is None
     if session is None:
         session = connect()
     if session is None:
         raise Unsupported("no Tern Surface Protocol on this terminal")
     try:
-        with session.open(mode="flow") as surface:
+        with session.open(mode="flow", font=font) as surface:
             if css is not None:
                 surface.stylesheet("main", css)
             surface.render(as_view(view))
@@ -211,18 +214,43 @@ def _render(node: Mapping[str, Json], cols: int) -> list[str]:
             if k == "status":
                 return ["  ".join(" ".join(_render(c, cols)) for c in kids)]
             return _block([], cols, kids)
-        case "row":
+        case "row" | "buttons":
             parts = [" ".join(line for line in _render(c, cols) if line) for c in kids]
             return [" ".join(part for part in parts if part)]
+        case "split" | "scroll":
+            return _block([], cols, kids)
+        case "carousel":
+            index = p.get("index")
+            at = index if isinstance(index, int) and not isinstance(index, bool) else 0
+            return _render(kids[min(max(at, 0), len(kids) - 1)], cols) if kids else []
+        case "empty":
+            return _block([x for x in (_text(p.get("title")), _text(p.get("text"))) if x], cols, kids)
         case "card" | "section" | "overlay":
-            head = _text(p.get("head"))
+            slots = {name: _slot(p, kids, name) for name in ("head", "end", "foot")}
+            body_kids = [c for c in kids if all(c is not s for s in slots.values())]
+            head_node = slots["head"]
+            head = " ".join(_render(head_node, cols)) if head_node is not None else _text(p.get("head"))
+            note = _text(p.get("meta"))
+            end_node = slots["end"]
+            end = " ".join(line for line in _render(end_node, cols) if line) if end_node is not None else ""
+            head = "  ".join(x for x in (head, note, end) if x)
             status = p.get("status")
             if isinstance(status, str):
                 head = f"{head} ({status})" if head else f"({status})"
-            body = _indent(_block([], cols, kids))
-            return ([head] if head else []) + body
+            body = _indent(_block([], cols, body_kids))
+            foot_node = slots["foot"]
+            foot = _indent(_render(foot_node, cols)) if foot_node is not None else []
+            return ([head] if head else []) + body + foot
+        case "button":
+            return [f"[{_text(p.get('text')) or _text(p.get('title'))}]"]
+        case "stats":
+            items = [i for i in p.get("items") or [] if isinstance(i, Mapping)]
+            return ["  ·  ".join(_stat(i) for i in items)]
         case "rule":
             label = _text(p.get("label"))
+            time = _text(p.get("time"))
+            if time:
+                label = f"{label} · {time}" if label else time
             if not label:
                 return ["-" * cols]
             side = max((cols - _width(label) - 2) // 2, 2)
@@ -230,12 +258,16 @@ def _render(node: Mapping[str, Json], cols: int) -> list[str]:
         case "spacer":
             return [""]
         case "text" | "shimmer" | "seg":
-            seg = _node_text(p)
+            spans = p.get("spans")
+            seg = _cited(spans) if k == "text" and isinstance(spans, list) else _node_text(p)
             if k == "seg" and kids:
                 seg = " ".join([*(" ".join(_render(c, cols)) for c in kids), seg]).strip()
             return seg.split("\n")
         case "md" | "code" | "math" | "editor" | "input":
-            return _text(p.get("text")).split("\n")
+            text = _text(p.get("text"))
+            if k == "input" and p.get("secret") is True:
+                return ["•" * len(text)]
+            return text.split("\n")
         case "ansi":
             return _ANSI.sub("", _text(p.get("text"))).split("\n")
         case "rows":
@@ -266,6 +298,14 @@ def _render(node: Mapping[str, Json], cols: int) -> list[str]:
             return ["+".join(s for s in p.get("keys") or [] if isinstance(s, str))]
         case "icon":
             return []
+        case "avatar":
+            name = _text(p.get("text"))
+            return [name] if name else []
+        case "avatars":
+            names = ", ".join(x for x in (_text(i.get("text")) for i in _items(p, "items")) if x)
+            return [" ".join(x for x in (names, _text(p.get("label"))) if x)]
+        case "attachment":
+            return [f"[attachment: {_text(p.get('name'))}]"]
         case "image":
             return [f"[image: {_text(p.get('alt')) or _text(p.get('title')) or 'image'}]"]
         case "media":
@@ -288,10 +328,65 @@ def _render(node: Mapping[str, Json], cols: int) -> list[str]:
                     f"[{_text(t.get('label'))}]" if t.get("id") == active else _text(t.get("label")) for t in tabs
                 )
             ]
+        case "nav":
+            active = p.get("active")
+            navs = _items(p, "items")
+            return [
+                " | ".join(
+                    f"[{_text(n.get('label'))}]"
+                    if n.get("id") == active or any(s.get("id") == active for s in _items(n, "items"))
+                    else _text(n.get("label"))
+                    for n in navs
+                )
+            ]
+        case "breadcrumb":
+            sep = " / " if p.get("variant") == "path" else " › "
+            return [sep.join(_text(c.get("label")) or str(c.get("id", "")) for c in _items(p, "items"))]
+        case "pager":
+            return [_pager(p)]
+        case "menu":
+            return [f"[{_text(p.get('text')) or _text(p.get('title'))}]"]
+        case "menubar":
+            return ["  ".join(_text(m.get("label")) or _text(m.get("id")) for m in _items(p, "menus"))]
+        case "suggestions":
+            return [f"- {_text(s.get('text'))}" for s in _items(p, "items") if _text(s.get("text"))]
         case "picker":
             title = _text(p.get("title"))
             items = [i for i in p.get("items") or [] if isinstance(i, Mapping)]
             return ([title] if title else []) + [f"- {_text(i.get('label')) or i.get('id')}" for i in items]
+        case "select":
+            label = _text(p.get("label"))
+            shown = _select_shown(p)
+            return [f"{label}: {shown}" if label else shown]
+        case "switch":
+            mark = "[x]" if p.get("on") is True else "[ ]"
+            return [f"{mark} {_text(p.get('label'))}".rstrip()]
+        case "slider":
+            value = p.get("value")
+            if isinstance(value, list):
+                shown = "–".join(_number(v) for v in value[:2])
+            else:
+                shown = _number(value)
+            symbol = _text(p.get("unit"))
+            line = _with_unit(shown, symbol, symbol in _ATTACHED)
+            label = _text(p.get("label"))
+            return [f"{label}: {line}" if label and line else label or line]
+        case "field":
+            label = _text(p.get("label"))
+            if label and p.get("required") is True:
+                label += " *"
+            out = _block([label] if label else [], cols, kids)
+            note = _text(p.get("error")) or _text(p.get("warning")) or _text(p.get("hint"))
+            return [*out, note] if note else out
+        case "otp":
+            return [_otp(p)]
+        case "calendar" | "date":
+            shown = _day_value(p.get("value"))
+            if not shown and k == "date":
+                shown = _text(p.get("placeholder"))
+            return [shown] if shown else []
+        case "skeleton":
+            return []
         case "spinner":
             return [_text(p.get("label"))]
         case "elapsed":
@@ -310,7 +405,7 @@ def _render(node: Mapping[str, Json], cols: int) -> list[str]:
             return [f"{line} {extra}".rstrip()]
         case "chart":
             summary = _text(p.get("summary"))
-            return [summary] if summary else []
+            return [summary] if summary else _chart(p)
         case "effort":
             return [f"effort: {p.get('level')}"] if isinstance(p.get("level"), str) else []
         case "toast":
@@ -321,6 +416,14 @@ def _render(node: Mapping[str, Json], cols: int) -> list[str]:
             status = p.get("status")
             line = " ".join([head, *meta] + ([f"({status})"] if isinstance(status, str) else []))
             return [line] + _indent(_block([], cols, kids))
+        case "trace":
+            return _trace(p, kids, cols)
+        case "message":
+            return _message(p, kids, cols)
+        case "stacktrace":
+            return _stacktrace(p)
+        case "questions":
+            return _questions(p)
         case "agent":
             status = p.get("status")
             line = " ".join(
@@ -339,6 +442,279 @@ def _render(node: Mapping[str, Json], cols: int) -> list[str]:
             return _block([], cols, kids)
 
 
+def _slot(p: Mapping[str, Json], kids: list[Mapping[str, Json]], name: str) -> Mapping[str, Json] | None:
+    """The child a `head`/`end`/`foot` prop names: by key (id-less nodes)
+    or by id (wire nodes)."""
+    ref = p.get(name)
+    if not isinstance(ref, str):
+        return None
+    for child in kids:
+        cid = child.get("id")
+        key = _props(child).get("key")
+        if cid == ref or (isinstance(key, str) and (ref == key or ref.endswith("." + key))):
+            return child
+    return None
+
+
+def _items(p: Mapping[str, Json], key: str) -> list[Mapping[str, Json]]:
+    """The mapping entries of an array prop."""
+    value = p.get(key)
+    return [x for x in value if isinstance(x, Mapping)] if isinstance(value, list) else []
+
+
+def _number(value: Json) -> str:
+    """A JSON number as written: integral floats without `.0`."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return ""
+    return str(int(value)) if isinstance(value, float) and value.is_integer() else str(value)
+
+
+_ATTACHED: Final = ("%", "‰", "°", "×", "x", "′", "″", "'", '"')
+# Currency symbols a donut writes before its numbers (`$51.4`).
+_CURRENCY: Final = ("$", "€", "£", "¥")
+"""Units a slider writes against its number (`72%`)."""
+
+
+def _with_unit(value: str, unit: str, attached: bool) -> str:
+    """A value and its unit, attached (`72%`) or after a space (`182 ms`)."""
+    if not value or not unit:
+        return value
+    return f"{value}{unit}" if attached else f"{value} {unit}"
+
+
+def _chart(p: Mapping[str, Json]) -> list[str]:
+    """A `line`/`area` chart as a spark per series (`label spark` with
+    several), a `donut` as `label value` segments."""
+    kind = p.get("kind")
+    series = p.get("series")
+    entries = series if isinstance(series, list) else []
+    if kind == "donut":
+        unit = _text(p.get("unit"))
+        attached = unit.startswith(("%", "×", "°"))
+        segs = []
+        for e in entries:
+            seg = e if isinstance(e, Mapping) else {"value": e}
+            number = _number(seg.get("value"))
+            if unit in _CURRENCY and number:
+                # A currency symbol leads the number, after any minus sign.
+                sign, digits = ("−", number[1:]) if number[0] in "-−" else ("", number)
+                value = f"{sign}{unit}{digits}"
+            else:
+                value = _with_unit(number, unit, attached)
+            if value:
+                segs.append(" ".join(x for x in (_text(seg.get("label")), value) if x))
+        return ["  ".join(segs)] if segs else []
+    if kind not in ("line", "area"):
+        return []
+    lines = [e for e in entries if isinstance(e, Mapping) and isinstance(e.get("values"), list)]
+    if lines:
+        out = []
+        for s in lines:
+            spark = _spark(_values(s["values"]))
+            out.append(" ".join(x for x in (_text(s.get("label")), spark) if x))
+        return out
+    spark = _spark(_values(entries))
+    return [spark] if spark else []
+
+
+def _values(points: list[Json]) -> list[float]:
+    """The numbers of chart points (numbers or `{value}`), gaps skipped."""
+    out: list[float] = []
+    for v in points:
+        value = v.get("value") if isinstance(v, Mapping) else v
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            out.append(value)
+    return out
+
+
+def _cited(spans: list[Json]) -> str:
+    """Spans' text with `[n]` after each run citing sources: numbered in order
+    of first `href` (a cite's own `n` wins); cites without `href` are ignored."""
+    runs: list[tuple[str, list[str]]] = []
+    numbers: dict[str, int] = {}
+    order: list[str] = []
+    for span in spans:
+        cite = span.get("cite") if isinstance(span, Mapping) else None
+        hrefs: list[str] = []
+        for c in cite if isinstance(cite, list) else [cite]:
+            if not isinstance(c, Mapping) or not isinstance(c.get("href"), str):
+                continue
+            href = c["href"]
+            hrefs.append(href)
+            if href not in order:
+                order.append(href)
+            n = c.get("n")
+            if href not in numbers and isinstance(n, int) and not isinstance(n, bool) and n >= 1:
+                numbers[href] = n
+        runs.append((_text([span]), hrefs))
+    used = set(numbers.values())
+    free = 1
+    for href in order:
+        if href not in numbers:
+            while free in used:
+                free += 1
+            numbers[href] = free
+            used.add(free)
+    return "".join(text + "".join(f"[{numbers[h]}]" for h in hrefs) for text, hrefs in runs)
+
+
+def _select_shown(p: Mapping[str, Json]) -> str:
+    """A select's shown value: the picked option's label, else the value,
+    else the placeholder."""
+    value = p.get("value")
+    for option in p.get("options") or []:
+        if isinstance(option, str) and option == value:
+            return option
+        if isinstance(option, Mapping) and option.get("value") == value:
+            return _text(option.get("label")) or _text(value)
+    return _text(value) or _text(p.get("placeholder"))
+
+
+def _otp(p: Mapping[str, Json]) -> str:
+    length = p.get("length")
+    cells = length if isinstance(length, int) and not isinstance(length, bool) else 6
+    text = _text(p.get("text"))[:cells]
+    mask = p.get("mask")
+    if mask is True:
+        text = "•" * len(text)
+    elif isinstance(mask, str) and mask:
+        text = mask[0] * len(text)
+    return text + "_" * (cells - len(text))
+
+
+def _day_value(value: Json) -> str:
+    """A calendar value: a day, or a range as `from – to`."""
+    if isinstance(value, list):
+        days = [d for d in value[:2] if isinstance(d, str)]
+        return " – ".join(days)
+    return _text(value)
+
+
+def _pager(p: Mapping[str, Json]) -> str:
+    page = p.get("page")
+    current = page if isinstance(page, int) and not isinstance(page, bool) else 1
+    pages = _count(p.get("pages"))
+    total, size = _count(p.get("total")), _count(p.get("size"))
+    if pages is None and total is not None and size is not None and size > 0:
+        pages = -(-total // size)
+    return f"Page {current} of {pages}" if pages else f"Page {current}"
+
+
+def _count(value: Json) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def _trace(p: Mapping[str, Json], kids: list[Mapping[str, Json]], cols: int) -> list[str]:
+    """A trace: its head (with its status), then a `- title target (status)`
+    row per line with the line's content child (keyed by its id, else its
+    index) indented under it, then the other children."""
+    out: list[str] = []
+    status = p.get("status")
+    head = _text(p.get("title")) or _text(p.get("summary"))
+    if isinstance(status, str):
+        head = f"{head} ({status})" if head else f"({status})"
+    if head:
+        out.append(head)
+    placed: list[Mapping[str, Json]] = []
+    for index, line in enumerate(_items(p, "lines")):
+        state = line.get("status")
+        parts = [_text(line.get("title")), _text(line.get("target"))]
+        row = " ".join([x for x in parts if x] + ([f"({state})"] if isinstance(state, str) else []))
+        out.append(f"- {row}")
+        lid = line.get("id")
+        child = _slot({"line": lid if isinstance(lid, str) else str(index)}, kids, "line")
+        if child is not None:
+            placed.append(child)
+            out += _indent(_render(child, cols), "    ")
+    return _block(out, cols, [c for c in kids if all(c is not x for x in placed)])
+
+
+def _message(p: Mapping[str, Json], kids: list[Mapping[str, Json]], cols: int) -> list[str]:
+    """A message: `author time`, then its body, reactions and status indented."""
+    avatar = _slot(p, kids, "avatar")
+    head = " ".join(x for x in (_text(p.get("author")), _text(p.get("time"))) if x)
+    body = _block([], cols, [c for c in kids if c is not avatar])
+    chips = []
+    for r in _items(p, "reactions"):
+        n = r.get("count")
+        count = _number(n) if isinstance(n, (int, float)) and n > 0 else ""
+        chips.append(" ".join(x for x in (_text(r.get("text")), count) if x))
+    if any(chips):
+        body.append("  ".join(x for x in chips if x))
+    status = _text(p.get("status"))
+    if status:
+        body.append(status)
+    return ([head] if head else []) + _indent(body)
+
+
+def _stacktrace(p: Mapping[str, Json]) -> list[str]:
+    """The error as `type: message`, then `  at fn (file:line:col)` per frame."""
+    error = p.get("error")
+    err = error if isinstance(error, Mapping) else {}
+    head = ": ".join(x for x in (_text(err.get("type")), _text(err.get("message"))) if x)
+    out = [head] if head else []
+    for frame in _items(p, "frames"):
+        fn = _text(frame.get("fn")) or "<anonymous>"
+        file = _text(frame.get("file"))
+        where = ":".join(x for x in (file, _number(frame.get("line")), _number(frame.get("col"))) if x)
+        out.append(f"  at {fn} ({where})" if file else f"  at {fn}")
+    return out
+
+
+def _questions(p: Mapping[str, Json]) -> list[str]:
+    """Each question's prompt, then a `  - label` row per choice."""
+    out: list[str] = []
+    for q in _items(p, "items"):
+        if not isinstance(q.get("id"), str):
+            continue
+        out.append(_text(q.get("prompt")))
+        for choice in q.get("choices") or []:
+            if isinstance(choice, str):
+                out.append(f"  - {choice}")
+            elif isinstance(choice, Mapping):
+                out.append(f"  - {_text(choice.get('label')) or _text(choice.get('value'))}")
+    return out
+
+
+def _stat(item: Mapping[str, Json]) -> str:
+    sub = _text(item.get("sub"))
+    line = f"{_text(item.get('label'))}: {_text(item.get('value'))}"
+    return f"{line} ({sub})" if sub else line
+
+
+def _cell(cell: Json) -> str:
+    """Plain text of one table cell."""
+    if not isinstance(cell, Mapping):
+        return _text(cell)
+    if isinstance(cell.get("meter"), Mapping):
+        meter = cell["meter"]
+        value = meter.get("value")
+        parts = meter.get("parts")
+        if value is None and isinstance(parts, list):
+            value = sum(part.get("value", 0) for part in parts if isinstance(part, Mapping))
+        return _bar(value)
+    if isinstance(cell.get("badge"), Mapping):
+        return f"[{_text(cell['badge'].get('text'))}]"
+    if isinstance(cell.get("button"), Mapping):
+        return f"[{_text(cell['button'].get('text'))}]"
+    if isinstance(cell.get("spark"), Mapping):
+        values = [v for v in cell["spark"].get("values") or [] if isinstance(v, (int, float))]
+        return _spark(values)
+    text = _text(cell.get("text"))
+    return f"● {text}" if cell.get("dot") is not None else text
+
+
+_SPARK: Final = "▁▂▃▄▅▆▇█"
+
+
+def _spark(values: Sequence[float]) -> str:
+    if not values:
+        return ""
+    lo, hi = min(values), max(values)
+    span = hi - lo or 1
+    return "".join(_SPARK[int((v - lo) / span * (len(_SPARK) - 1) + 0.5)] for v in values)
+
+
 def _elapsed(ms: float) -> str:
     s = abs(ms) / 1000
     if s < 60:
@@ -354,22 +730,18 @@ def _plain_table(p: Mapping[str, Json], cols: int) -> list[str]:
     out: list[list[str]] = []
     if any(_text(c.get("head")) for c in columns):
         out.append([_text(c.get("head")) for c in columns])
+    if not rows and p.get("empty") is not None:
+        return [*_table(out), _text(p.get("empty"))]
+    selected = p.get("selected")
+    marks = selected is not None
+    if marks and out:
+        out[0] = ["", *out[0]]
     for r in rows:
         cells = r.get("cells") if isinstance(r.get("cells"), Mapping) else {}
-        line = []
-        for c in columns:
-            cell = cells.get(c["id"]) if isinstance(cells, Mapping) else None
-            if isinstance(cell, Mapping):
-                meter = cell.get("meter")
-                value = meter.get("value") if isinstance(meter, Mapping) else None
-                parts = meter.get("parts") if isinstance(meter, Mapping) else None
-                if value is None and isinstance(parts, list):
-                    value = sum(part.get("value", 0) for part in parts if isinstance(part, Mapping))
-                line.append(_bar(value))
-            else:
-                line.append(_text(cell))
-        out.append(line)
-    return _table(out, [c.get("align") == "end" for c in columns])
+        line = [_cell(cells.get(c["id"]) if isinstance(cells, Mapping) else None) for c in columns]
+        out.append([">" if r.get("id") == selected else "", *line] if marks else line)
+    ends = [c.get("align") == "end" for c in columns]
+    return _table(out, [False, *ends] if marks else ends)
 
 
 def _tree(nodes: list[Mapping[str, Json]], depth: int = 0) -> list[str]:

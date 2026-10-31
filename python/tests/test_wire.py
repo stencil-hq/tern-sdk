@@ -73,6 +73,32 @@ def test_events_are_typed_and_tolerate_bad_fields() -> None:
     assert isinstance(hello, wire.HelloReply) and hello.cell is None and hello.reduce_motion is True
 
 
+def test_new_kinds_events_keep_their_payloads() -> None:
+    menu = wire.decode_event({"ev": "toggle", "id": "main.bar", "item": "file", "open": True})
+    assert isinstance(menu, wire.ToggleEvent) and (menu.open, menu.item, menu.collapsed) == (True, "file", None)
+    date = wire.decode_event({"ev": "toggle", "id": "main.d", "collapsed": False})
+    assert isinstance(date, wire.ToggleEvent) and (date.collapsed, date.open) == (False, None)
+    row = wire.decode_event({"ev": "action", "id": "m", "act": "follow", "item": "view", "checked": False})
+    assert isinstance(row, wire.ActionEvent)
+    assert (row.act, row.item, row.checked, row.value) == ("follow", "view", False, None)
+    for value in ({"col": "age", "dir": "asc"}, ["r1", "r2"], {"size": "m"}, 2, "session"):
+        ev = wire.decode_event({"ev": "action", "id": "t", "act": "x", "value": value})
+        assert isinstance(ev, wire.ActionEvent) and ev.value == value
+    for changed in (True, 0.6, [200, 1200], [0.3, 0.7], "2026-10-30", ["s", "m"]):
+        change = wire.decode_event({"ev": "change", "id": "c", "value": changed})
+        assert isinstance(change, wire.ChangeEvent) and change.value == changed
+    react = wire.decode_event({"ev": "change", "id": "msg", "value": "👍", "on": True})
+    assert isinstance(react, wire.ChangeEvent) and (react.value, react.on) == ("👍", True)
+    answer = wire.decode_event({"ev": "change", "id": "q", "item": "size", "value": ["s", "m"]})
+    assert isinstance(answer, wire.ChangeEvent) and answer.item == "size" and answer.on is None
+    frame = wire.decode_event({"ev": "select", "id": "st", "item": 3})
+    assert isinstance(frame, wire.SelectEvent) and frame.item == "3"
+    opened = wire.decode_event({"ev": "activate", "id": "st", "item": 0.0})
+    assert isinstance(opened, wire.ActivateEvent) and opened.item == "0"
+    crumb = wire.decode_event({"ev": "select", "id": "bc", "item": "src", "values": None})
+    assert isinstance(crumb, wire.SelectEvent) and crumb.item == "src"
+
+
 def test_split_keeps_body_with_semicolons_and_equals() -> None:
     m = wire.split(b'f;c=k7;m=1;{"a":"x=1;"}')
     assert m is not None and m.params == (("c", "k7"), ("m", "1")) and m.body == b'{"a":"x=1;"}'

@@ -2,11 +2,14 @@
 import { plain } from './plain.js';
 import type { Renderable } from './reconcile.js';
 import { connect, type ConnectOptions } from './session.js';
+import type { SurfaceFont } from './wire.js';
 
 /** What `print` takes. */
 export interface PrintOptions extends ConnectOptions {
    /** A stylesheet for the view. */
    readonly css?: string;
+   /** The view's base face (`open`'s `font`). */
+   readonly font?: SurfaceFont;
    /** The text written outside Tern instead of the plain rendering. */
    readonly fallback?: string;
 }
@@ -26,7 +29,8 @@ export async function print(view: Renderable, options: PrintOptions = {}): Promi
       return;
    }
    try {
-      const surface = session.open({ mode: 'flow', listen: false });
+      const font = options.font === undefined ? {} : { font: options.font };
+      const surface = session.open({ mode: 'flow', listen: false, ...font });
       if (options.css !== undefined) surface.stylesheet('main', options.css);
       surface.render(view);
       await surface.close({ keep: true });

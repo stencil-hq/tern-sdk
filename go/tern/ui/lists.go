@@ -65,7 +65,21 @@ type Tabs struct {
 	Items []Tab `json:"items,omitzero"`
 	// Active is the id of the active tab.
 	Active string `json:"active,omitzero"`
+	// Variant is TabsUnderline (default) or TabsSegmented.
+	Variant TabsVariant `json:"variant,omitzero"`
 }
+
+// TabsVariant is a tab strip's look.
+type TabsVariant string
+
+// Tab strip looks.
+const (
+	// TabsUnderline is a full-width strip with an underlined active tab.
+	TabsUnderline TabsVariant = "underline"
+	// TabsSegmented is an inline segmented control, for view switches in
+	// a head's end.
+	TabsSegmented TabsVariant = "segmented"
+)
 
 // Tab is one tab.
 type Tab struct {
@@ -201,8 +215,8 @@ type PickerItem struct {
 	Icon IconName `json:"icon,omitzero"`
 	// Role picks the lead icon when Icon is unset.
 	Role string `json:"role,omitzero"`
-	// Mark is an initials avatar.
-	Mark *Avatar `json:"mark,omitzero"`
+	// Mark is an initials avatar (its Text and Seed).
+	Mark *Face `json:"mark,omitzero"`
 	// Dot is a status dot tone.
 	Dot Tone `json:"dot,omitzero"`
 	// Mono draws the label monospace.
@@ -227,12 +241,6 @@ type PickerItem struct {
 	Open *bool `json:"open,omitzero"`
 	// Title is the row tooltip.
 	Title string `json:"title,omitzero"`
-}
-
-// Avatar is an initials avatar on a gradient.
-type Avatar struct {
-	Text string `json:"text"`
-	Seed string `json:"seed,omitzero"`
 }
 
 // RoleChip is a chip after a picker row's badges.
@@ -298,7 +306,7 @@ type Scope struct {
 	ID       string   `json:"id"`
 	Label    Rich     `json:"label,omitzero"`
 	Group    string   `json:"group,omitzero"`
-	Mark     *Avatar  `json:"mark,omitzero"`
+	Mark     *Face    `json:"mark,omitzero"`
 	Icon     IconName `json:"icon,omitzero"`
 	Dot      Tone     `json:"dot,omitzero"`
 	Count    *int     `json:"count,omitzero"`
@@ -334,3 +342,268 @@ type PickerAction struct {
 
 // Node builds the picker.
 func (p Picker) Node() tern.Node { return Build(tern.KindPicker, p, p.Children) }
+
+// Breadcrumb is the trail from a root to the current place (kind
+// breadcrumb). A click on a crumb but the last sends select with its id.
+// Its Max is a crumb count and shadows Common's size bound.
+type Breadcrumb struct {
+	Common
+	// Items are the trail, root first; the last is the current place.
+	Items []Crumb `json:"items,omitzero"`
+	// Variant is BreadcrumbChevron (default) or BreadcrumbPath.
+	Variant BreadcrumbVariant `json:"variant,omitzero"`
+	// Max is the most crumbs shown: a longer trail keeps the first and the
+	// last Max-1 and folds the rest into a "…" menu (0 never folds).
+	Max int `json:"max,omitzero"`
+	// Open shows the fold's menu; a change wins over the user's.
+	Open bool `json:"open,omitzero"`
+	// Active is the id of the crumb under your keyboard cursor.
+	Active string `json:"active,omitzero"`
+}
+
+// Crumb is one step of a breadcrumb.
+type Crumb struct {
+	// ID is what select sends; a crumb without one is skipped.
+	ID string `json:"id"`
+	// Label is the crumb's text (default ID).
+	Label string `json:"label,omitzero"`
+	// Icon leads the label (BreadcrumbChevron and the fold's menu).
+	Icon IconName `json:"icon,omitzero"`
+	// Href is opened by ⌘-click on the crumb.
+	Href string `json:"href,omitzero"`
+}
+
+// BreadcrumbVariant is a breadcrumb's look.
+type BreadcrumbVariant string
+
+// Breadcrumb looks.
+const (
+	// BreadcrumbChevron is crumbs with icons and › between them.
+	BreadcrumbChevron BreadcrumbVariant = "chevron"
+	// BreadcrumbPath is a mono path with / between dim parents.
+	BreadcrumbPath BreadcrumbVariant = "path"
+)
+
+// Node builds the breadcrumb.
+func (b Breadcrumb) Node() tern.Node { return Build(tern.KindBreadcrumb, b, nil) }
+
+// Pager pages through a long set (kind pager). A page click sends change
+// with the page (1-based); PagerMore's row sends an action event with act
+// "more".
+type Pager struct {
+	Common
+	// Variant is PagerRange (default), PagerPages or PagerMore.
+	Variant PagerVariant `json:"variant,omitzero"`
+	// Page is the current page, 1-based (default 1); for PagerMore, the
+	// pages loaded so far.
+	Page int `json:"page,omitzero"`
+	// Pages is the page count (default from Total and Size).
+	Pages int `json:"pages,omitzero"`
+	// Total is the item count.
+	Total *int `json:"total,omitzero"`
+	// Size is items per page.
+	Size int `json:"size,omitzero"`
+	// Loading draws a turning ring; the more row sends nothing.
+	Loading bool `json:"loading,omitzero"`
+	// Label is what the items are, plural ("rows", "commits").
+	Label string `json:"label,omitzero"`
+}
+
+// PagerVariant is a pager's look.
+type PagerVariant string
+
+// Pager looks.
+const (
+	// PagerRange is "12–24 of 312" with arrows.
+	PagerRange PagerVariant = "range"
+	// PagerPages is numbered page pills.
+	PagerPages PagerVariant = "pages"
+	// PagerMore is a "Show 50 more" row.
+	PagerMore PagerVariant = "more"
+)
+
+// Node builds the pager.
+func (p Pager) Node() tern.Node { return Build(tern.KindPager, p, nil) }
+
+// Nav switches between an app's sections: pills, or links with menus
+// (kind nav). A click on an item without sub-items, or on a sub-item,
+// sends select with its id.
+type Nav struct {
+	Common
+	// Items are the items in order.
+	Items []NavItem `json:"items,omitzero"`
+	// Active is the id of the active item or sub-item.
+	Active string `json:"active,omitzero"`
+	// Open is the id of the item whose menu or panel shows.
+	Open string `json:"open,omitzero"`
+	// Variant is NavPills (default) or NavLinks.
+	Variant NavVariant `json:"variant,omitzero"`
+}
+
+// NavItem is one item of a nav.
+type NavItem struct {
+	// ID is what select sends; an item without one is skipped.
+	ID string `json:"id"`
+	// Label is the item's text (default ID).
+	Label string `json:"label,omitzero"`
+	// Icon leads the label.
+	Icon IconName `json:"icon,omitzero"`
+	// Count is a small mono pill after the label.
+	Count string `json:"count,omitzero"`
+	// Items are sub-items: the item opens a menu instead of being picked.
+	Items []NavSubItem `json:"items,omitzero"`
+}
+
+// NavSubItem is an entry of a nav item's menu or panel.
+type NavSubItem struct {
+	ID string `json:"id"`
+	// Label is the entry's text (default ID).
+	Label string `json:"label,omitzero"`
+	// Detail is a muted note (NavPills) or a description line (NavLinks).
+	Detail string `json:"detail,omitzero"`
+	// Icon leads the menu row, or fills the panel entry's tile.
+	Icon IconName `json:"icon,omitzero"`
+}
+
+// NavVariant is a nav's look.
+type NavVariant string
+
+// Nav looks.
+const (
+	NavPills NavVariant = "pills"
+	NavLinks NavVariant = "links"
+)
+
+// Node builds the nav.
+func (n Nav) Node() tern.Node { return Build(tern.KindNav, n, nil) }
+
+// Menu is a button that opens a menu of actions (kind menu). Choosing a
+// row sends an action event with act the row's id (and Checked for check
+// and radio rows); the pointer opening or closing it sends toggle (Open).
+type Menu struct {
+	Common
+	// Items are the rows, in order.
+	Items []MenuEntry `json:"items,omitzero"`
+	// Text is the trigger's label; without Text and Icon the trigger is a
+	// square … button.
+	Text string `json:"text,omitzero"`
+	// Icon leads the trigger's label.
+	Icon IconName `json:"icon,omitzero"`
+	// Trigger is the trigger's look: ButtonDefault, ButtonQuiet or ButtonPrimary.
+	Trigger ButtonVariant `json:"trigger,omitzero"`
+	// Caret draws a chevron after the label.
+	Caret bool `json:"caret,omitzero"`
+	// Size is the trigger's size, SizeMD (default) or SizeSM.
+	Size Size `json:"size,omitzero"`
+	// Variant is MenuDefault or MenuDense.
+	Variant MenuVariant `json:"variant,omitzero"`
+	// Open shows the menu; a change wins over the user's.
+	Open bool `json:"open,omitzero"`
+	// Active is the highlighted row's id, your keyboard cursor.
+	Active string `json:"active,omitzero"`
+	// Align is the trigger edge the menu lines up with: AlignStart or AlignEnd.
+	Align Align `json:"align,omitzero"`
+	// Disabled dims the trigger; it does not open.
+	Disabled Disabled `json:"disabled,omitzero"`
+}
+
+// MenuVariant is a menu's look.
+type MenuVariant string
+
+// Menu looks.
+const (
+	MenuDefault MenuVariant = "default"
+	MenuDense   MenuVariant = "dense"
+)
+
+// MenuEntry is a row of a menu: a MenuAct, a MenuItem, MenuSep or a
+// MenuHeader.
+type MenuEntry interface {
+	menuEntry()
+}
+
+// MenuAct is an action labeled from its id ("open-file" reads "Open file").
+type MenuAct string
+
+// MenuSep is a separator line.
+const MenuSep MenuAct = "-"
+
+// MenuHeader is a dim section title.
+type MenuHeader string
+
+// MarshalJSON writes {header}.
+func (h MenuHeader) MarshalJSON() ([]byte, error) {
+	return tern.Marshal(map[string]string{"header": string(h)})
+}
+
+// MenuItem is a menu row.
+type MenuItem struct {
+	// ID is what the action event sends as act.
+	ID string `json:"id"`
+	// Label is the row's text (default from ID).
+	Label string `json:"label,omitzero"`
+	// Icon leads the row.
+	Icon IconName `json:"icon,omitzero"`
+	// Keys are shortcut keys drawn at the right (display only).
+	Keys []string `json:"keys,omitzero"`
+	// Detail is a second line under the label (a tooltip in a context menu).
+	Detail string `json:"detail,omitzero"`
+	// Checked makes the row a check row, showing a check while true.
+	Checked *bool `json:"checked,omitzero"`
+	// Radio makes the row a radio row of this group.
+	Radio string `json:"radio,omitzero"`
+	// Disabled dims the row; it is not choosable.
+	Disabled Disabled `json:"disabled,omitzero"`
+	// Danger draws a destructive action in red.
+	Danger bool `json:"danger,omitzero"`
+	// Items are a submenu; the row itself sends nothing.
+	Items []MenuEntry `json:"items,omitzero"`
+}
+
+func (MenuAct) menuEntry()    {}
+func (MenuHeader) menuEntry() {}
+func (MenuItem) menuEntry()   {}
+
+// Node builds the menu.
+func (m Menu) Node() tern.Node { return Build(tern.KindMenu, m, nil) }
+
+// Menubar is an app's row of menus (kind menubar). Opening or closing a
+// menu sends toggle (Open, Item the menu); choosing a row sends an action
+// event with act the row's id, Item the menu and Checked for check rows.
+type Menubar struct {
+	Common
+	// Menus are the menus in order.
+	Menus []MenubarMenu `json:"menus,omitzero"`
+	// Variant is MenubarStrip (default) or MenubarPill.
+	Variant MenubarVariant `json:"variant,omitzero"`
+	// Icon is the app's mark before the titles.
+	Icon IconName `json:"icon,omitzero"`
+	// Open is the id of the menu shown open; a change wins over the pointer.
+	Open string `json:"open,omitzero"`
+	// Active is the id of the highlighted row in the open menu.
+	Active string `json:"active,omitzero"`
+}
+
+// MenubarMenu is one menu of a menubar.
+type MenubarMenu struct {
+	// ID names the menu in events and in Open; a menu without one is skipped.
+	ID string `json:"id"`
+	// Label is its title (default ID).
+	Label string `json:"label,omitzero"`
+	// Items are its rows.
+	Items []MenuEntry `json:"items"`
+}
+
+// MenubarVariant is a menubar's look.
+type MenubarVariant string
+
+// Menubar looks.
+const (
+	// MenubarStrip is a full-width hairline strip.
+	MenubarStrip MenubarVariant = "strip"
+	// MenubarPill is a floating glass capsule, with the app's mark.
+	MenubarPill MenubarVariant = "pill"
+)
+
+// Node builds the menubar.
+func (m Menubar) Node() tern.Node { return Build(tern.KindMenubar, m, nil) }

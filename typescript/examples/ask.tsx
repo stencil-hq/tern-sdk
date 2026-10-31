@@ -23,13 +23,6 @@ const sheet = css`
    .ask :checked + span {
       color: var(--accent);
    }
-   .ask button {
-      align-self: flex-start;
-      padding: 3px 12px;
-      border-radius: 6px;
-      background: var(--accent-fill);
-      color: #fff;
-   }
 `;
 
 const sizes: Readonly<Record<string, string>> = { s: 'Small', m: 'Medium', l: 'Large' };
@@ -45,9 +38,9 @@ const form = (
             </html.label>
          ))}
       </html.div>
-      <html.button key="go" actions={{ click: 'submit' }}>
+      <button key="go" variant="primary" actions={{ click: 'submit' }}>
          Create
-      </html.button>
+      </button>
    </html.form>
 );
 

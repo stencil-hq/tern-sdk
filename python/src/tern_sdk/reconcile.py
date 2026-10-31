@@ -74,6 +74,7 @@ class Tree:
             props: Json = node.props
             nodes: Sequence[Node | Mapping[str, Json]] = node.children
             handlers = node.handlers
+            slots: Mapping[str, str] = node.slots
         elif isinstance(node, Mapping):
             kind = node.get("k")
             props = node.get("p")
@@ -84,6 +85,7 @@ class Tree:
                 raise ReconcileError(f"{id}: `c` must be a list, got {raw!r}")
             nodes = raw
             handlers = {}
+            slots = {}
         else:
             raise ReconcileError(f"{id}: a node must be a table, got {node!r}")
         if not isinstance(kind, str):
@@ -110,7 +112,10 @@ class Tree:
                 raise ReconcileError(f"{id}: duplicate child key {name!r}")
             seen.add(child_id)
             children.append(cls.build(child_id, child))
-        return cls(id, kind, deepcopy(dict(props)), children, dict(handlers))
+        own = deepcopy(dict(props))
+        for prop, key in slots.items():
+            own[prop] = f"{id}.{key}"
+        return cls(id, kind, own, children, dict(handlers))
 
     def wire(self) -> dict[str, Json]:
         """The node as a wire subtree with every id."""

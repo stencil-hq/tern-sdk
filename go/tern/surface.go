@@ -39,6 +39,9 @@ type SurfaceOptions struct {
 	// Closable opens with closable:true: closing the pane loses nothing,
 	// so Tern closes it without asking.
 	Closable bool
+	// Font is the regions' base face: FontSans for apps (machine strings
+	// stay mono), FontMono (the default) for terminal-like output.
+	Font Font
 }
 
 // Surface is one open document in the pane. Render diffs views into frames
@@ -81,6 +84,7 @@ func (s *Session) Open(opts SurfaceOptions) (*Surface, error) {
 		Role:     opts.Role,
 		Adopt:    opts.Adopt,
 		Closable: opts.Closable,
+		Font:     opts.Font,
 	}
 	if opts.NoListen {
 		msg.Listen = new(false)

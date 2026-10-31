@@ -22,24 +22,101 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/stencil-hq/tern-sdk/go/tern"
 	"github.com/stencil-hq/tern-sdk/go/tern/ui"
 )
 
 func main() {
-	view := tern.Main(ui.Card{
-		Head:     ui.T("Deploy"),
-		Status:   ui.Done,
-		Children: ui.Nodes(ui.KV{Items: []ui.Pair{{K: ui.T("service"), V: ui.T("api")}}}),
+	ctx := context.Background()
+	deployed := false
+	var sf *tern.Surface
+	var view func() tern.View
+	deploy := func(*tern.Action) { deployed = true; _ = sf.Render(view()) }
+	view = func() tern.View {
+		status := ui.Pending
+		if deployed {
+			status = ui.Done
+		}
+		return tern.Main(ui.Card{
+			Head:   ui.T("Deploy"),
+			Icon:   ui.IconRocket,
+			Meta:   ui.T("api · v2.14.0"),
+			Status: status,
+			Children: ui.Nodes(
+				ui.KV{Items: []ui.Pair{{K: ui.T("Service"), V: ui.T("api")}}},
+				ui.Button{Text: "Deploy", Keys: []string{"enter"}, Variant: ui.ButtonPrimary,
+					Common: ui.Common{OnClick: deploy}},
+			),
+		})
+	}
+	s, err := tern.Connect(ctx, tern.Options{})
+	if errors.Is(err, tern.ErrUnsupported) {
+		fmt.Print(tern.Plain(view(), 0)) // plain text outside Tern
+		return
+	}
+	if err != nil {
+		panic(err)
+	}
+	defer s.Close()
+	// Apps use the sans face; machine strings (code, mono spans) stay mono.
+	sf, _ = s.Open(tern.SurfaceOptions{Title: "deploy", Font: tern.FontSans})
+	_ = sf.Render(view())
+	_ = s.Run(ctx, func(in tern.Input) error {
+		k, ok := in.(tern.Key)
+		switch {
+		case ok && k.Is("escape"):
+			return tern.ErrStop
+		case ok && k.Is("enter"):
+			deploy(nil) // the key the button's keycap shows
+		}
+		return nil
 	})
-	// A native card kept in the scrollback in Tern; plain text anywhere else.
-	_ = tern.Print(context.Background(), view, tern.PrintOptions{})
 }
 ```
 
+Handlers run inside `Run`, on the goroutine that reads input. For a one-shot
+output that stays in the scrollback, use `tern.Print`.
+
+Outside Tern, `tern.Plain` (and so `Print`'s fallback) prints a `row`'s
+children on one line: build fallback-friendly views (cols of cards), or pass
+`PrintOptions.Fallback` with text of your own.
+
 Run the examples from this directory: `go run ./examples/table`,
-`./examples/ask`, `./examples/progress`, `./examples/chat`.
+`./examples/ask`, `./examples/progress`, `./examples/chat`,
+`./examples/dashboard` (a sans `screen` app laid out as a page: head row,
+flat stats strip, underline tabs over three views, each a full-width table
+beside a detail card; confirm strip and key legend in the dock; live
+updates).
+
+## Design rules
+
+Follow [Designing views](https://docs.stencil.so/tern/guides/design.html);
+in short:
+
+- Open apps with `Font: tern.FontSans`; mono is for machine strings (span
+  tokens `mono`, `code`, `num`, `path`, `key`; `Column.Mono`).
+- Use kinds, not `el` + CSS: `ui.Button` for actions, `ui.Table` with
+  `Selectable` for lists of records, `ui.Stats` for headline figures (a
+  flat strip directly in main, never in a card), `ui.Tabs` (underline) to
+  navigate between views, `ui.TabsSegmented` for a toolbar filter, cards
+  only for objects (a selected item's detail, a confirm strip).
+- Pages: a head row (a `title` span, muted meta, badges right), the stats
+  strip, tabs, then one view: a full-width table (one `Grow` text column,
+  numbers `AlignEnd` + `Mono`) beside a detail card (`Min` 44ch, `Max`
+  56ch). See the dashboard example.
+- `Column.Priority` 0 (the default) hides first when a table is narrow:
+  give the `Grow` column the highest priority, numbers next, sparks,
+  meters and secondary columns the lowest.
+- Color carries meaning only: tones and span tokens, never your own colors.
+- One `ButtonPrimary` per view: with a detail card it sits in the card's
+  `End` with its key and rows carry no buttons; without one, use a small
+  `ui.ButtonCell` on rows. `ButtonDanger` only opens a confirm strip for
+  destructive actions.
+- Design all four states: loading, empty (`Table.Empty`, `List.Empty`),
+  error, success.
 
 The `ask` example reads the selected size only from the submit action's form
 values, without tracking radio changes. Outside Tern it asks on the command line.
@@ -49,7 +126,7 @@ values, without tracking radio changes. Outside Tern it asks on the command line
 | Package | Holds |
 | --- | --- |
 | `tern` | Wire, input, keys, nodes, reconcile, session and helpers |
-| `tern/ui` | A builder struct per kind (`ui.Card`, `ui.Table`, `ui.Editor`, …), spans, enums, `ui.Common` |
+| `tern/ui` | A builder struct per kind (`ui.Card`, `ui.Table`, `ui.Button`, `ui.Stats`, …), spans, enums, `ui.Common` |
 | `tern/el` | A builder struct per `el` tag (`el.Form`, `el.Button`, `el.Input`, …) |
 
 ## Layers
@@ -70,6 +147,10 @@ values, without tracking radio changes. Outside Tern it asks on the command line
    not the zero value are pointers (`Value: new(0.5)`). Text is `ui.T("…")`
    or `ui.Spans(ui.Span{T: "…", S: "muted"})`. `ui.Common` holds the props
    every node takes, `Props` for untyped extras, and the handlers.
+   `Node.Slots` are nodes a prop points at by id: `ui.Card` `HeadNode` and
+   `End`, `ui.Section` `HeadNode`, `ui.Overlay` `End` and `Foot`, `ui.Rule`
+   `End` and `ui.Message` `Avatar` become the children keyed `head`, `end`,
+   `foot` and `avatar`, and the prop is that child's id (`main.<card>.end`).
 4. **Reconcile.** `Reconciler.Diff(view)` returns the ops from the last
    view with ids derived from keys (`main.<key or index>…`), exactly as
    Tern's plugin worker; two siblings with one id return a
@@ -111,7 +192,10 @@ Set handlers on a node through `ui.Common` (or `tern.Handlers` on a
 `tern.Node`):
 
 ```go
-el.Button{Text: "Create", Common: ui.Common{OnClick: func(a *tern.Action) { … }}}
+ui.Button{Text: "Create", Common: ui.Common{OnClick: func(a *tern.Action) { … }}}
+ui.Table{Common: ui.Common{OnSelect: func(e *tern.Select) { pick(e.Item) },
+	OnAction: map[string]func(*tern.Action){"retry": func(a *tern.Action) { retry(a.Item) }}},
+	Selectable: true, Selected: picked, Cols: cols, Rows: rows}
 ui.List{CommonWithoutMax: ui.CommonWithoutMax{OnSelect: func(e *tern.Select) { … }}, Children: items}
 ui.Editor{Common: ui.Common{Key: "ed", OnSend: func(e *tern.Send) { … }}}
 ```
@@ -119,7 +203,9 @@ ui.Editor{Common: ui.Common{Key: "ed", OnSend: func(e *tern.Send) { … }}}
 - `OnClick` / `OnDblClick` set `actions.click` / `actions.dblclick` to
   `"click"` / `"dblclick"` unless the node names that action itself.
 - `OnMenu` adds its names (sorted) to `actions.menu` after the node's own.
-- `OnAction` runs on `action` events by `act` (or `act=value`).
+- `OnAction` runs on `action` events by `act` (or `act=value` when the
+  value is a string; a table's sort, an otp's cell or a questionnaire's
+  answers arrive in `Action.Value` as decoded JSON).
 - `OnToggle`, `OnSelect`, `OnActivate`, `OnChange`, `OnFocus`, `OnEdit`,
   `OnUndo`, `OnSend` run on those events.
 
@@ -178,7 +264,7 @@ err = s.Run(ctx, func(in tern.Input) error {
 
 ```go
 tern.Print(ctx, view, tern.PrintOptions{CSS: ".size{text-align:right}"})
-answer, err := tern.Ask(ctx, tern.Main(form), tern.AskOptions{CSS: css}) // Submit defaults to "submit"
+answer, err := tern.Ask(ctx, tern.Main(form), tern.AskOptions{Font: tern.FontSans}) // Submit defaults to "submit"
 fmt.Print(tern.Plain(view, 80))
 ```
 

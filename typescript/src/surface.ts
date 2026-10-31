@@ -9,6 +9,7 @@ import type {
    Op,
    RevealAt,
    ScrollTo,
+   SurfaceFont,
    SurfaceMode,
    TspEvent,
 } from './wire.js';
@@ -29,6 +30,11 @@ export interface OpenOptions {
    readonly adopt?: boolean;
    /** `true`: closing the pane loses nothing, so Tern closes it without asking. */
    readonly closable?: boolean;
+   /**
+    * The base face: `"sans"` for apps (people text in the UI face, machine
+    * strings stay mono), `"mono"` (Tern's default) for terminal-like output.
+    */
+   readonly font?: SurfaceFont;
    /** Also yield these action names after their node handlers run (used by `ask`). */
    readonly forwardActions?: readonly string[];
 }
@@ -221,7 +227,8 @@ export class Surface implements AsyncDisposable {
       switch (event.ev) {
          case 'action': {
             const actions = this.#latest.find(event.id)?.props['actions'];
-            const full = event.value === undefined ? event.act : `${event.act}=${event.value}`;
+            const full =
+               typeof event.value === 'string' ? `${event.act}=${event.value}` : event.act;
             const named = (gesture: string): boolean =>
                typeof actions === 'object' &&
                actions !== null &&

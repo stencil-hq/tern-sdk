@@ -39,6 +39,10 @@ name = "chat"
 path = "examples/chat.rs"
 
 [[example]]
+name = "dashboard"
+path = "examples/dashboard.rs"
+
+[[example]]
 name = "progress"
 path = "examples/progress.rs"
 
@@ -84,7 +88,7 @@ features = [
 default-features = false
 
 [target."cfg(unix)".dependencies.libc]
-version = "=0.2.189"
+version = "0.2.189"
 features = ["extra_traits"]
 
 [target."cfg(windows)".dependencies.windows-sys]

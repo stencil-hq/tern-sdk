@@ -42,6 +42,9 @@ pub struct Node<M = ()> {
 	pub(crate) children: Vec<Self>,
 	/// Handlers, in the order they were attached.
 	pub(crate) handlers: Vec<(Trigger, Handler<M>)>,
+	/// Slot props (`head`, `end`, `foot`) given a node: the child keyed by
+	/// the slot's name, sent as that child's id.
+	pub(crate) slots:    Vec<&'static str>,
 }
 
 impl<M> Clone for Node<M> {
@@ -51,6 +54,7 @@ impl<M> Clone for Node<M> {
 			props:    self.props.clone(),
 			children: self.children.clone(),
 			handlers: self.handlers.clone(),
+			slots:    self.slots.clone(),
 		}
 	}
 }
@@ -74,6 +78,7 @@ impl<M> Node<M> {
 			props:    Map::new(),
 			children: Vec::new(),
 			handlers: Vec::new(),
+			slots:    Vec::new(),
 		}
 	}
 
@@ -111,6 +116,30 @@ impl<M> Node<M> {
 				self.props.insert(key.to_owned(), value);
 			},
 			Err(err) => tracing::warn!(key, %err, "prop not serializable; left unset"),
+		}
+	}
+
+	/// Puts `node` in slot `slot` (`head`, `end`, `foot`): the child keyed
+	/// `slot`, replacing an earlier one, with the prop sent as its id.
+	pub(crate) fn set_slot(&mut self, slot: &'static str, mut node: Self) {
+		node.props.insert("key".into(), Value::String(slot.into()));
+		self.props.remove(slot);
+		self
+			.children
+			.retain(|c| c.props.get("key").and_then(Value::as_str) != Some(slot));
+		self.children.push(node);
+		if !self.slots.contains(&slot) {
+			self.slots.push(slot);
+		}
+	}
+
+	/// Clears slot `slot` (a plain prop value replaces the node).
+	pub(crate) fn clear_slot(&mut self, slot: &str) {
+		if let Some(at) = self.slots.iter().position(|s| *s == slot) {
+			self.slots.remove(at);
+			self
+				.children
+				.retain(|c| c.props.get("key").and_then(Value::as_str) != Some(slot));
 		}
 	}
 
@@ -152,7 +181,7 @@ impl<M> Node<M> {
 			Some(Value::Array(c)) => c.iter().map(Self::from_json).collect::<Result<_, _>>()?,
 			Some(other) => return Err(Error::InvalidView(format!("`c` must be a list, got {other}"))),
 		};
-		Ok(Self { kind: kind.to_owned(), props, children, handlers: Vec::new() })
+		Ok(Self { children, props, ..Self::new(kind) })
 	}
 
 	/// The node's wire form without ids `{k, p?, c?}` (handlers dropped).
@@ -361,13 +390,14 @@ where
 	})
 }
 
-/// The handler of a `toggle` event.
+/// The handler of a `toggle` event: the new `collapsed` (not `open` in the
+/// events that say `open`).
 pub fn toggle_handler<M, F>(f: F) -> Handler<M>
 where
 	F: Fn(bool) -> M + Send + Sync + 'static,
 {
 	Arc::new(move |e| match e {
-		Event::Toggle(t) => Some(f(t.collapsed)),
+		Event::Toggle(t) => Some(f(t.open.map_or(t.collapsed, |open| !open))),
 		_ => None,
 	})
 }
@@ -612,7 +642,8 @@ macro_rules! event_methods {
 			self
 		}
 
-		/// Maps `toggle` events (the new `collapsed`) to a message.
+		/// Maps `toggle` events (the new `collapsed`; a menu, select or trace
+		/// line that opened is not collapsed) to a message.
 		pub fn on_toggle(mut self, f: impl Fn(bool) -> M + Send + Sync + 'static) -> Self {
 			$crate::ui::node::AsNode::as_node(&mut self)
 				.handlers

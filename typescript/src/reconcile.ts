@@ -34,10 +34,18 @@ export class Tree {
    readonly id: string;
    readonly node: Node;
    readonly children: readonly Tree[];
+   /** The props as sent: slot props (`head`, `end`, `foot`) given a node set to its id. */
+   readonly props: JsonObject;
 
    constructor(id: string, node: Node) {
       this.id = id;
       this.node = node;
+      if (node.slots.length === 0) this.props = node.props;
+      else {
+         const props: Record<string, Json> = { ...node.props };
+         for (const slot of node.slots) props[slot] = `${id}.${slot}`;
+         this.props = props;
+      }
       const seen = new Set<string>();
       const children: Tree[] = [];
       node.children.forEach((child, i) => {
@@ -56,11 +64,6 @@ export class Tree {
    /** The kind. */
    get kind(): string {
       return this.node.kind;
-   }
-
-   /** The props. */
-   get props(): JsonObject {
-      return this.node.props;
    }
 
    /** The node as a wire subtree with every id. */

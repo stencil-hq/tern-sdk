@@ -181,15 +181,21 @@ type Visible struct {
 	Visible bool `json:"visible"`
 }
 
-// Toggle reports that the user folded or unfolded a node.
+// Toggle reports that the user folded or unfolded a node, or opened or
+// closed a popup. Cards, sections, tools and dates send Collapsed; selects,
+// menus, menubars and traces send Open instead, with Item the menu or the
+// trace line when there is one.
 type Toggle struct {
 	EventBase
 	ID        string `json:"id"`
 	Collapsed bool   `json:"collapsed"`
+	Open      bool   `json:"open"`
+	Item      string `json:"item,omitempty"`
 	Key       string `json:"key,omitempty"`
 }
 
-// Select reports a select action; for a list's item ID is the list.
+// Select reports a select action; for a list's item ID is the list. Item is
+// the item's id; a number (a stacktrace's frame index) arrives in decimal.
 type Select struct {
 	EventBase
 	ID     string `json:"id"`
@@ -198,6 +204,8 @@ type Select struct {
 }
 
 // Activate reports an activate action; for a list's item ID is the list.
+// Item is the item's id; a number (a stacktrace's frame index) arrives in
+// decimal.
 type Activate struct {
 	EventBase
 	ID     string `json:"id"`
@@ -205,22 +213,83 @@ type Activate struct {
 	Values Values `json:"values,omitempty"`
 }
 
-// Action reports a program-named pointer action.
-type Action struct {
-	EventBase
-	ID     string   `json:"id"`
-	Act    string   `json:"act"`
-	Value  string   `json:"value,omitempty"`
-	Mods   []string `json:"mods,omitempty"`
-	Values Values   `json:"values,omitempty"`
+// UnmarshalJSON decodes the event, with a numeric item in decimal.
+func (e *Select) UnmarshalJSON(b []byte) error {
+	type fields Select
+	var f struct {
+		fields
+		Item json.RawMessage `json:"item"`
+	}
+	if err := json.Unmarshal(b, &f); err != nil {
+		return err
+	}
+	item, err := itemID(f.Item)
+	*e = Select(f.fields)
+	e.Item = item
+	return err
 }
 
-// Change reports an el checkbox or radio flip, or a prefs row change.
+// UnmarshalJSON decodes the event, with a numeric item in decimal.
+func (e *Activate) UnmarshalJSON(b []byte) error {
+	type fields Activate
+	var f struct {
+		fields
+		Item json.RawMessage `json:"item"`
+	}
+	if err := json.Unmarshal(b, &f); err != nil {
+		return err
+	}
+	item, err := itemID(f.Item)
+	*e = Activate(f.fields)
+	e.Item = item
+	return err
+}
+
+// itemID is an item id sent as a string or as a number.
+func itemID(raw json.RawMessage) (string, error) {
+	if len(raw) == 0 || string(raw) == "null" {
+		return "", nil
+	}
+	var s string
+	if json.Unmarshal(raw, &s) == nil {
+		return s, nil
+	}
+	var n json.Number
+	if err := json.Unmarshal(raw, &n); err != nil {
+		return "", err
+	}
+	return n.String(), nil
+}
+
+// Action reports a program-named pointer action. Item is the table row an
+// action came from (a row menu entry or a button cell), a menubar's menu or
+// a question, else empty. Value is the part of an act=value after the =,
+// or what the node sends with the act: a string, a number (an otp's cell),
+// a list (a table's picks) or an object (a table's sort, a questionnaire's
+// answers), as decoded by encoding/json. Checked is the new state of a menu's
+// check or radio row.
+type Action struct {
+	EventBase
+	ID      string   `json:"id"`
+	Act     string   `json:"act"`
+	Item    string   `json:"item,omitempty"`
+	Value   any      `json:"value,omitempty"`
+	Checked bool     `json:"checked,omitempty"`
+	Mods    []string `json:"mods,omitempty"`
+	Values  Values   `json:"values,omitempty"`
+}
+
+// Change reports an el checkbox or radio flip, a prefs row change, or a
+// control's new value: a bool (a switch), a number (a slider, a pager, a
+// carousel), a string (a select, a calendar) or a list (a range, a split's
+// shares, a table's picks), as decoded by encoding/json. On is a message
+// reaction's new state; Item is the question a questionnaire's answer is for.
 type Change struct {
 	EventBase
 	ID      string `json:"id"`
 	Value   any    `json:"value"`
 	Checked bool   `json:"checked"`
+	On      bool   `json:"on"`
 	Name    string `json:"name,omitempty"`
 	Item    string `json:"item,omitempty"`
 	Values  Values `json:"values,omitempty"`

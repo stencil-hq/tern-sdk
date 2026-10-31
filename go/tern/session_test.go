@@ -191,6 +191,106 @@ func connect(t *testing.T, ft *fakeTerm, opts Options) *Session {
 	return r.s
 }
 
+func TestEventsCarryNewKindsPayloads(t *testing.T) {
+	decode := func(body string) Event {
+		t.Helper()
+		ev, ok := DecodeEvent([]byte(body))
+		if !ok {
+			t.Fatalf("not an event: %s", body)
+		}
+		if _, unknown := ev.(*UnknownEvent); unknown {
+			t.Fatalf("undecoded: %s", body)
+		}
+		return ev
+	}
+	if e := decode(`{"ev":"toggle","id":"bar","item":"file","open":true}`).(*Toggle); !e.Open || e.Item != "file" || e.Collapsed {
+		t.Errorf("menubar toggle %+v", e)
+	}
+	if e := decode(`{"ev":"toggle","id":"d","collapsed":true}`).(*Toggle); !e.Collapsed || e.Open {
+		t.Errorf("date toggle %+v", e)
+	}
+	if e := decode(`{"ev":"action","id":"m","act":"follow","checked":true}`).(*Action); !e.Checked || e.Value != nil {
+		t.Errorf("menu check %+v", e)
+	}
+	if e := decode(`{"ev":"action","id":"t","act":"sort","value":{"col":"age","dir":"asc"}}`).(*Action); e.Value.(map[string]any)["col"] != "age" {
+		t.Errorf("table sort %+v", e)
+	}
+	if e := decode(`{"ev":"action","id":"t","act":"restart","value":["a","b"]}`).(*Action); len(e.Value.([]any)) != 2 {
+		t.Errorf("table bar %+v", e)
+	}
+	if e := decode(`{"ev":"action","id":"o","act":"focus","value":2}`).(*Action); e.Value != float64(2) {
+		t.Errorf("otp focus %+v", e)
+	}
+	if e := decode(`{"ev":"action","id":"q","act":"submit","value":{"db":"pg","tags":["a"]}}`).(*Action); e.Value.(map[string]any)["db"] != "pg" {
+		t.Errorf("questions submit %+v", e)
+	}
+	if e := decode(`{"ev":"action","id":"q","act":"next","item":"db"}`).(*Action); e.Item != "db" {
+		t.Errorf("questions next %+v", e)
+	}
+	for body, want := range map[string]any{
+		`{"ev":"change","id":"s","value":true}`:      true,
+		`{"ev":"change","id":"s","value":0.6}`:       0.6,
+		`{"ev":"change","id":"s","value":"haiku"}`:   "haiku",
+		`{"ev":"change","id":"s","value":[0.3,0.7]}`: 2,
+	} {
+		e := decode(body).(*Change)
+		if list, ok := e.Value.([]any); ok {
+			if len(list) != want {
+				t.Errorf("%s: %+v", body, e)
+			}
+		} else if e.Value != want {
+			t.Errorf("%s: %+v", body, e)
+		}
+	}
+	if e := decode(`{"ev":"change","id":"m","value":"♥","on":true}`).(*Change); !e.On || e.Value != "♥" {
+		t.Errorf("reaction %+v", e)
+	}
+	if e := decode(`{"ev":"change","id":"q","item":"db","value":["pg"]}`).(*Change); e.Item != "db" {
+		t.Errorf("questions change %+v", e)
+	}
+	if e := decode(`{"ev":"select","id":"st","item":3}`).(*Select); e.Item != "3" {
+		t.Errorf("stacktrace select %+v", e)
+	}
+	if e := decode(`{"ev":"activate","id":"st","item":0}`).(*Activate); e.Item != "0" || e.Target() != "st" {
+		t.Errorf("stacktrace activate %+v", e)
+	}
+	if e := decode(`{"ev":"select","sf":"s1","id":"l","item":"main.l.a"}`).(*Select); e.Item != "main.l.a" || e.Surface() != "s1" {
+		t.Errorf("list select %+v", e)
+	}
+	if ev, _ := DecodeEvent([]byte(`{"ev":"select","id":"x","item":{}}`)); ev.Type() != "select" {
+		t.Errorf("bad item %+v", ev)
+	} else if _, unknown := ev.(*UnknownEvent); !unknown {
+		t.Errorf("object item decoded: %+v", ev)
+	}
+}
+
+func TestOnMenuKeepsRichEntries(t *testing.T) {
+	h := Handlers{OnMenu: map[string]func(*Action){"open": func(*Action) {}, "trash": func(*Action) {}}}
+	props := normalizeProps(map[string]any{"actions": map[string]any{"menu": []any{
+		map[string]any{"id": "open", "icon": "file"}, "-"}}})
+	b, err := Marshal(h.bind(props)["actions"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"menu":[{"icon":"file","id":"open"},"-","trash"]}`; string(b) != want {
+		t.Errorf("got %s, want %s", b, want)
+	}
+}
+
+func TestStringActionValuesStillRoute(t *testing.T) {
+	called := false
+	b := bound{Handlers: Handlers{OnAction: map[string]func(*Action){"sort=name": func(*Action) { called = true }}}}
+	ev, _ := DecodeEvent([]byte(`{"ev":"action","act":"sort","value":"name"}`))
+	if !b.route(ev) || !called {
+		t.Fatal("act=value not routed")
+	}
+	called = false
+	ev, _ = DecodeEvent([]byte(`{"ev":"action","act":"sort","value":{"col":"name"}}`))
+	if b.route(ev) || called {
+		t.Fatal("object value routed as act=value")
+	}
+}
+
 func TestHelloHour12(t *testing.T) {
 	var r HelloReply
 	if err := json.Unmarshal([]byte(`{"r":"hello","v":1,"hour12":true}`), &r); err != nil {

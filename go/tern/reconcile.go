@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 )
@@ -18,6 +20,8 @@ type tree struct {
 	kind     string
 	props    map[string]any
 	children []*tree
+	// slots are the slot nodes by name, kept apart only for Plain.
+	slots map[string]*tree
 }
 
 // viewTree is a compiled view: each region's tree and the handlers by id.
@@ -66,16 +70,46 @@ func (vt *viewTree) build(id string, n Node) (*tree, error) {
 		}
 		vt.handlers[id] = b
 	}
+	children := n.Children
+	var slotKeys map[int]string
+	if len(n.Slots) > 0 {
+		names := make([]string, 0, len(n.Slots))
+		for name, el := range n.Slots {
+			if el != nil {
+				names = append(names, name)
+			}
+		}
+		slices.Sort(names)
+		children = slices.Clone(children)
+		slotKeys = make(map[int]string, len(names))
+		if props == nil && len(names) > 0 {
+			props = map[string]any{}
+		}
+		for _, name := range names {
+			slotKeys[len(children)] = name
+			children = append(children, n.Slots[name])
+			props[name] = id + "." + name
+		}
+	}
 	t := &tree{id: id, kind: n.Kind, props: props}
-	if len(n.Children) > 0 {
-		t.children = make([]*tree, 0, len(n.Children))
-		seen := make(map[string]struct{}, len(n.Children))
-		for i, el := range n.Children {
+	if len(children) > 0 {
+		t.children = make([]*tree, 0, len(children))
+		seen := make(map[string]struct{}, len(children))
+		for i, el := range children {
 			if el == nil {
 				continue
 			}
 			child := el.Node()
-			key := keyOf(child.Props, i)
+			key, slot := slotKeys[i]
+			if slot {
+				child.Props = maps.Clone(child.Props)
+				if child.Props == nil {
+					child.Props = map[string]any{}
+				}
+				child.Props["key"] = key
+			} else {
+				key = keyOf(child.Props, i)
+			}
 			cid := id + "." + key
 			if _, dup := seen[cid]; dup {
 				return nil, &DuplicateKeyError{Parent: id, Key: key}

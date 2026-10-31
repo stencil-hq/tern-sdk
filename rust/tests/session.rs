@@ -296,6 +296,35 @@ fn listen_false_sends_without_acks() {
 	assert_eq!(seqs, [&json!(1), &json!(2), &json!(3)]);
 }
 
+#[test]
+fn sans_font_goes_out_in_the_open_message() {
+	let (mut session, pipes) = connected::<()>(1);
+	session
+		.open(SurfaceOptions::screen().font(tern_sdk::Font::Sans))
+		.expect("open");
+	session.open(SurfaceOptions::screen()).expect("open");
+	let sent = written(&pipes);
+	assert_eq!(sent[0], ("o".to_owned(), json!({"id": "s1", "mode": "screen", "font": "sans"})));
+	assert_eq!(sent[1], ("o".to_owned(), json!({"id": "s2", "mode": "screen"})));
+}
+
+#[test]
+fn table_row_actions_route_with_the_row_as_item() {
+	let (mut session, pipes) = connected::<String>(1);
+	let sf = session.open(SurfaceOptions::screen()).expect("open");
+	let table = ui::table()
+		.key("jobs")
+		.on_action_with("retry", |a| a.item.clone().unwrap_or_default());
+	session
+		.render(sf, View::new().main([table]))
+		.expect("render");
+	pipes.borrow_mut().input.push_back(event(
+		&json!({"ev": "action", "sf": "s1", "id": "main.jobs", "act": "retry", "item": "r7"}),
+	));
+	let got = session.next(Some(Duration::from_millis(50))).expect("next");
+	assert!(matches!(got, Some(Input::Msg(item, _)) if item == "r7"));
+}
+
 #[derive(Clone, Debug, PartialEq)]
 enum Msg {
 	Go,

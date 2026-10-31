@@ -8,7 +8,7 @@ import hashlib
 import json
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Final, Literal, TypeAlias
+from typing import Any, Final, Literal, TypeAlias, get_args
 
 VERSION: Final = 1
 """The protocol version this SDK speaks."""
@@ -19,32 +19,31 @@ CREDITS: Final = 2
 MAX_BLOB: Final = 16 << 20
 """The largest blob, decoded, that Tern accepts."""
 
-KINDS: Final = (
-    "col", "row", "card", "section", "rule", "spacer", "text", "md", "code", "diff", "ansi",
-    "math", "image", "media", "kv", "table", "tree", "json", "badge", "kbd", "icon", "spinner", "shimmer",
-    "elapsed", "progress", "rate", "list", "item", "tabs", "editor", "input", "status", "seg",
-    "overlay", "toast", "rows", "picker", "prefs", "tool", "checklist", "agent", "chart",
-    "meter", "block", "effort", "el",
-)  # fmt: skip
-"""Every node kind of protocol version 1."""
 TEXT_KINDS: Final = frozenset(("text", "md", "code", "ansi", "math", "editor", "input", "shimmer", "el"))
 """Kinds whose `text` prop is primary text, updated with the `text` op."""
 PROGRAM_FEATURES: Final = ("edit", "undo", "send")
 """Features a program may announce in its `hello`."""
 TERMINAL_FEATURES: Final = (
     "blobs", "settle", "adopt", "dock", "reduce-motion", "aside",
-    "scroll", "styles", "flow",
+    "scroll", "styles", "flow", "font",
 )  # fmt: skip
 """Features a terminal may list in its `hello` reply."""
 
 Kind: TypeAlias = Literal[
     "col", "row", "card", "section", "rule", "spacer", "text", "md", "code", "diff", "ansi",
-    "math", "image", "media", "kv", "table", "tree", "json", "badge", "kbd", "icon", "spinner", "shimmer",
-    "elapsed", "progress", "rate", "list", "item", "tabs", "editor", "input", "status", "seg",
-    "overlay", "toast", "rows", "picker", "prefs", "tool", "checklist", "agent", "chart",
-    "meter", "block", "effort", "el",
+    "math", "image", "media", "kv", "stats", "table", "tree", "json", "badge", "kbd", "icon", "spinner",
+    "shimmer", "elapsed", "progress", "rate", "list", "item", "tabs", "editor", "input", "button",
+    "status", "seg", "overlay", "toast", "rows", "picker", "prefs", "tool", "checklist", "agent",
+    "chart", "meter", "block", "effort", "select", "switch", "slider", "field", "otp", "buttons",
+    "avatar", "avatars", "breadcrumb", "pager", "empty", "skeleton", "calendar", "date", "menu",
+    "menubar", "nav", "split", "scroll", "carousel", "message", "attachment", "trace", "stacktrace",
+    "suggestions", "questions", "el",
 ]  # fmt: skip
 """A node kind."""
+KINDS: Final[tuple[Kind, ...]] = get_args(Kind)
+"""Every node kind of protocol version 1, in Tern's order (the hello reply's `kinds`)."""
+Font: TypeAlias = Literal["sans", "mono"]
+"""A surface's base face (`o`'s `font`): `sans` for apps, `mono` (default) for terminal-like output."""
 ProgramFeature: TypeAlias = Literal["edit", "undo", "send"]
 """A program feature of the `hello` query."""
 Mode: TypeAlias = Literal["inline", "screen", "flow"]
@@ -257,8 +256,10 @@ def open_surface(
     listen: bool | None = None,
     adopt: bool | None = None,
     closable: bool | None = None,
+    font: Font | None = None,
 ) -> Outgoing:
-    """Opens a surface (`o`). `closable=True` lets Tern close the pane without asking."""
+    """Opens a surface (`o`). `closable=True` lets Tern close the pane without
+    asking; `font="sans"` sets its regions in the UI face (machine strings stay mono)."""
     body = _drop_none(
         {
             "id": id,
@@ -268,6 +269,7 @@ def open_surface(
             "listen": listen,
             "adopt": adopt,
             "closable": closable,
+            "font": font,
         }
     )
     return Outgoing("o", body)
@@ -400,6 +402,12 @@ def _num(raw: Mapping[str, Json], key: str) -> float | None:
     if isinstance(v, bool) or not isinstance(v, (int, float)):
         return None
     return v
+
+
+def _item(raw: Mapping[str, Json], key: str) -> str | None:
+    """A string item, or an integer one (a frame index) as its decimal string."""
+    n = _int(raw, key)
+    return str(n) if n is not None else _str(raw, key)
 
 
 def _bool(raw: Mapping[str, Json], key: str) -> bool | None:
@@ -550,16 +558,21 @@ class VisibleEvent(Event):
 
 @dataclass(frozen=True, kw_only=True)
 class ToggleEvent(Event):
-    """A collapsible node (or a tree item, `key`) was folded or unfolded."""
+    """A collapsible node (or a tree item, `key`) was folded or unfolded, or a
+    menu or fold opened or closed (`open`; `item` the menubar menu or trace
+    line)."""
 
     id: str | None
     collapsed: bool | None
     key: str | None
+    open: bool | None
+    item: str | None
 
 
 @dataclass(frozen=True, kw_only=True)
 class SelectEvent(Event):
-    """A `select` action: `id` the node or list, `item` the item."""
+    """A `select` action: `id` the node or list, `item` the item (a
+    `stacktrace` frame's index as a decimal string)."""
 
     id: str | None
     item: str | None
@@ -568,7 +581,8 @@ class SelectEvent(Event):
 
 @dataclass(frozen=True, kw_only=True)
 class ActivateEvent(Event):
-    """An `activate` action: `id` the node or list, `item` the item."""
+    """An `activate` action: `id` the node or list, `item` the item (a
+    `stacktrace` frame's index as a decimal string)."""
 
     id: str | None
     item: str | None
@@ -577,22 +591,32 @@ class ActivateEvent(Event):
 
 @dataclass(frozen=True, kw_only=True)
 class ActionEvent(Event):
-    """A custom pointer action `act` (with `value` after `=`) on node `id`."""
+    """A custom pointer action `act` (with `value` after `=`) on node `id`;
+    `item` is the table row it came from (a button cell or row menu), or
+    the menubar menu or question. `value` is any JSON some kinds send (a
+    table's sort and picks, a questionnaire's answers, an otp's cell);
+    `checked` a check or radio menu row's new state."""
 
     id: str | None
     act: str | None
-    value: str | None
+    value: Json
+    item: str | None
     mods: tuple[str, ...]
     values: dict[str, Json] | None
+    checked: bool | None
 
 
 @dataclass(frozen=True, kw_only=True)
 class ChangeEvent(Event):
-    """An `el` checkbox or radio flipped, or a `prefs` row's value changed (`item`)."""
+    """An `el` checkbox or radio flipped, a `prefs` row's value or a
+    question's answer changed (`item`), or a control's value changed (a
+    switch's bool, a slider's number or pair, a table's picks). `on` is a
+    message reaction's new state."""
 
     id: str | None
     value: Json
     checked: bool | None
+    on: bool | None
     name: str | None
     item: str | None
     values: dict[str, Json] | None
@@ -671,19 +695,28 @@ def decode_event(raw: dict[str, Json]) -> Event:
         case "visible":
             return VisibleEvent(**base, visible=_bool(raw, "visible"))
         case "toggle":
-            return ToggleEvent(**base, id=_str(raw, "id"), collapsed=_bool(raw, "collapsed"), key=_str(raw, "key"))
+            return ToggleEvent(
+                **base,
+                id=_str(raw, "id"),
+                collapsed=_bool(raw, "collapsed"),
+                key=_str(raw, "key"),
+                open=_bool(raw, "open"),
+                item=_str(raw, "item"),
+            )
         case "select":
-            return SelectEvent(**base, id=_str(raw, "id"), item=_str(raw, "item"), values=_obj(raw, "values"))
+            return SelectEvent(**base, id=_str(raw, "id"), item=_item(raw, "item"), values=_obj(raw, "values"))
         case "activate":
-            return ActivateEvent(**base, id=_str(raw, "id"), item=_str(raw, "item"), values=_obj(raw, "values"))
+            return ActivateEvent(**base, id=_str(raw, "id"), item=_item(raw, "item"), values=_obj(raw, "values"))
         case "action":
             return ActionEvent(
                 **base,
                 id=_str(raw, "id"),
                 act=_str(raw, "act"),
-                value=_str(raw, "value"),
+                value=raw.get("value"),
+                item=_str(raw, "item"),
                 mods=_strs(raw, "mods"),
                 values=_obj(raw, "values"),
+                checked=_bool(raw, "checked"),
             )
         case "change":
             return ChangeEvent(
@@ -691,6 +724,7 @@ def decode_event(raw: dict[str, Json]) -> Event:
                 id=_str(raw, "id"),
                 value=raw.get("value"),
                 checked=_bool(raw, "checked"),
+                on=_bool(raw, "on"),
                 name=_str(raw, "name"),
                 item=_str(raw, "item"),
                 values=_obj(raw, "values"),

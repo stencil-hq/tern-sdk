@@ -206,6 +206,56 @@ func (c PickerCommon) common() Common {
 	}
 }
 
+// CommonWithoutActions holds common props for Message and Attachment, whose
+// Actions are icon buttons rather than pointer gestures. The conflicting
+// common prop and the handlers that set it (OnClick, OnDblClick, OnMenu)
+// are not exposed; OnAction handles the buttons.
+type CommonWithoutActions struct {
+	Key        string                        `json:"key,omitzero"`
+	Role       string                        `json:"role,omitzero"`
+	Tone       Tone                          `json:"tone,omitzero"`
+	Hidden     bool                          `json:"hidden,omitzero"`
+	Mark       Mark                          `json:"mark,omitzero"`
+	Title      string                        `json:"title,omitzero"`
+	Hovercard  Hovercard                     `json:"hovercard,omitzero"`
+	Aria       string                        `json:"aria,omitzero"`
+	Href       string                        `json:"href,omitzero"`
+	Grow       float64                       `json:"grow,omitzero"`
+	Shrink     *float64                      `json:"shrink,omitzero"`
+	Basis      Basis                         `json:"basis,omitzero"`
+	Min        *Bounds                       `json:"min,omitzero"`
+	Max        *Bounds                       `json:"max,omitzero"`
+	Props      map[string]any                `json:"-"`
+	OnAction   map[string]func(*tern.Action) `json:"-"`
+	OnToggle   func(*tern.Toggle)            `json:"-"`
+	OnSelect   func(*tern.Select)            `json:"-"`
+	OnActivate func(*tern.Activate)          `json:"-"`
+	OnChange   func(*tern.Change)            `json:"-"`
+	OnFocus    func(*tern.Focus)             `json:"-"`
+	OnEdit     func(*tern.Edit)              `json:"-"`
+	OnUndo     func(*tern.Undo)              `json:"-"`
+	OnSend     func(*tern.Send)              `json:"-"`
+}
+
+func (c CommonWithoutActions) common() Common {
+	return Common{
+		Props: c.Props, OnAction: c.OnAction, OnToggle: c.OnToggle,
+		OnSelect: c.OnSelect, OnActivate: c.OnActivate, OnChange: c.OnChange,
+		OnFocus: c.OnFocus, OnEdit: c.OnEdit, OnUndo: c.OnUndo, OnSend: c.OnSend,
+	}
+}
+
+// IconAction is an icon button of a message or an attachment. A click
+// sends an action event with act Act.
+type IconAction struct {
+	// Act is the action a click runs; an entry without one is skipped.
+	Act string `json:"act"`
+	// Icon is the button's icon (default the act's own).
+	Icon IconName `json:"icon,omitzero"`
+	// Title is the tooltip and accessible name (default the act, capitalized).
+	Title string `json:"title,omitzero"`
+}
+
 // common is how Build finds the Common a builder embeds.
 func (c Common) common() Common { return c }
 
@@ -255,8 +305,9 @@ type Actions struct {
 	Click string `json:"click,omitzero"`
 	// DblClick is the action a double click runs.
 	DblClick string `json:"dblclick,omitzero"`
-	// Menu lists the context menu's actions.
-	Menu []string `json:"menu,omitzero"`
+	// Menu lists the context menu's rows: MenuAct names, MenuItem rows,
+	// MenuSep and MenuHeader, as the menu kind's items.
+	Menu []MenuEntry `json:"menu,omitzero"`
 }
 
 // Build makes a node of kind from props, a struct of json-tagged fields
@@ -293,14 +344,31 @@ func Build(kind string, props any, children []tern.Element) tern.Node {
 type Span struct {
 	// T is the text.
 	T string `json:"t"`
-	// S is space-separated style tokens: muted, dim, strong, em, accent,
-	// success, warning, error, info, code, mono, path, key, link, num, ins,
-	// del, mark, typo, icon, hide, or an omp theme token.
+	// S is space-separated style tokens: muted, dim, strong, em, title,
+	// accent, success, warning, error, info, pending, code, mono, path, key,
+	// link, num, ins, del, mark, typo, icon, hide, or an omp theme token.
 	S string `json:"s,omitzero"`
 	// Fx is an effect.
 	Fx Fx `json:"fx,omitzero"`
 	// Href makes the span a link.
 	Href string `json:"href,omitzero"`
+	// Cite are the sources the run cites, drawn as a marker after it (a
+	// text's Cite picks the look). An empty T draws the marker alone.
+	Cite []Cite `json:"cite,omitzero"`
+}
+
+// Cite is a source a span cites.
+type Cite struct {
+	// Href is where the source is, opened on click; a cite without one is ignored.
+	Href string `json:"href"`
+	// Title is the source's title (card, sources list, accessible name).
+	Title string `json:"title,omitzero"`
+	// N is the number shown (default the next free one, by appearance).
+	N int `json:"n,omitzero"`
+	// Site is the name the pill shows (default the href's host, www. dropped).
+	Site string `json:"site,omitzero"`
+	// Snippet is a quote shown in the hover card.
+	Snippet string `json:"snippet,omitzero"`
 }
 
 // Fx is a span effect.
@@ -392,6 +460,8 @@ const (
 	Done      RunState = "done"
 	Errored   RunState = "error"
 	Cancelled RunState = "cancelled"
+	// Asking is a tool waiting for approval: it draws the approval panel.
+	Asking RunState = "ask"
 )
 
 // AgentState is an agent's status, distinct from card and tool run states.
@@ -420,6 +490,10 @@ func Lines(n float64) Extent { return Extent{strconv.FormatFloat(n, 'f', -1, 64)
 
 // Frac is a fraction of the parent (0.5 is half).
 func Frac(f float64) Extent { return Extent{f} }
+
+// Px is n pixels, where a prop reads a bare number as pixels (a
+// carousel's height).
+func Px(n float64) Extent { return Extent{n} }
 
 // IsZero reports whether e is absent.
 func (e Extent) IsZero() bool { return e.v == nil }
@@ -487,6 +561,7 @@ type Size string
 
 // Sizes.
 const (
+	SizeXS     Size = "xs"
 	SizeSM     Size = "sm"
 	SizeMD     Size = "md"
 	SizeLG     Size = "lg"

@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from typing import Unpack
 
 from ._node import Common, CommonNoMax, Node, make
-from ._types import Decor, ListMax, Text
+from ._types import AddonButton, Decor, IconName, InputVariant, ListMax, Text
 
 
 def list(  # noqa: A001
@@ -38,12 +38,30 @@ def input(  # noqa: A001
     readonly: bool | None = None,
     sendable: bool | None = None,
     typeahead: bool | None = None,
+    variant: InputVariant | None = None,
+    icon: IconName | None = None,
+    keys: str | Sequence[str] | None = None,
+    mono: bool | None = None,
+    clear: bool | None = None,
+    prefix: str | None = None,
+    suffix: str | None = None,
+    unit: str | None = None,
+    stepper: bool | None = None,
+    secret: bool | None = None,
+    reveal: bool | None = None,
+    buttons: Sequence[AddonButton] | None = None,
     **common: Unpack[Common],
 ) -> Node:
-    """A single-line text field; the program owns its text and caret."""
+    """A single-line text field; the program owns its text and caret. Addons
+    frame it as a `field`: a leading `icon`, an idle `keys` hint, `prefix`/
+    `suffix` wells, a `unit`, a `clear` × (`action` `clear`), a `stepper`
+    (`action` `inc`/`dec`), a `secret` with its eye (`reveal`) and attached
+    `buttons` (each sends `action` with its `act`)."""
     own = {
         "text": text, "cursor": cursor, "anchor": anchor, "decor": decor, "ghost": ghost,
         "placeholder": placeholder, "prompt": prompt, "mode": mode, "lang": lang,
-        "readonly": readonly, "sendable": sendable, "typeahead": typeahead,
+        "readonly": readonly, "sendable": sendable, "typeahead": typeahead, "variant": variant,
+        "icon": icon, "keys": keys, "mono": mono, "clear": clear, "prefix": prefix, "suffix": suffix,
+        "unit": unit, "stepper": stepper, "secret": secret, "reveal": reveal, "buttons": buttons,
     }  # fmt: skip
     return make("input", own, (), common)

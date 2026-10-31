@@ -10,6 +10,13 @@ A program describes its UI as a tree of nodes over the
 Tern lays it out, draws and animates it natively. Outside Tern the same
 program prints plain text.
 
+Before you build a UI, read
+[Designing Views](https://docs.stencil.so/tern/guides/design.html): an app as
+a page (a head row, a `stats` strip, `tabs` between views, a full-width
+selectable `table` beside the selected item's `card`), which kind does which
+job, the sans face for apps, and the mistakes that make a view look like a
+web page. Every SDK's `dashboard` example follows it.
+
 | Language | Path | Package |
 | --- | --- | --- |
 | Rust | [`rust/`](rust) | crate `tern-sdk` |

@@ -454,16 +454,6 @@ def example(name: str) -> Any:
     return module
 
 
-def test_table_example_accepts_entry_named_head(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    (tmp_path / "head").write_text("entry")
-    monkeypatch.chdir(tmp_path)
-    views: list[ui.Node] = []
-    monkeypatch.setattr(tern_sdk, "show", lambda node, **kwargs: views.append(node))
-    example("table").main()
-    built = View.build(as_view(views[0]))
-    assert {"main.0.head", "main.0.entry:head"} <= built.nodes().keys()
-
-
 @pytest.mark.parametrize(
     ("values", "expected"),
     [

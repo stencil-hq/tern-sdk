@@ -13,6 +13,8 @@ import (
 type PrintOptions struct {
 	// CSS is a stylesheet installed (as "main") before the view.
 	CSS string
+	// Font is the surface's base face (FontSans for app-like output).
+	Font Font
 	// Fallback is written instead of the plain-text rendering without TSP.
 	Fallback string
 	// Options configure the session Print connects.
@@ -31,7 +33,7 @@ func Print(ctx context.Context, view View, opts PrintOptions) error {
 	if err != nil {
 		return err
 	}
-	err = printOn(s, view, opts.CSS)
+	err = printOn(s, view, opts.CSS, opts.Font)
 	if e := s.Close(); err == nil {
 		err = e
 	}
@@ -39,8 +41,8 @@ func Print(ctx context.Context, view View, opts PrintOptions) error {
 }
 
 // printOn shows view on s in a non-listening flow surface and closes it.
-func printOn(s *Session, view View, css string) error {
-	sf, err := s.Open(SurfaceOptions{Mode: Flow, NoListen: true})
+func printOn(s *Session, view View, css string, font Font) error {
+	sf, err := s.Open(SurfaceOptions{Mode: Flow, NoListen: true, Font: font})
 	if err != nil {
 		return err
 	}
@@ -83,6 +85,8 @@ func writeFallback(view View, fallback string, out io.Writer) error {
 type AskOptions struct {
 	// CSS is a stylesheet installed (as "main") before the view.
 	CSS string
+	// Font is the surface's base face (FontSans for forms).
+	Font Font
 	// Submit is the action name that answers (default "submit").
 	Submit string
 	// Options configure the session Ask connects.
@@ -121,7 +125,7 @@ func Ask(ctx context.Context, view View, opts AskOptions) (*Answer, error) {
 
 // askOn runs Ask on a connected session.
 func askOn(ctx context.Context, s *Session, view View, opts AskOptions) (answer *Answer, err error) {
-	sf, err := s.Open(SurfaceOptions{Mode: Flow})
+	sf, err := s.Open(SurfaceOptions{Mode: Flow, Font: opts.Font})
 	if err != nil {
 		return nil, err
 	}

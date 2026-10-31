@@ -4,7 +4,7 @@
  * styled span inside text kinds; `html.*` components build `el` nodes.
  */
 import { createNode, flatten, FragmentNode, Node, Span, withKey, type Children } from './nodes.js';
-import type { BuildKind, SpanFx, SpanToken } from './props.js';
+import type { BuildKind, Cite, SpanFx, SpanToken } from './props.js';
 import type { ElementProps } from './ui.js';
 
 /** The props of the `<span>` intrinsic. */
@@ -13,6 +13,8 @@ export interface SpanProps {
    readonly s?: SpanToken;
    readonly fx?: SpanFx;
    readonly href?: string;
+   /** The sources the run cites. */
+   readonly cite?: Cite | readonly Cite[];
    readonly children?: string | number | readonly (string | number)[];
 }
 
@@ -45,9 +47,11 @@ function spanOf(props: Readonly<Record<string, unknown>>): Span {
    const s = props['s'];
    const fx = props['fx'];
    const href = props['href'];
-   const options: { fx?: string; href?: string } = {};
+   const cite = props['cite'];
+   const options: { fx?: string; href?: string; cite?: Cite | readonly Cite[] } = {};
    if (typeof fx === 'string') options.fx = fx;
    if (typeof href === 'string') options.href = href;
+   if (typeof cite === 'object' && cite !== null) options.cite = cite as Cite | readonly Cite[];
    return new Span(t, typeof s === 'string' ? s : undefined, options);
 }
 

@@ -1,18 +1,13 @@
-//! `print`: the current directory as a table, sizes right-aligned by a
-//! stylesheet. In Tern it stays in the scrollback as a native table;
-//! anywhere else it prints as aligned plain text.
+//! `print`: the current directory as a native `table` (sizes end-aligned,
+//! mono), with no stylesheet. In Tern it stays in the scrollback as a native
+//! table; anywhere else it prints as aligned plain text.
 
 use std::fs;
 
 use tern_sdk::{
 	PrintOptions,
-	ui::{View, html},
+	ui::{self, Column, TableRow, TextAlign, TextCell, View},
 };
-
-/// The table's look: header muted, sizes right-aligned.
-const CSS: &str = ".ls{border-spacing:0} .ls th{text-align:left;padding:0 18px 3px \
-                   0;color:var(--sf-c-muted);font-weight:500} .ls td{padding:1px 18px 1px 0} .ls \
-                   .size{text-align:right} .ls .dir{color:var(--sf-c-accent)}";
 
 /// A size as `312`, `2.1K`, `14K`, `3.4M`.
 fn human(bytes: u64) -> String {
@@ -43,26 +38,24 @@ struct Entry {
 	size: u64,
 }
 
-/// The directory listing as a table.
+/// The directory listing as a `table`: folders first with a folder icon,
+/// sizes end-aligned in the mono face.
 fn view(entries: &[Entry]) -> View {
-	let head = html::tr()
-		.child(html::th("Name"))
-		.child(html::th("Size").class("size"));
 	let rows = entries.iter().map(|e| {
-		let name = if e.dir {
-			format!("{}/", e.name)
+		let (name, icon) = if e.dir {
+			(format!("{}/", e.name), "folder")
 		} else {
-			e.name.clone()
+			(e.name.clone(), "file")
 		};
 		let size = if e.dir { "-".to_owned() } else { human(e.size) };
-		html::tr()
-			.child(html::td(name).class(if e.dir { "dir" } else { "file" }))
-			.child(html::td(size).class("size"))
+		TableRow::new(e.name.clone())
+			.cell("name", TextCell::new(name).icon(icon))
+			.cell("size", size)
 	});
-	View::new().main([html::table()
-		.class("ls")
-		.child(html::thead().child(head))
-		.child(html::tbody().children(rows))])
+	View::new().main([ui::table()
+		.col(Column::new("name", "Name").grow(1.0))
+		.col(Column::new("size", "Size").align(TextAlign::End).mono(true))
+		.rows(rows.collect::<Vec<_>>())])
 }
 
 #[cfg(test)]
@@ -73,7 +66,7 @@ mod tests {
 	fn a_file_named_head_does_not_collide_with_the_header() {
 		let view = view(&[Entry { name: "head".into(), dir: false, size: 12 }]);
 		assert!(tern_sdk::reconcile::Doc::from_view(view.clone()).is_ok());
-		assert_eq!(tern_sdk::plain(view, 80), "Name  Size\nhead  12\n");
+		assert_eq!(tern_sdk::plain(view, 80), "Name  Size\nhead    12\n");
 	}
 }
 
@@ -90,5 +83,5 @@ fn main() -> Result<(), tern_sdk::Error> {
 		})
 		.collect();
 	entries.sort_by(|a, b| b.dir.cmp(&a.dir).then_with(|| a.name.cmp(&b.name)));
-	tern_sdk::print(view(&entries), PrintOptions::new().css(CSS))
+	tern_sdk::print(view(&entries), PrintOptions::new())
 }

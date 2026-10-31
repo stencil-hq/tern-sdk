@@ -22,6 +22,10 @@ type Node struct {
 	Props map[string]any
 	// Children are the node's children, in order.
 	Children []Element
+	// Slots are nodes a prop points at by id (a card's head, end or foot):
+	// each is added after Children as the child keyed by its slot name, and
+	// the prop of that name is set to the child's id.
+	Slots map[string]Element
 	// Handlers run on the node's events.
 	Handlers
 }
@@ -89,6 +93,17 @@ func (h *Handlers) empty() bool {
 		h.OnFocus == nil && h.OnEdit == nil && h.OnUndo == nil && h.OnSend == nil
 }
 
+// menuID is the act of an actions.menu entry: the string itself, or an
+// item's id.
+func menuID(entry any) string {
+	if m, ok := entry.(map[string]any); ok {
+		id, _ := m["id"].(string)
+		return id
+	}
+	s, _ := entry.(string)
+	return s
+}
+
 // bind returns props (normalized JSON values) with the actions the
 // handlers need added.
 func (h *Handlers) bind(props map[string]any) map[string]any {
@@ -120,7 +135,7 @@ func (h *Handlers) bind(props map[string]any) map[string]any {
 		}
 		slices.Sort(names)
 		for _, name := range names {
-			if !slices.Contains(menu, any(name)) {
+			if !slices.ContainsFunc(menu, func(e any) bool { return menuID(e) == name }) {
 				menu = append(menu, name)
 			}
 		}
@@ -145,8 +160,8 @@ func (b *bound) route(ev Event) bool {
 	switch e := ev.(type) {
 	case *Action:
 		name := e.Act
-		if e.Value != "" {
-			name += "=" + e.Value
+		if v, _ := e.Value.(string); v != "" {
+			name += "=" + v
 		}
 		switch {
 		case b.OnClick != nil && b.click != "" && (e.Act == b.click || name == b.click):

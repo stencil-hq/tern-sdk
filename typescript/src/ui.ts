@@ -16,13 +16,13 @@ import type { BuildKind, CommonProps, ControlProps, ElTag, HtmlProps, KindProps 
 
 /** Kinds that take no children. */
 export type LeafKind =
-   | 'rule'
    | 'spacer'
    | 'diff'
    | 'rows'
    | 'image'
    | 'media'
    | 'kv'
+   | 'stats'
    | 'table'
    | 'tree'
    | 'json'
@@ -37,7 +37,24 @@ export type LeafKind =
    | 'meter'
    | 'chart'
    | 'effort'
-   | 'checklist';
+   | 'checklist'
+   | 'select'
+   | 'switch'
+   | 'slider'
+   | 'otp'
+   | 'avatar'
+   | 'avatars'
+   | 'breadcrumb'
+   | 'pager'
+   | 'skeleton'
+   | 'calendar'
+   | 'date'
+   | 'menu'
+   | 'menubar'
+   | 'nav'
+   | 'attachment'
+   | 'stacktrace'
+   | 'suggestions';
 
 /** Kinds whose children are plain text, taken as the `text` prop. */
 export type PlainTextKind =
@@ -48,6 +65,7 @@ export type PlainTextKind =
    | 'editor'
    | 'input'
    | 'badge'
+   | 'button'
    | 'toast';
 
 /** The children a kind takes. */
@@ -114,6 +132,7 @@ export const ui: { readonly [K in BuildKind]: Builder<K> } = {
    image: builder('image'),
    media: builder('media'),
    kv: builder('kv'),
+   stats: builder('stats'),
    table: builder('table'),
    tree: builder('tree'),
    json: builder('json'),
@@ -134,6 +153,7 @@ export const ui: { readonly [K in BuildKind]: Builder<K> } = {
    effort: builder('effort'),
    editor: builder('editor'),
    input: builder('input'),
+   button: builder('button'),
    status: builder('status'),
    seg: builder('seg'),
    toast: builder('toast'),
@@ -142,6 +162,32 @@ export const ui: { readonly [K in BuildKind]: Builder<K> } = {
    agent: builder('agent'),
    checklist: builder('checklist'),
    prefs: builder('prefs'),
+   select: builder('select'),
+   switch: builder('switch'),
+   slider: builder('slider'),
+   field: builder('field'),
+   otp: builder('otp'),
+   buttons: builder('buttons'),
+   avatar: builder('avatar'),
+   avatars: builder('avatars'),
+   breadcrumb: builder('breadcrumb'),
+   pager: builder('pager'),
+   empty: builder('empty'),
+   skeleton: builder('skeleton'),
+   calendar: builder('calendar'),
+   date: builder('date'),
+   menu: builder('menu'),
+   menubar: builder('menubar'),
+   nav: builder('nav'),
+   split: builder('split'),
+   scroll: builder('scroll'),
+   carousel: builder('carousel'),
+   message: builder('message'),
+   attachment: builder('attachment'),
+   trace: builder('trace'),
+   stacktrace: builder('stacktrace'),
+   suggestions: builder('suggestions'),
+   questions: builder('questions'),
    el: builder('el'),
 };
 

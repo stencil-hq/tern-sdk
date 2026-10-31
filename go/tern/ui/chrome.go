@@ -1,6 +1,11 @@
 package ui
 
-import "github.com/stencil-hq/tern-sdk/go/tern"
+import (
+	"encoding/json"
+	"strconv"
+
+	"github.com/stencil-hq/tern-sdk/go/tern"
+)
 
 // Status is a status bar strip of Seg children (kind status).
 type Status struct {
@@ -31,9 +36,6 @@ type Seg struct {
 	Children []tern.Element `json:"-"`
 }
 
-// SideRight puts a segment in the status strip's right group.
-const SideRight = "right"
-
 // Node builds the seg.
 func (s Seg) Node() tern.Node { return Build(tern.KindSeg, s, s.Children) }
 
@@ -57,15 +59,56 @@ type Overlay struct {
 	Common
 	// Anchor is the placement (default center).
 	Anchor Anchor `json:"anchor,omitzero"`
-	// Size is sm, md, lg or full.
+	// Side docks the overlay to an edge of the layer: a full-height sheet
+	// (SideLeft, SideRight) or a drawer (SideBottom). It wins over Anchor.
+	Side OverlaySide `json:"side,omitzero"`
+	// Variant is, with Side, OverlayEdge (default, flush) or OverlayInset
+	// (floating 8px off the edge).
+	Variant OverlayVariant `json:"variant,omitzero"`
+	// Size is sm, md, lg or full; with Side, the sheet's width or the
+	// drawer's height.
 	Size Size `json:"size,omitzero"`
+	// SizeFrac is, with Side, the size as a fraction of the layer in (0, 1],
+	// sent as size in place of Size.
+	SizeFrac float64 `json:"-"`
 	// Modal dims the backdrop and takes the pointer.
 	Modal bool `json:"modal,omitzero"`
 	// Head is the title row.
 	Head Rich `json:"head,omitzero"`
+	// Icon is the head icon.
+	Icon IconName `json:"icon,omitzero"`
+	// Meta is drawn muted after the head text.
+	Meta Rich `json:"meta,omitzero"`
+	// End is drawn at the head's end (child "end").
+	End tern.Element `json:"-"`
+	// Foot is drawn in a footer bar under the body: the sheet's buttons
+	// (child "foot").
+	Foot tern.Element `json:"-"`
 	// Children are drawn in order.
 	Children []tern.Element `json:"-"`
 }
+
+// OverlaySide is the layer edge an overlay docks to.
+type OverlaySide string
+
+// Overlay sides.
+const (
+	SideLeft   OverlaySide = "left"
+	SideBottom OverlaySide = "bottom"
+)
+
+// SideRight docks an overlay to the layer's right edge; as a string, it
+// puts a segment in the status strip's right group.
+const SideRight = "right"
+
+// OverlayVariant is how a docked overlay sits at its edge.
+type OverlayVariant string
+
+// Docked overlay looks.
+const (
+	OverlayEdge  OverlayVariant = "edge"
+	OverlayInset OverlayVariant = "inset"
+)
 
 // Anchor places an overlay. Its zero value is absent (center).
 type Anchor struct{ v any }
@@ -96,4 +139,13 @@ func (a Anchor) IsZero() bool { return a.v == nil }
 func (a Anchor) MarshalJSON() ([]byte, error) { return tern.Marshal(a.v) }
 
 // Node builds the overlay.
-func (o Overlay) Node() tern.Node { return Build(tern.KindOverlay, o, o.Children) }
+func (o Overlay) Node() tern.Node {
+	n := Build(tern.KindOverlay, o, o.Children)
+	if o.SizeFrac != 0 && o.Props["size"] == nil {
+		if n.Props == nil {
+			n.Props = map[string]any{}
+		}
+		n.Props["size"] = json.Number(strconv.FormatFloat(o.SizeFrac, 'f', -1, 64))
+	}
+	return slotted(n, "end", o.End, "foot", o.Foot)
+}

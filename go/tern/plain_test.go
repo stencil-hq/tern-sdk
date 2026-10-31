@@ -127,6 +127,23 @@ func TestPlainSanitizesEveryOutputPath(t *testing.T) {
 			"title": dirty, "rows": []any{map[string]any{"label": dirty,
 				"control": map[string]any{"k": "text", "value": dirty}}}}}}},
 		{KindEl, map[string]any{"tag": "p", "text": dirty}},
+		{KindButton, map[string]any{"text": dirty}},
+		{KindStats, map[string]any{"items": []any{map[string]any{"label": dirty, "value": dirty, "sub": dirty}}}},
+		{KindSelect, map[string]any{"label": dirty, "value": dirty}},
+		{KindSlider, map[string]any{"label": dirty, "value": 1, "unit": dirty}},
+		{KindOtp, map[string]any{"text": dirty, "length": 12}},
+		{KindBreadcrumb, map[string]any{"items": []any{map[string]any{"id": dirty}}}},
+		{KindMessage, map[string]any{"author": dirty, "status": dirty}},
+		{KindTrace, map[string]any{"title": dirty, "lines": []any{map[string]any{"title": dirty}}}},
+		{KindStacktrace, map[string]any{"error": map[string]any{"type": dirty}}},
+		{KindQuestions, map[string]any{"items": []any{map[string]any{"id": "q", "prompt": dirty}}}},
+		{KindCard, map[string]any{"head": dirty, "meta": dirty}},
+		{KindTable, map[string]any{"cols": []any{map[string]any{"id": "x"}}, "empty": dirty}},
+		{KindTable, map[string]any{"cols": []any{map[string]any{"id": "a"}, map[string]any{"id": "b"},
+			map[string]any{"id": "c"}}, "rows": []any{map[string]any{"cells": map[string]any{
+			"a": map[string]any{"text": dirty, "dot": "success"},
+			"b": map[string]any{"badge": map[string]any{"text": dirty}},
+			"c": map[string]any{"button": map[string]any{"text": dirty, "act": "x"}}}}}}},
 	} {
 		t.Run(c.kind, func(t *testing.T) {
 			got := Plain(Main(Node{Kind: c.kind, Props: c.props}), 80)
@@ -246,5 +263,122 @@ func TestPlainRuleSpansCols(t *testing.T) {
 	lines := strings.Split(strings.TrimSuffix(got, "\n"), "\n")
 	if len(lines) != 2 || lines[0] != strings.Repeat("─", 12) || !strings.HasPrefix(lines[1], "── log ") {
 		t.Fatalf("%q", got)
+	}
+}
+
+func TestPlainSlotsAndSparks(t *testing.T) {
+	card := Node{Kind: KindOverlay, Props: map[string]any{"head": "Deploy", "meta": "2 left"},
+		Children: []Element{Node{Kind: KindText, Props: map[string]any{"text": "body"}}},
+		Slots: map[string]Element{
+			"end":  Node{Kind: KindBadge, Props: map[string]any{"text": "new"}},
+			"foot": Node{Kind: KindButton, Props: map[string]any{"text": "OK"}},
+		}}
+	table := Node{Kind: KindTable, Props: map[string]any{"cols": []any{map[string]any{"id": "s"}},
+		"rows": []any{map[string]any{"cells": map[string]any{"s": map[string]any{
+			"spark": map[string]any{"values": []any{0, 7, 3.5}}}}}}}}
+	got := Plain(Main(card, table), 80)
+	if want := "Deploy  2 left  [new]\n  body\n  [OK]\n▁█▅\n"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestPlainNewKinds(t *testing.T) {
+	n := func(kind string, props map[string]any, children ...Element) Node {
+		return Node{Kind: kind, Props: props, Children: children}
+	}
+	text := func(s, key string) Node {
+		p := map[string]any{"text": s}
+		if key != "" {
+			p["key"] = key
+		}
+		return n(KindText, p)
+	}
+	cases := []struct {
+		name string
+		node Node
+		want string
+	}{
+		{"select shows the option's label", n(KindSelect, map[string]any{"label": "Model", "value": "haiku",
+			"options": []any{"opus", map[string]any{"value": "haiku", "label": "Haiku"}}}), "Model: Haiku\n"},
+		{"select without a value shows the placeholder", n(KindSelect, map[string]any{"placeholder": "Pick"}), "Pick\n"},
+		{"switch on", n(KindSwitch, map[string]any{"on": true, "label": "Wrap"}), "[x] Wrap\n"},
+		{"switch off", n(KindSwitch, nil), "[ ]\n"},
+		{"slider unit attaches", n(KindSlider, map[string]any{"label": "Opacity", "value": 72, "unit": "%"}), "Opacity: 72%\n"},
+		{"slider range", n(KindSlider, map[string]any{"value": []any{200, 1200}, "unit": "ms"}), "200–1200 ms\n"},
+		{"slider without a value", n(KindSlider, map[string]any{"label": "Size"}), "Size\n"},
+		{"field error wins over hint", n(KindField, map[string]any{"label": "Port", "required": true, "hint": "1–65535",
+			"error": "Bad port"}, n(KindInput, map[string]any{"text": "0"})), "Port *\n0\nBad port\n"},
+		{"field flagged hides the hint", n(KindField, map[string]any{"label": "Port", "hint": "h", "warning": true},
+			n(KindInput, map[string]any{"text": "0"})), "Port\n0\n"},
+		{"field hint", n(KindField, map[string]any{"hint": "h"}), "h\n"},
+		{"otp pads to its length", n(KindOtp, map[string]any{"text": "12", "length": 4}), "12__\n"},
+		{"otp masks and cuts at the length", n(KindOtp, map[string]any{"text": "1234567", "mask": true}), "••••••\n"},
+		{"otp masks with a character", n(KindOtp, map[string]any{"text": "12", "mask": "*#"}), "**____\n"},
+		{"buttons on one line", n(KindButtons, nil, n(KindButton, map[string]any{"text": "Undo"}),
+			n(KindButton, map[string]any{"text": "Redo"})), "[Undo] [Redo]\n"},
+		{"avatar", n(KindAvatar, map[string]any{"text": "Cara"}), "Cara\n"},
+		{"avatars", n(KindAvatars, map[string]any{"items": []any{map[string]any{"text": "Ann"}, map[string]any{"text": "Bo"}},
+			"label": "2 reviewers"}), "Ann, Bo 2 reviewers\n"},
+		{"breadcrumb", n(KindBreadcrumb, map[string]any{"items": []any{map[string]any{"id": "acme", "label": "Acme"},
+			map[string]any{"id": "k8s"}}}), "Acme › k8s\n"},
+		{"breadcrumb path", n(KindBreadcrumb, map[string]any{"variant": "path", "items": []any{map[string]any{"id": "src"},
+			map[string]any{"id": "main.go"}}}), "src / main.go\n"},
+		{"pager counts pages", n(KindPager, map[string]any{"page": 2, "total": 312, "size": 25}), "Page 2 of 13\n"},
+		{"pager pages win", n(KindPager, map[string]any{"pages": 4, "total": 312, "size": 25}), "Page 1 of 4\n"},
+		{"pager alone", n(KindPager, nil), "Page 1\n"},
+		{"empty", n(KindEmpty, map[string]any{"title": "No deploys", "text": "Push to deploy"},
+			n(KindButton, map[string]any{"text": "Deploy"})), "No deploys\nPush to deploy\n[Deploy]\n"},
+		{"skeleton draws nothing", n(KindCol, nil, n(KindSkeleton, nil), text("x", "")), "x\n"},
+		{"calendar range waiting for its end", n(KindCalendar, map[string]any{"value": []any{"2026-10-19", nil}}), "2026-10-19\n"},
+		{"date range", n(KindDate, map[string]any{"value": []any{"2026-10-19", "2026-10-30"}}), "2026-10-19 – 2026-10-30\n"},
+		{"date placeholder", n(KindDate, map[string]any{"placeholder": "Pick a date"}), "Pick a date\n"},
+		{"menu", n(KindMenu, map[string]any{"text": "Sort", "items": []any{"asc"}}), "[Sort]\n"},
+		{"menu by its title", n(KindMenu, map[string]any{"title": "More"}), "[More]\n"},
+		{"menubar", n(KindMenubar, map[string]any{"menus": []any{map[string]any{"id": "file", "label": "File"},
+			map[string]any{"id": "view"}}}), "File  view\n"},
+		{"nav brackets the active sub-item's parent", n(KindNav, map[string]any{"active": "api", "items": []any{
+			map[string]any{"id": "home", "label": "Home"},
+			map[string]any{"id": "docs", "label": "Docs", "items": []any{map[string]any{"id": "api"}}}}}), "Home | [Docs]\n"},
+		{"carousel shows its slide", n(KindCarousel, map[string]any{"index": 5}, text("a", ""), text("b", "")), "b\n"},
+		{"message", n(KindMessage, map[string]any{"author": "Sam", "time": "14:02", "status": "Read",
+			"reactions": []any{map[string]any{"text": "♥", "count": 2}, map[string]any{"text": "👍", "count": 0}}},
+			n(KindMd, map[string]any{"text": "hi"})), "Sam 14:02\n  hi\n  ♥ 2  👍\n  Read\n"},
+		{"attachment", n(KindAttachment, map[string]any{"name": "a.pdf"}), "[attachment: a.pdf]\n"},
+		{"trace lines with their content", n(KindTrace, map[string]any{"title": "Worked", "status": "done",
+			"lines": []any{map[string]any{"id": "s1", "title": "Search", "target": "go.dev", "status": "done"},
+				map[string]any{"title": "Read"}}}, text("body", ""), text("found", "s1"), text("read it", "1")),
+			"Worked (done)\n- Search go.dev (done)\n    found\n- Read\n    read it\nbody\n"},
+		{"stacktrace", n(KindStacktrace, map[string]any{"error": map[string]any{"type": "TypeError", "message": "x"},
+			"frames": []any{map[string]any{"fn": "main", "file": "a.ts", "line": 3, "col": 7}, map[string]any{}}}),
+			"TypeError: x\n  at main (a.ts:3:7)\n  at <anonymous>\n"},
+		{"suggestions", n(KindSuggestions, map[string]any{"items": []any{map[string]any{"text": "Fix it"},
+			map[string]any{"detail": "no text"}}}), "- Fix it\n"},
+		{"questions", n(KindQuestions, map[string]any{"items": []any{map[string]any{"id": "db", "prompt": "Which DB?",
+			"choices": []any{"pg", map[string]any{"value": "my", "label": "MySQL"}}}, map[string]any{"prompt": "no id"}}}),
+			"Which DB?\n  - pg\n  - MySQL\n"},
+		{"secret input", n(KindInput, map[string]any{"text": "abc", "secret": true, "reveal": true}), "•••\n"},
+		{"cited text", n(KindText, map[string]any{"spans": []any{
+			map[string]any{"t": "Go", "cite": []any{map[string]any{"href": "a"}}},
+			map[string]any{"t": " and Rust", "cite": map[string]any{"href": "b", "n": 1}},
+			map[string]any{"t": ".", "cite": []any{map[string]any{"href": "a"}, map[string]any{"href": "c"}, map[string]any{}}},
+		}}), "Go[2] and Rust[1].[2][3]\n"},
+		{"line chart sparkline skips gaps", n(KindChart, map[string]any{"kind": "line",
+			"series": []any{1, nil, map[string]any{"value": 3}, 2}}), "▁█▅\n"},
+		{"area chart series", n(KindChart, map[string]any{"kind": "area", "series": []any{
+			map[string]any{"label": "p50", "values": []any{1, 3}}, map[string]any{"values": []any{2, 2}}}}), "p50 ▁█\n▁▁\n"},
+		{"donut segments", n(KindChart, map[string]any{"kind": "donut", "unit": "%", "series": []any{
+			map[string]any{"label": "ok", "value": 60}, 40, "x"}}), "ok 60%  40%\n"},
+		{"donut unit after a space", n(KindChart, map[string]any{"kind": "donut", "unit": "ms",
+			"series": []any{map[string]any{"label": "p50", "value": 3}}}), "p50 3 ms\n"},
+		{"summary wins", n(KindChart, map[string]any{"kind": "line", "summary": "flat", "series": []any{1, 2}}), "flat\n"},
+	}
+	for _, c := range cases {
+		if got := Plain(Main(c.node), 80); got != c.want {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
+	}
+	rule := Plain(Main(Node{Kind: KindRule, Props: map[string]any{"label": "Checkpoint", "time": "14:02", "variant": "note"}}), 40)
+	if want := "── Checkpoint · 14:02 " + strings.Repeat("─", 40-18-4) + "\n"; rule != want {
+		t.Errorf("rule %q, want %q", rule, want)
 	}
 }

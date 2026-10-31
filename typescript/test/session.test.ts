@@ -500,6 +500,35 @@ describe('input', () => {
       await session.close();
    });
 
+   test('font goes in the o message; buttons, table rows and slot nodes route', async () => {
+      const { term, session } = await connected();
+      const calls: string[] = [];
+      session.open({ mode: 'screen', font: 'sans' }).render([
+         ui.card(
+            {
+               head: 'Jobs',
+               end: ui.button({ onClick: () => void calls.push('refresh') }, 'Refresh'),
+            },
+            ui.table({
+               selectable: true,
+               rows: [{ id: 'a', cells: {} }],
+               onSelect: ev => void calls.push(`select ${ev.item}`),
+               onActivate: ev => void calls.push(`activate ${ev.item}`),
+               onAction: { approve: ev => void calls.push(`approve ${ev.item}`) },
+            })
+         ),
+      ]);
+      expect(term.output.bodies('o')).toEqual([{ id: 's1', mode: 'screen', font: 'sans' }]);
+      term.event({ ev: 'action', sf: 's1', id: 'main.0.end', act: 'click' });
+      term.event({ ev: 'select', sf: 's1', id: 'main.0.0', item: 'a' });
+      term.event({ ev: 'activate', sf: 's1', id: 'main.0.0', item: 'a' });
+      term.event({ ev: 'action', sf: 's1', id: 'main.0.0', act: 'approve', item: 'a' });
+      term.input.type('z');
+      await session.next();
+      expect(calls).toEqual(['refresh', 'select a', 'activate a', 'approve a']);
+      await session.close();
+   });
+
    test('idle flushing waits for silence and preserves paste terminators', async () => {
       const { term, session } = await connected();
       term.input.type('\x1b');

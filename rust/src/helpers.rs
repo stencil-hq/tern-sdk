@@ -7,7 +7,11 @@ use std::io::Write as _;
 use serde_json::{Map, Value};
 
 use crate::{
-	Error, Input, Options, Session, SurfaceOptions, plain::plain, term, ui::View, wire::Event,
+	Error, Input, Options, Session, SurfaceOptions,
+	plain::plain,
+	term,
+	ui::View,
+	wire::{Event, Font},
 };
 
 /// Options of [`print`].
@@ -97,11 +101,13 @@ pub struct AskOptions {
 	pub css:    Option<String>,
 	/// The action that submits (default `submit`).
 	pub submit: String,
+	/// The surface's base face (default mono; `Font::Sans` for forms).
+	pub font:   Option<Font>,
 }
 
 impl Default for AskOptions {
 	fn default() -> Self {
-		Self { css: None, submit: "submit".into() }
+		Self { css: None, submit: "submit".into(), font: None }
 	}
 }
 
@@ -114,6 +120,12 @@ impl AskOptions {
 	/// Sets the stylesheet.
 	pub fn css(mut self, css: impl Into<String>) -> Self {
 		self.css = Some(css.into());
+		self
+	}
+
+	/// Sets the surface's base face.
+	pub const fn font(mut self, font: Font) -> Self {
+		self.font = Some(font);
 		self
 	}
 
@@ -206,7 +218,11 @@ fn ask_session<M>(
 	options: AskOptions,
 	mut update: impl FnMut(M) -> Option<View<M>>,
 ) -> Result<Answer, Error> {
-	let sf = session.open(SurfaceOptions::flow())?;
+	let mut surface = SurfaceOptions::flow();
+	if let Some(font) = options.font {
+		surface = surface.font(font);
+	}
+	let sf = session.open(surface)?;
 	if let Some(css) = &options.css {
 		session.stylesheet(sf, "main", Some(css))?;
 	}

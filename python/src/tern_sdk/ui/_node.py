@@ -35,12 +35,16 @@ class Node:
     children: list[Node] = field(default_factory=list)
     handlers: dict[str, Handler] = field(default_factory=dict)
     """Handlers by route: `action:<act>`, or an event name (`toggle`, `change`, …)."""
+    slots: dict[str, str] = field(default_factory=dict)
+    """Props naming a child by key (`{"end": "end"}`): when ids are assigned,
+    each prop is sent as that child's id."""
 
     def to_json(self) -> dict[str, Json]:
         """The node as a wire node without ids: `{"k", "p"?, "c"?}`."""
         out: dict[str, Json] = {"k": self.kind}
-        if self.props:
-            out["p"] = self.props
+        props = {**self.props, **self.slots} if self.slots else self.props
+        if props:
+            out["p"] = props
         if self.children:
             out["c"] = [c.to_json() for c in self.children]
         return out
@@ -109,6 +113,14 @@ class CommonNoMax(BaseProps, total=False):
     actions: Actions | None
 
 
+class CommonNoMin(BaseProps, total=False):
+    """Common props for kinds whose `min` is their own (`split`)."""
+
+    title: str | None
+    max: Bounds | None
+    actions: Actions | None
+
+
 class CommonNoBounds(BaseProps, total=False):
     """Common props for kinds whose `min` and `max` are their own (`chart`)."""
 
@@ -119,6 +131,15 @@ class CommonNoBounds(BaseProps, total=False):
 class PickerCommon(BaseProps, total=False):
     """Common props for `picker`, whose `title` and `actions` are its own."""
 
+    min: Bounds | None
+    max: Bounds | None
+
+
+class CommonNoActions(BaseProps, total=False):
+    """Common props for kinds whose `actions` are their own buttons
+    (`attachment`, `message`)."""
+
+    title: str | None
     min: Bounds | None
     max: Bounds | None
 
@@ -198,8 +219,9 @@ def make(
     if menu:
         acts = ensure_actions()
         names = list(acts.get("menu") or [])
+        ids = {e if isinstance(e, str) else e.get("id") for e in names if isinstance(e, (str, dict))}
         for name, fn in menu.items():
-            if name not in names:
+            if name not in ids:
                 names.append(name)
             handlers[f"action:{name}"] = fn
         acts["menu"] = names
@@ -220,7 +242,7 @@ def route(handlers: Mapping[str, Handler], event: Event) -> Handler | None:
     if isinstance(event, ActionEvent):
         if event.act is None:
             return None
-        if event.value is not None:
+        if isinstance(event.value, str):
             fn = handlers.get(f"action:{event.act}={event.value}")
             if fn is not None:
                 return fn

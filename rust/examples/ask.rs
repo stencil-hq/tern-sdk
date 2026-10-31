@@ -5,20 +5,12 @@
 use std::io::{self, BufRead as _, Write as _};
 
 use tern_sdk::{
-	Answer, AskOptions,
+	Answer, AskOptions, Font,
 	ui::{
-		Actions, View,
+		self, Actions, Bound, Extent, View,
 		html::{self, El},
 	},
 };
-
-/// The form's look, from the protocol book.
-const CSS: &str = ".ask{display:flex;flex-direction:column;gap:8px;max-width:460px;padding:10px \
-                   12px;border-radius:8px;background:var(--card);box-shadow:inset 0 0 0 1px \
-                   var(--l2)} .ask p{margin:0} .ask .sizes{display:flex;gap:14px} .ask \
-                   :checked+span{color:var(--accent)} .ask \
-                   button{align-self:flex-start;padding:3px \
-                   12px;border-radius:6px;background:var(--accent-fill);color:#fff}";
 
 /// The sizes: value and label.
 const SIZES: [(&str, &str); 3] = [("s", "Small"), ("m", "Medium"), ("l", "Large")];
@@ -31,19 +23,23 @@ fn choice(value: &str, label: &str) -> El<()> {
 		.child(html::span(label).key("t"))
 }
 
-/// The form.
+/// The form: a card of radios and a primary Create button, styled by the
+/// kinds alone.
 fn view() -> View<()> {
 	let sizes = SIZES.iter().map(|(value, label)| choice(value, label));
-	View::new().main([html::form()
-		.key("ask")
-		.class("ask")
-		.child(html::p("Which size?").key("q"))
-		.child(html::div().key("sizes").class("sizes").children(sizes))
-		.child(
-			html::button("Create")
-				.key("go")
-				.actions(Actions::new().click("submit")),
-		)])
+	View::new().main([html::form().key("ask").child(
+		ui::card()
+			.key("card")
+			.head("Which size?")
+			.max(Bound::w(Extent::Ch(48.0)))
+			.child(ui::row().key("sizes").gap("lg").children(sizes))
+			.child(
+				ui::button("Create")
+					.key("go")
+					.variant("primary")
+					.actions(Actions::new().click("submit")),
+			),
+	)])
 }
 
 /// The label of size `value`.
@@ -71,7 +67,7 @@ fn ask_plainly() -> io::Result<()> {
 }
 
 fn main() -> Result<(), tern_sdk::Error> {
-	let answer = tern_sdk::ask(view(), AskOptions::new().css(CSS))?;
+	let answer = tern_sdk::ask(view(), AskOptions::new().font(Font::Sans))?;
 	match answer {
 		Answer::Submitted(submission) => {
 			let size = submission.values.get("size").and_then(|v| v.as_str());

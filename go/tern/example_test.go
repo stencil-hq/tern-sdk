@@ -29,12 +29,16 @@ func ExamplePrint() {
 
 // Ask returns ErrUnsupported without TSP, so the program asks its own way.
 func ExampleAsk() {
-	form := el.Form{Children: ui.Nodes(
-		el.P{Text: "Which size?"},
-		el.Label{Children: ui.Nodes(el.Input{Type: el.Radio, Name: "size", Value: "s"}, el.Span{Text: "Small"})},
-		el.Button{Text: "Create", Common: ui.Common{Actions: &ui.Actions{Click: "submit"}}},
+	form := el.Form{Common: ui.Common{Key: "ask"}, Children: ui.Nodes(
+		ui.Card{Head: ui.T("Which size?"), Common: ui.Common{Key: "q", Max: &ui.Bounds{W: ui.Ch(48)}}, Children: ui.Nodes(
+			ui.Row{Gap: ui.GapLG, Common: ui.Common{Key: "sizes"}, Children: ui.Nodes(
+				el.Label{Children: ui.Nodes(el.Input{Type: el.Radio, Name: "size", Value: "s"}, el.Span{Text: "Small"})},
+			)},
+			ui.Button{Text: "Create", Variant: ui.ButtonPrimary,
+				Common: ui.Common{Key: "go", Actions: &ui.Actions{Click: "submit"}}},
+		)},
 	)}
-	answer, err := tern.Ask(context.Background(), tern.Main(form), tern.AskOptions{})
+	answer, err := tern.Ask(context.Background(), tern.Main(form), tern.AskOptions{Font: tern.FontSans})
 	switch {
 	case errors.Is(err, tern.ErrUnsupported):
 		fmt.Println("no TSP: ask on stdin")

@@ -57,6 +57,8 @@ pub mod kind {
 	pub const MATH: &str = "math";
 	/// An aligned key/value list.
 	pub const KV: &str = "kv";
+	/// A well of stat tiles.
+	pub const STATS: &str = "stats";
 	/// A table.
 	pub const TABLE: &str = "table";
 	/// A disclosure tree.
@@ -101,6 +103,8 @@ pub mod kind {
 	pub const EDITOR: &str = "editor";
 	/// A single-line text field.
 	pub const INPUT: &str = "input";
+	/// A push button.
+	pub const BUTTON: &str = "button";
 	/// A status bar strip.
 	pub const STATUS: &str = "status";
 	/// A status bar segment.
@@ -119,15 +123,137 @@ pub mod kind {
 	pub const BLOCK: &str = "block";
 	/// A settings page.
 	pub const PREFS: &str = "prefs";
+	/// A value picked from a menu, optionally searchable.
+	pub const SELECT: &str = "select";
+	/// An on/off switch.
+	pub const SWITCH: &str = "switch";
+	/// A value, or a range, dragged along a track.
+	pub const SLIDER: &str = "slider";
+	/// A labelled form row: label, control, help or error.
+	pub const FIELD: &str = "field";
+	/// A one-time code, one cell per character.
+	pub const OTP: &str = "otp";
+	/// Buttons drawn as one group.
+	pub const BUTTONS: &str = "buttons";
+	/// A person, bot or org: initials, an icon or a picture.
+	pub const AVATAR: &str = "avatar";
+	/// Avatars stacked, with an overflow count.
+	pub const AVATARS: &str = "avatars";
+	/// A trail of places, the last one current.
+	pub const BREADCRUMB: &str = "breadcrumb";
+	/// Pagination.
+	pub const PAGER: &str = "pager";
+	/// An empty state.
+	pub const EMPTY: &str = "empty";
+	/// Placeholder shapes while content loads.
+	pub const SKELETON: &str = "skeleton";
+	/// A month grid or a week strip of days to pick from.
+	pub const CALENDAR: &str = "calendar";
+	/// A date field that opens a calendar.
+	pub const DATE: &str = "date";
+	/// A button that opens a menu of commands.
+	pub const MENU: &str = "menu";
+	/// A strip of menus.
+	pub const MENUBAR: &str = "menubar";
+	/// Navigation links, some opening a panel.
+	pub const NAV: &str = "nav";
+	/// Panes the user resizes by dragging between them.
+	pub const SPLIT: &str = "split";
+	/// A scrolling container, optionally pinned to its end.
+	pub const SCROLL: &str = "scroll";
+	/// Slides shown one at a time.
+	pub const CAROUSEL: &str = "carousel";
+	/// One chat message.
+	pub const MESSAGE: &str = "message";
+	/// A file attached to a message, with its upload state.
+	pub const ATTACHMENT: &str = "attachment";
+	/// An agent's steps, each opening in place.
+	pub const TRACE: &str = "trace";
+	/// An error and its stack frames.
+	pub const STACKTRACE: &str = "stacktrace";
+	/// Suggested prompts, sent with one click.
+	pub const SUGGESTIONS: &str = "suggestions";
+	/// A questionnaire answered in steps.
+	pub const QUESTIONS: &str = "questions";
 	/// A plain HTML element.
 	pub const EL: &str = "el";
 
 	/// Every kind of protocol version 1.
-	pub const ALL: [&str; 46] = [
-		COL, ROW, CARD, SECTION, RULE, SPACER, TEXT, MD, CODE, DIFF, ANSI, ROWS, MATH, KV, TABLE,
-		TREE, JSON, BADGE, KBD, ICON, IMAGE, MEDIA, LIST, ITEM, TABS, PICKER, SPINNER, SHIMMER,
-		ELAPSED, RATE, PROGRESS, METER, CHART, EFFORT, EDITOR, INPUT, STATUS, SEG, TOAST, OVERLAY,
-		TOOL, AGENT, CHECKLIST, BLOCK, PREFS, EL,
+	pub const ALL: [&str; 74] = [
+		COL,
+		ROW,
+		CARD,
+		SECTION,
+		RULE,
+		SPACER,
+		TEXT,
+		MD,
+		CODE,
+		DIFF,
+		ANSI,
+		ROWS,
+		MATH,
+		KV,
+		STATS,
+		TABLE,
+		TREE,
+		JSON,
+		BADGE,
+		KBD,
+		ICON,
+		IMAGE,
+		MEDIA,
+		LIST,
+		ITEM,
+		TABS,
+		PICKER,
+		SPINNER,
+		SHIMMER,
+		ELAPSED,
+		RATE,
+		PROGRESS,
+		METER,
+		CHART,
+		EFFORT,
+		EDITOR,
+		INPUT,
+		BUTTON,
+		STATUS,
+		SEG,
+		TOAST,
+		OVERLAY,
+		TOOL,
+		AGENT,
+		CHECKLIST,
+		BLOCK,
+		PREFS,
+		SELECT,
+		SWITCH,
+		SLIDER,
+		FIELD,
+		OTP,
+		BUTTONS,
+		AVATAR,
+		AVATARS,
+		BREADCRUMB,
+		PAGER,
+		EMPTY,
+		SKELETON,
+		CALENDAR,
+		DATE,
+		MENU,
+		MENUBAR,
+		NAV,
+		SPLIT,
+		SCROLL,
+		CAROUSEL,
+		MESSAGE,
+		ATTACHMENT,
+		TRACE,
+		STACKTRACE,
+		SUGGESTIONS,
+		QUESTIONS,
+		EL,
 	];
 
 	/// The kinds whose `text` prop is primary text, updated with `text` and
@@ -168,6 +294,8 @@ pub mod feature {
 	pub const STYLES: &str = "styles";
 	/// Terminal: `flow` surfaces and `listen:false`.
 	pub const FLOW: &str = "flow";
+	/// Terminal: `o` takes `font` (`sans` | `mono`).
+	pub const FONT: &str = "font";
 }
 
 // ---------------------------------------------------------------------------
@@ -259,6 +387,20 @@ pub struct Open {
 	/// asking.
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub closable: Option<bool>,
+	/// The surface's base face (`mono` when absent).
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub font:     Option<Font>,
+}
+
+/// A surface's base face: the `font` of an `o` message.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Font {
+	/// The terminal face (the default).
+	#[default]
+	Mono,
+	/// The UI face for apps; machine strings stay mono.
+	Sans,
 }
 
 /// An `f` message: an atomic batch of ops on one surface.
@@ -850,6 +992,15 @@ trait Raw: DeserializeOwned {
 	fn set_raw(&mut self, raw: Map<String, Value>);
 }
 
+/// Decodes a string, or a number as its decimal text.
+fn string_or_number<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, D::Error> {
+	match Value::deserialize(d)? {
+		Value::String(s) => Ok(s),
+		Value::Number(n) => Ok(n.to_string()),
+		_ => Err(serde::de::Error::custom("expected a string or a number")),
+	}
+}
+
 /// Decodes `map` as `T`, or `None` when its fields don't fit.
 fn typed<T: Raw>(map: Map<String, Value>) -> Result<T, Map<String, Value>> {
 	let value = Value::Object(map);
@@ -970,14 +1121,20 @@ event_struct!(
 );
 
 event_struct!(
-	/// `toggle`: a collapsible node was folded or unfolded.
+	/// `toggle`: a collapsible node was folded or unfolded, or a menu,
+	/// select or trace line opened or closed.
 	Toggle {
 		/// The surface.
 		sf: Option<String>,
 		/// The node.
 		id: String,
-		/// Whether it is folded now.
+		/// Whether it is folded now (`false` in the events that say `open`
+		/// instead).
 		collapsed: bool,
+		/// Whether it is open now (`select`, `menu`, `menubar`, `trace`).
+		open: Option<bool>,
+		/// The menu of a `menubar`, or the line of a `trace`.
+		item: Option<String>,
 		/// The node's `key` prop (or a `tree` item).
 		key: Option<Value>,
 	}
@@ -990,7 +1147,8 @@ event_struct!(
 		sf: Option<String>,
 		/// The node (the list, for a list's item).
 		id: String,
-		/// The item.
+		/// The item (a `stacktrace` frame's index in decimal).
+		#[serde(deserialize_with = "string_or_number")]
 		item: String,
 		/// Form values, inside an `el` form.
 		values: Option<Map<String, Value>>,
@@ -1006,8 +1164,16 @@ event_struct!(
 		id: String,
 		/// The action's name (before any `=`).
 		act: String,
-		/// The part after `=` in the action's name.
-		value: Option<String>,
+		/// The part after `=` in the action's name, or the action's payload:
+		/// a table's `sort` (`{col, dir}`) and selection bar acts (the picked
+		/// ids), the scope of a tool's approval, the cell of an `otp`'s
+		/// `focus`, a calendar's `month`, the answers of a `questions` submit.
+		value: Option<Value>,
+		/// The row, for a table's row menu or button cell; the menu of a
+		/// `menubar`; the question a `questions` step left.
+		item: Option<String>,
+		/// The new state of a check or radio row of a menu.
+		checked: Option<bool>,
 		/// Modifiers held, in the order `shift`, `ctrl`, `alt`, `meta`.
 		mods: Vec<String>,
 		/// Form values, inside an `el` form.
@@ -1016,19 +1182,27 @@ event_struct!(
 );
 
 event_struct!(
-	/// `change`: an `el` control flipped, or a `prefs` row changed.
+	/// `change`: an `el` control flipped, a `prefs` row changed, or an input
+	/// kind took a new value.
+	///
+	/// The new value is a switch's state, a slider's value or range, a
+	/// select's option, a calendar's day, a table's picks, a split's shares,
+	/// a pager's page, a carousel's slide or a question's answer.
 	Change {
 		/// The surface.
 		sf: Option<String>,
 		/// The node.
 		id: String,
-		/// The control's value, or the `prefs` row's new value.
+		/// The control's value, the `prefs` row's new value or the kind's
+		/// new value.
 		value: Value,
 		/// The control's new state.
 		checked: Option<bool>,
+		/// Whether the user reacted with a `message`'s reaction chip now.
+		on: Option<bool>,
 		/// The control's name.
 		name: Option<String>,
-		/// The `prefs` row.
+		/// The `prefs` row, or the question of a `questions` answer.
 		item: Option<String>,
 		/// Form values, inside an `el` form.
 		values: Option<Map<String, Value>>,
@@ -1222,5 +1396,85 @@ impl Event {
 	/// The node the event is about, when it names one.
 	pub fn id(&self) -> Option<&str> {
 		self.raw().get("id").and_then(Value::as_str)
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use serde_json::json;
+
+	use super::*;
+
+	fn decode(body: Value) -> Event {
+		Event::decode(body.as_object().expect("an object").clone())
+	}
+
+	#[test]
+	fn toggles_carry_open_and_item_without_collapsed() {
+		let Event::Toggle(t) =
+			decode(json!({"ev": "toggle", "id": "main.mb", "item": "file", "open": true}))
+		else {
+			panic!("not a toggle");
+		};
+		assert_eq!((t.open, t.item.as_deref(), t.collapsed), (Some(true), Some("file"), false));
+		let Event::Toggle(t) = decode(json!({"ev": "toggle", "id": "main.date", "collapsed": true}))
+		else {
+			panic!("not a toggle");
+		};
+		assert_eq!((t.open, t.collapsed), (None, true));
+	}
+
+	#[test]
+	fn action_values_keep_their_json_shape() {
+		for value in [
+			json!({"col": "age", "dir": "asc"}),
+			json!(["billing", "web"]),
+			json!(2),
+			json!("session"),
+			json!({"db": "postgres", "tags": ["a"]}),
+		] {
+			let Event::Action(a) =
+				decode(json!({"ev": "action", "id": "main.t", "act": "sort", "value": value}))
+			else {
+				panic!("not an action");
+			};
+			assert_eq!(a.value.as_ref(), a.raw.get("value"));
+			assert!(a.value.is_some());
+		}
+		let Event::Action(a) =
+			decode(json!({"ev": "action", "id": "main.m", "act": "follow", "checked": true}))
+		else {
+			panic!("not an action");
+		};
+		assert_eq!((a.act.as_str(), a.checked), ("follow", Some(true)));
+	}
+
+	#[test]
+	fn change_values_keep_their_json_shape_with_item_and_on() {
+		for value in [json!(true), json!(0.6), json!([0.3, 0.7]), json!("haiku"), json!(["a", "b"])] {
+			let Event::Change(c) = decode(json!({"ev": "change", "id": "main.c", "value": value}))
+			else {
+				panic!("not a change");
+			};
+			assert_eq!(Some(&c.value), c.raw.get("value"));
+		}
+		let Event::Change(c) = decode(
+			json!({"ev": "change", "id": "main.q", "item": "db", "value": ["pg"], "on": false}),
+		) else {
+			panic!("not a change");
+		};
+		assert_eq!((c.item.as_deref(), c.on), (Some("db"), Some(false)));
+	}
+
+	#[test]
+	fn selects_take_an_integer_item() {
+		let Event::Select(s) = decode(json!({"ev": "select", "id": "main.st", "item": 3})) else {
+			panic!("not a select");
+		};
+		assert_eq!(s.item, "3");
+		assert!(matches!(
+			decode(json!({"ev": "activate", "id": "main.st", "item": "frame"})),
+			Event::Activate(s) if s.item == "frame"
+		));
 	}
 }

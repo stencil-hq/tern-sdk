@@ -10,46 +10,38 @@ import sys
 import tern_sdk
 from tern_sdk import ui
 
-CSS = """
-.ask { display: flex; flex-direction: column; gap: 8px; max-width: 460px;
-  padding: 10px 12px; border-radius: 8px; background: var(--card);
-  box-shadow: inset 0 0 0 1px var(--l2) }
-.ask p { margin: 0 }
-.ask .sizes { display: flex; gap: 14px }
-.ask :checked+span { color: var(--accent) }
-.ask button { align-self: flex-start; padding: 3px 12px; border-radius: 6px;
-  background: var(--accent-fill); color: #fff }
-"""
-
 SIZES = (("s", "Small"), ("m", "Medium"), ("l", "Large"))
 
 
 def form() -> ui.Node:
-    """The form: a question, three radios and a submit button."""
+    """The form: a card asking the question, three radios and a submit button."""
 
     return ui.html.form(
-        ui.html.p("Which size?", key="q"),
-        ui.html.div(
-            *(
-                ui.html.label(
-                    ui.html.input(type="radio", name="size", value=value, key="r"),
-                    label,
-                    key=value,
-                )
-                for value, label in SIZES
+        ui.card(
+            ui.row(
+                *(
+                    ui.html.label(
+                        ui.html.input(type="radio", name="size", value=value, key="r"),
+                        ui.html.span(label, key="t"),
+                        key=value,
+                    )
+                    for value, label in SIZES
+                ),
+                gap="lg",
+                key="sizes",
             ),
-            class_="sizes",
-            key="sizes",
+            ui.button("Create", variant="primary", actions={"click": "submit"}, key="go"),
+            head="Which size?",
+            max={"w": "48ch"},
+            key="q",
         ),
-        ui.html.button("Create", actions={"click": "submit"}, key="go"),
-        class_="ask",
         key="ask",
     )
 
 
 def main() -> int:
     try:
-        answer = tern_sdk.ask(form(), css=CSS)
+        answer = tern_sdk.ask(form(), font="sans")
     except tern_sdk.Unsupported:
         try:
             size = input("Which size? [s/m/l] ").strip().lower()[:1]

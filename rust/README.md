@@ -43,7 +43,7 @@ An interactive program connects a session, opens a surface, renders views
 and reads input:
 
 ```rust
-use tern_sdk::{Input, Options, Session, SurfaceOptions, ui};
+use tern_sdk::{Font, Input, Options, Session, SurfaceOptions, ui};
 
 #[derive(Clone)]
 enum Msg {
@@ -54,8 +54,15 @@ fn main() -> Result<(), tern_sdk::Error> {
 	let Some(mut session) = Session::<Msg>::connect(Options::new())? else {
 		return Ok(()); // no TSP here: use your own output
 	};
-	let sf = session.open(SurfaceOptions::flow())?;
-	session.render(sf, ui::html::button("Deploy").on_click(Msg::Deploy))?;
+	// Apps use the UI face; machine strings (code, paths, numbers) stay mono.
+	let sf = session.open(SurfaceOptions::flow().font(Font::Sans))?;
+	let view = ui::card()
+		.icon("rocket")
+		.head("api-gateway")
+		.meta("eu-west-1")
+		.end(ui::button("Deploy").variant("primary").keys(["enter"]).on_click(Msg::Deploy))
+		.child(ui::kv().item("commit", ui::span("4f2c9e1").style("mono")));
+	session.render(sf, view)?;
 	while let Some(input) = session.next(None)? {
 		match input {
 			Input::Msg(Msg::Deploy, _) => break,
@@ -66,6 +73,43 @@ fn main() -> Result<(), tern_sdk::Error> {
 	session.close()
 }
 ```
+
+## Design rules
+
+Build from kinds and props, not CSS: the kinds already carry Tern's look.
+The design guide, [Designing views](https://docs.stencil.so/tern/guides/design.html), has the
+rules, recipes and a review checklist. In short:
+
+- Open apps with `SurfaceOptions::font(Font::Sans)`; mark machine strings with
+  span tokens (`mono`, `code`, `num`, `path`, `key`) or `Column::mono(true)`.
+- Actions are `ui::button(text)`: `.variant("primary")` for the one main
+  action of a view, `"quiet"` for secondary ones, `"danger"` for destructive
+  ones (behind a confirm strip), `.size("sm")` inside rows, `.keys([...])` to
+  show the shortcut. Never `html::button` with hand-written styles.
+- Dashboards are pages, not piles of cards: a head row
+  (`row().justify("between")` with the title in the `title` span token, muted
+  meta, badges and Refresh at the end), a flat `ui::stats([...])` strip (at
+  most four tiles, never in a card), underline `ui::tabs()` with one view per
+  tab (Tab/⇧Tab switch; render only the active view), and per view a
+  full-width `ui::table()` beside a detail `card` (`min`/`max` width
+  `44ch`–`56ch`) for the selected row. Tables take `.selectable(true)`,
+  `.selected(id)`, `.empty(...)` and typed cells (`TextCell` with a status
+  `dot` or `icon`, `BadgeSpec`, `ButtonCell`, `SparkCell`, `MeterCell`);
+  exactly one column `grow`s (the main text one), numbers are
+  `.align(TextAlign::End).mono(true)`. A narrow table hides the lowest
+  `priority` first and a missing one is 0: give the `grow` column the highest
+  so it never hides, numbers next, sparks, meters and secondary columns the
+  lowest. Rows take `.menu(act)` and
+  `.disabled(reason)`; row actions arrive as `action` events with the row in
+  `Action::item`. With a detail card, the selected row's action is the card's
+  `primary` button in its head's `end` and rows carry no buttons.
+- Panel heads: `card().icon(…).head(…).meta(…).end(node)` puts controls
+  (buttons, `tabs().variant("segmented")`, badges) at the head's end;
+  `overlay().foot(node)` adds a footer bar. A node given to `head`, `end` or
+  `foot` becomes the child keyed by the slot (`<card id>.end`) and the prop
+  is sent as its id.
+- Color carries meaning only: use `tone`s, not colors. Design the four
+  states: loading, empty, error, success.
 
 ## The layers
 
@@ -170,12 +214,15 @@ Tests and custom transports drive a session over anything implementing
 - `print(view, PrintOptions::new().css(…).fallback(…))`: a `flow` surface
   opened with `listen:false`, its sheet, one frame, `x` with keep. Without TSP
   (or when stdout is not a tty) the plain rendering, or the fallback text.
-- `ask(view, AskOptions::new().css(…).submit("submit"))` returns
+- `ask(view, AskOptions::new().font(Font::Sans).submit("submit"))` returns
   `Answer::Submitted(Submission { id, act, values })`, `Answer::Cancelled`
   (Escape, Ctrl+C, Ctrl+D) or `Answer::Unsupported`. `ask_with(view, opts,
   |msg| …)` also runs the form's handlers while it waits, and renders the view
   the closure returns.
-- `plain(view, cols)`: readable plain text without escapes.
+- `plain(view, cols)` (or `view.plain(cols)` for a view with handlers):
+  readable plain text without escapes. It prints a `row`'s children on one
+  line, so build fallback-friendly views (a `col` of cards) or pass
+  `fallback` to `print`.
 
 `print` and `plain` take message-free views, so bare builder chains need no
 type annotations. `ask_with` remains generic over handler messages; a submit
@@ -216,6 +263,7 @@ cargo run -p tern-sdk --example table     # print: the current directory
 cargo run -p tern-sdk --example ask       # ask: "Which size?"
 cargo run -p tern-sdk --example progress  # a flow surface with a running card
 cargo run -p tern-sdk --example chat      # an inline surface with a composer
+cargo run -p tern-sdk --example dashboard # a sans screen page: head row, stats, tabs, table + detail
 ```
 
 ## Tests

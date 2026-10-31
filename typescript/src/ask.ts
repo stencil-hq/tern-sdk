@@ -1,12 +1,14 @@
 /** The `ask` helper: one question in a form, its answer returned. */
 import type { Renderable } from './reconcile.js';
 import { connect, type ConnectOptions } from './session.js';
-import type { FormValues } from './wire.js';
+import type { FormValues, SurfaceFont } from './wire.js';
 
 /** What `ask` takes. */
 export interface AskOptions extends ConnectOptions {
    /** A stylesheet for the form. */
    readonly css?: string;
+   /** The form's base face (`open`'s `font`). */
+   readonly font?: SurfaceFont;
    /** The action that answers. Default `"submit"`. */
    readonly submit?: string;
 }
@@ -38,7 +40,11 @@ export async function ask(
    if (!session) return { type: 'unsupported' };
    const submit = options.submit ?? 'submit';
    try {
-      const surface = session.open({ mode: 'flow', forwardActions: [submit] });
+      const surface = session.open({
+         mode: 'flow',
+         forwardActions: [submit],
+         ...(options.font === undefined ? {} : { font: options.font }),
+      });
       if (options.css !== undefined) surface.stylesheet('main', options.css);
       surface.render(view);
       for await (const input of session) {

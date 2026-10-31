@@ -73,7 +73,20 @@ impl Tree {
 
 	/// Builds the tree of `node` under `id`, collecting its handlers.
 	fn build<M>(id: String, node: Node<M>, routes: &mut Routes<M>) -> Result<Self, Error> {
-		let Node { kind, mut props, children: nodes, handlers } = node;
+		let Node { kind, mut props, children: mut nodes, handlers, slots } = node;
+		// Slotted children come after the body, as in every SDK, so a body
+		// child's index (and the id derived from it) doesn't depend on its
+		// slots.
+		let slotted = |c: &Node<M>| {
+			c.props
+				.get("key")
+				.and_then(Value::as_str)
+				.is_some_and(|k| slots.contains(&k))
+		};
+		nodes.sort_by_key(slotted);
+		for slot in &slots {
+			props.insert((*slot).into(), Value::String(format!("{id}.{slot}")));
+		}
 		if !handlers.is_empty() {
 			let found = attach(&id, &mut props, handlers);
 			routes.by_id.insert(id.clone(), found);
@@ -179,7 +192,9 @@ impl<M> Routes<M> {
 		match event {
 			Event::Action(a) => self.at(id, event, |r| {
 				matches!(r, Route::Act(n) if *n == a.act || n.split_once('=')
-					.is_some_and(|(act, value)| act == a.act && a.value.as_deref() == Some(value)))
+				.is_some_and(|(act, value)| {
+					act == a.act && a.value.as_ref().and_then(Value::as_str) == Some(value)
+				}))
 			}),
 			Event::Select(s) | Event::Activate(s) => {
 				let name = event.name();
@@ -237,7 +252,9 @@ fn attach<M>(
 							.entry("menu")
 							.or_insert_with(|| Value::Array(Vec::new()));
 						if let Value::Array(menu) = menu
-							&& !menu.iter().any(|m| m.as_str() == Some(&act))
+							&& !menu
+								.iter()
+								.any(|m| m.as_str().or_else(|| m.get("id")?.as_str()) == Some(act.as_str()))
 						{
 							menu.push(Value::String(act.clone()));
 						}
@@ -548,6 +565,34 @@ mod tests {
 			.unwrap_err();
 			assert_eq!(error.to_string(), format!("main.nested.0: {message}"));
 		}
+	}
+
+	#[test]
+	fn slotted_nodes_become_keyed_children_sent_by_id() {
+		let view: View = View::new().main([crate::ui::card()
+			.head(crate::ui::text("Jobs"))
+			.end(crate::ui::button("Refresh"))
+			.end(crate::ui::button("Reload"))
+			.child(crate::ui::text("body"))
+			.key("panel")]);
+		let doc = Doc::from_view(view).unwrap();
+		let card = &doc.regions()[0].as_ref().unwrap().children()[0];
+		assert_eq!(card.props()["head"], json!("main.panel.head"));
+		assert_eq!(card.props()["end"], json!("main.panel.end"));
+		let ids: Vec<&str> = card.children().iter().map(Tree::id).collect();
+		assert_eq!(ids, ["main.panel.0", "main.panel.head", "main.panel.end"]);
+		assert_eq!(card.children()[2].props()["text"], json!("Reload"));
+	}
+
+	#[test]
+	fn text_after_a_slotted_head_drops_the_child() {
+		let card = crate::ui::card::<()>()
+			.head(crate::ui::text("x"))
+			.head("Plain");
+		let doc = Doc::from_view(View::new().main([card])).unwrap();
+		let card = &doc.regions()[0].as_ref().unwrap().children()[0];
+		assert_eq!(card.props()["head"], json!("Plain"));
+		assert!(card.children().is_empty());
 	}
 
 	#[test]

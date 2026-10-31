@@ -148,27 +148,29 @@ type MeterMark struct {
 // Node builds the meter.
 func (m Meter) Node() tern.Node { return Build(tern.KindMeter, m, nil) }
 
-// Chart is bars, a sparkline or a heatmap (kind chart). Its Min and Max are
-// the value domain and shadow Common's size bounds.
+// Chart is bars, a sparkline, a heatmap, a line, an area or a donut (kind
+// chart). Its Min and Max are the value domain and shadow Common's size
+// bounds.
 type Chart struct {
 	Common
-	// Kind is heatmap (default), bars or spark.
+	// Kind is heatmap (default), bars, spark, line, area or donut.
 	Kind ChartKind `json:"kind,omitzero"`
 	// Size is sm, md (default) or lg.
 	Size Size `json:"size,omitzero"`
-	// Token is the fill color.
+	// Token is the fill color, the first series' on a line or area chart.
 	Token string `json:"token,omitzero"`
 	// Summary is a line under the chart.
 	Summary Rich `json:"summary,omitzero"`
-	// Series are the bars of bars and spark charts.
+	// Series are the bars of bars and spark charts, the points of a
+	// one-series line or area chart, or a donut's segments.
 	Series []Point `json:"series,omitzero"`
-	// Min is the low end of a bars or spark chart's value domain (default 0);
-	// values are clamped into it.
+	// Min is the low end of a bars, spark, line or area chart's value
+	// domain; values are clamped into it.
 	Min *float64 `json:"min,omitzero"`
-	// Max is the high end of a bars or spark chart's value domain (default
-	// the largest series or mark value).
+	// Max is the high end of a bars, spark, line or area chart's value
+	// domain (default from the largest series or mark value).
 	Max *float64 `json:"max,omitzero"`
-	// Marks are dashed reference lines across a bars or spark chart.
+	// Marks are dashed reference lines across a bars, spark, line or area chart.
 	Marks []ChartMark `json:"marks,omitzero"`
 	// Cells are a heatmap's rows of intensities, 0–1; nil cells are transparent.
 	Cells [][]*float64 `json:"cells,omitzero"`
@@ -178,6 +180,23 @@ type Chart struct {
 	Rows []string `json:"rows,omitzero"`
 	// Cols label a heatmap's columns.
 	Cols []ChartCol `json:"cols,omitzero"`
+	// Lines are several line or area series, one line each, sent as series
+	// in place of Series.
+	Lines []ChartSeries `json:"-"`
+	// Labels are a line or area chart's x labels by point index ("" leaves
+	// a point unlabelled).
+	Labels []string `json:"labels,omitzero"`
+	// Unit is written with every value a line, area or donut chart prints: a
+	// currency symbol ($, €, £, ¥) leads it, %, × and ° attach after it, words
+	// follow a space.
+	Unit string `json:"unit,omitzero"`
+	// Last is the label beside a one-series line's last point (default its
+	// value with Unit).
+	Last Last `json:"last,omitzero"`
+	// Total is what a donut's middle says (default the sum, with Unit).
+	Total Rich `json:"total,omitzero"`
+	// Caption is a quiet line under a donut's ring.
+	Caption Rich `json:"caption,omitzero"`
 }
 
 // ChartKind is which chart.
@@ -188,16 +207,58 @@ const (
 	ChartHeatmap ChartKind = "heatmap"
 	ChartBars    ChartKind = "bars"
 	ChartSpark   ChartKind = "spark"
+	ChartLine    ChartKind = "line"
+	ChartArea    ChartKind = "area"
+	ChartDonut   ChartKind = "donut"
 )
 
-// Point is one bar of a series.
+// Point is one bar of a series, a point of a line or a donut's segment.
 type Point struct {
 	Value float64 `json:"value"`
 	Label string  `json:"label,omitzero"`
 	Title string  `json:"title,omitzero"`
 	// Tone fills this bar instead of the chart's Token.
 	Tone Tone `json:"tone,omitzero"`
+	// Token colors a donut's segment.
+	Token string `json:"token,omitzero"`
+	// Gap breaks a line or area chart here; the point is sent as null.
+	Gap bool `json:"-"`
 }
+
+// MarshalJSON writes the point, or null for a gap.
+func (p Point) MarshalJSON() ([]byte, error) {
+	if p.Gap {
+		return []byte("null"), nil
+	}
+	type fields Point
+	return tern.Marshal(fields(p))
+}
+
+// ChartSeries is one series of a line or area chart with several.
+type ChartSeries struct {
+	// Label names its legend chip and its part of the tooltip.
+	Label string `json:"label,omitzero"`
+	// Token is its color (default the next chart color).
+	Token string `json:"token,omitzero"`
+	// Values are its points, sharing x positions by index.
+	Values []Point `json:"values"`
+}
+
+// Last is the label beside a line's last point: HideLast, or LastSays. Its
+// zero value is absent (the value with the unit).
+type Last struct{ v any }
+
+// HideLast draws no label beside the last point.
+var HideLast = Last{false}
+
+// LastSays draws text beside the last point.
+func LastSays(text Rich) Last { return Last{text} }
+
+// IsZero reports whether l is absent.
+func (l Last) IsZero() bool { return l.v == nil }
+
+// MarshalJSON writes false or the text.
+func (l Last) MarshalJSON() ([]byte, error) { return tern.Marshal(l.v) }
 
 // ChartMark is a dashed reference line (a target, a limit) at Value, in
 // value units; outside the domain it is clamped to its edge.
@@ -216,7 +277,19 @@ type ChartCol struct {
 }
 
 // Node builds the chart.
-func (c Chart) Node() tern.Node { return Build(tern.KindChart, c, nil) }
+func (c Chart) Node() tern.Node {
+	n := Build(tern.KindChart, c, nil)
+	if len(c.Lines) > 0 && n.Props["series"] == nil {
+		lines := Build(tern.KindChart, struct {
+			Series []ChartSeries `json:"series"`
+		}{c.Lines}, nil)
+		if n.Props == nil {
+			n.Props = map[string]any{}
+		}
+		n.Props["series"] = lines.Props["series"]
+	}
+	return n
+}
 
 // Effort is a thinking-effort glyph (kind effort).
 type Effort struct {
@@ -241,3 +314,48 @@ const (
 
 // Node builds the effort.
 func (e Effort) Node() tern.Node { return Build(tern.KindEffort, e, nil) }
+
+// Skeleton is placeholder blocks in the shape of content on its way (kind
+// skeleton). Common.Tone tints the shapes; Common.Aria names it (default
+// "Loading").
+type Skeleton struct {
+	Common
+	// Variant is SkeletonShimmer (default), SkeletonPulse or SkeletonWire.
+	Variant SkeletonVariant `json:"variant,omitzero"`
+	// Shape is what it stands for (default ShapeText).
+	Shape SkeletonShape `json:"shape,omitzero"`
+	// Lines is ShapeText's line count, 1–24 (default 3).
+	Lines int `json:"lines,omitzero"`
+	// Rows is ShapeRows' row count, 1–50 (default 4).
+	Rows int `json:"rows,omitzero"`
+	// Tiles is ShapeCard's stat tile count, 1–8 (default 3).
+	Tiles int `json:"tiles,omitzero"`
+}
+
+// SkeletonVariant is a skeleton's look.
+type SkeletonVariant string
+
+// Skeleton looks.
+const (
+	// SkeletonShimmer is soft blocks with one band sweeping across them.
+	SkeletonShimmer SkeletonVariant = "shimmer"
+	// SkeletonPulse is soft blocks fading in and out slowly.
+	SkeletonPulse SkeletonVariant = "pulse"
+	// SkeletonWire is dashed hairline outlines, still.
+	SkeletonWire SkeletonVariant = "wire"
+)
+
+// SkeletonShape is what a skeleton stands for.
+type SkeletonShape string
+
+// Skeleton shapes.
+const (
+	ShapeText   SkeletonShape = "text"
+	ShapeAvatar SkeletonShape = "avatar"
+	ShapeRows   SkeletonShape = "rows"
+	ShapeCard   SkeletonShape = "card"
+	ShapeBlock  SkeletonShape = "block"
+)
+
+// Node builds the skeleton.
+func (s Skeleton) Node() tern.Node { return Build(tern.KindSkeleton, s, nil) }
