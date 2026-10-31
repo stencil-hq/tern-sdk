@@ -1,6 +1,6 @@
 [project]
 name = "tern-sdk"
-version = "0.1.0"
+version = "0.2.0"
 description = "Talk to Tern over the Tern Surface Protocol: typed nodes, diffing, flow control, events, and a plain-text fallback."
 readme = "README.md"
 requires-python = ">=3.11"

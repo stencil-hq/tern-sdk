@@ -1,6 +1,6 @@
 {
    "name": "@stencil-hq/tern",
-   "version": "0.1.0",
+   "version": "0.2.0",
    "description": "Talk to Tern over the Tern Surface Protocol: typed nodes and TSX, diffing, flow control, events, and a plain-text fallback.",
    "license": "MIT",
    "repository": {
