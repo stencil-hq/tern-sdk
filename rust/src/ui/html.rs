@@ -75,7 +75,11 @@ impl<M> El<M> {
 	/// Sets all extra attributes (`data-*`, `aria-*`, `role`, `colspan`,
 	/// `rowspan`).
 	pub fn attrs(mut self, attrs: Map<String, Value>) -> Self {
-		self.0.props.insert("attrs".into(), Value::Object(attrs));
+		self
+			.0
+			.inner_mut()
+			.props
+			.insert("attrs".into(), Value::Object(attrs));
 		self
 	}
 
@@ -84,12 +88,13 @@ impl<M> El<M> {
 		let Ok(value) = serde_json::to_value(value) else {
 			return self;
 		};
-		if let Some(Value::Object(attrs)) = self.0.props.get_mut("attrs") {
+		let props = &mut self.0.inner_mut().props;
+		if let Some(Value::Object(attrs)) = props.get_mut("attrs") {
 			attrs.insert(name.into(), value);
 		} else {
 			let mut attrs = Map::new();
 			attrs.insert(name.into(), value);
-			self.0.props.insert("attrs".into(), Value::Object(attrs));
+			props.insert("attrs".into(), Value::Object(attrs));
 		}
 		self
 	}

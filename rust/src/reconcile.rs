@@ -19,7 +19,7 @@ use crate::{
 	Error,
 	ui::{
 		Node, View,
-		node::{Handler, Trigger},
+		node::{Handler, Inner, Trigger},
 	},
 	wire::{Event, Op, TextMode, WireNode, kind},
 };
@@ -73,12 +73,13 @@ impl Tree {
 
 	/// Builds the tree of `node` under `id`, collecting its handlers.
 	fn build<M>(id: String, node: Node<M>, routes: &mut Routes<M>) -> Result<Self, Error> {
-		let Node { kind, mut props, children: mut nodes, handlers, slots } = node;
+		let Inner { kind, mut props, children: mut nodes, handlers, slots } = node.into_inner();
 		// Slotted children come after the body, as in every SDK, so a body
 		// child's index (and the id derived from it) doesn't depend on its
 		// slots.
 		let slotted = |c: &Node<M>| {
-			c.props
+			c.inner()
+				.props
 				.get("key")
 				.and_then(Value::as_str)
 				.is_some_and(|k| slots.contains(&k))
@@ -94,7 +95,7 @@ impl Tree {
 		let mut seen = HashSet::with_capacity(nodes.len());
 		let mut children = Vec::with_capacity(nodes.len());
 		for (i, child) in nodes.into_iter().enumerate() {
-			let key = match child.props.get("key") {
+			let key = match child.inner().props.get("key") {
 				Some(Value::String(k)) => k.clone(),
 				Some(Value::Number(n)) => n.to_string(),
 				_ => i.to_string(),

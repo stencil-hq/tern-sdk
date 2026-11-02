@@ -117,12 +117,12 @@ fn text<M>(node: &Node<M>, key: &str) -> Option<String> {
 
 /// A prop as a string.
 fn string<'a, M>(node: &'a Node<M>, key: &str) -> Option<&'a str> {
-	node.props.get(key).and_then(Value::as_str)
+	node.props().get(key).and_then(Value::as_str)
 }
 
 /// A prop as a number.
 fn number<M>(node: &Node<M>, key: &str) -> Option<f64> {
-	node.props.get(key).and_then(Value::as_f64)
+	node.props().get(key).and_then(Value::as_f64)
 }
 
 /// A JSON value (string or spans) as text.
@@ -139,7 +139,7 @@ fn value_text(value: &Value) -> String {
 /// A list prop.
 fn list<'a, M>(node: &'a Node<M>, key: &str) -> &'a [Value] {
 	node
-		.props
+		.props()
 		.get(key)
 		.and_then(Value::as_array)
 		.map_or_default(Vec::as_slice)
@@ -148,7 +148,7 @@ fn list<'a, M>(node: &'a Node<M>, key: &str) -> &'a [Value] {
 /// A node's primary text: `spans` (with their cite marks) when they are a
 /// list, else `text`.
 fn primary<M>(node: &Node<M>) -> Option<String> {
-	match node.props.get("spans") {
+	match node.props().get("spans") {
 		Some(Value::Array(spans)) => Some(cited_text(spans)),
 		_ => text(node, "text"),
 	}
@@ -434,11 +434,11 @@ fn headed(head: String, body: Vec<String>, out: &mut Vec<String>) {
 
 /// A node's lines.
 fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
-	if node.props.get("hidden") == Some(&Value::Bool(true)) {
+	if node.props().get("hidden") == Some(&Value::Bool(true)) {
 		return;
 	}
-	match node.kind.as_str() {
-		"col" => node.children.iter().for_each(|c| block(c, cols, out)),
+	match node.kind() {
+		"col" => node.child_nodes().iter().for_each(|c| block(c, cols, out)),
 		"status" => out.push(inline(node)),
 		"row" => {
 			let line = inline(node);
@@ -457,7 +457,7 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 			}
 			let mut inner = Vec::new();
 			node
-				.children
+				.child_nodes()
 				.iter()
 				.filter(|c| slot_of(node, c).is_none())
 				.for_each(|c| block(c, cols, &mut inner));
@@ -494,7 +494,7 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 				}
 			}
 		},
-		"diff" => match node.props.get("hunks") {
+		"diff" => match node.props().get("hunks") {
 			Some(Value::Array(hunks)) => {
 				for hunk in hunks {
 					for line in hunk
@@ -511,7 +511,7 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 		},
 		"editor" | "input" => {
 			let prompt = text(node, "prompt").unwrap_or_default();
-			let secret = node.props.get("secret") == Some(&Value::Bool(true));
+			let secret = node.props().get("secret") == Some(&Value::Bool(true));
 			let body = text(node, "text")
 				.map(|t| {
 					if secret {
@@ -549,16 +549,16 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 		"table" => table(node, out),
 		"tree" => tree(list(node, "nodes"), 0, out),
 		"json" => {
-			let value = node.props.get("value").unwrap_or(&Value::Null);
+			let value = node.props().get("value").unwrap_or(&Value::Null);
 			if let Ok(text) = serde_json::to_string_pretty(value) {
 				out.extend(text.lines().map(str::to_owned));
 			}
 		},
 		"list" => {
-			for child in &node.children {
+			for child in node.child_nodes() {
 				out.push(format!("- {}", inline(child)));
 			}
-			if node.children.is_empty()
+			if node.child_nodes().is_empty()
 				&& let Some(empty) = text(node, "empty")
 			{
 				out.push(empty);
@@ -602,13 +602,13 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 			out.push(inline(node));
 			let mut inner = Vec::new();
 			node
-				.children
+				.child_nodes()
 				.iter()
 				.for_each(|c| block(c, cols, &mut inner));
 			indented(inner, out);
 		},
 		"select" => {
-			let shown = match node.props.get("value") {
+			let shown = match node.props().get("value") {
 				None => text(node, "placeholder").unwrap_or_default(),
 				Some(value) => list(node, "options")
 					.iter()
@@ -620,13 +620,13 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 			out.push(labeled(text(node, "label"), shown));
 		},
 		"switch" => {
-			let on = node.props.get("on") == Some(&Value::Bool(true));
+			let on = node.props().get("on") == Some(&Value::Bool(true));
 			let label = text(node, "label").unwrap_or_default();
 			out.push(format!("[{}] {label}", if on { 'x' } else { ' ' }));
 		},
 		"slider" => {
 			let label = text(node, "label");
-			let shown = match node.props.get("value") {
+			let shown = match node.props().get("value") {
 				None => None,
 				Some(Value::Array(range)) => Some(
 					range
@@ -648,12 +648,12 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 		},
 		"field" => {
 			let mut head = text(node, "label").unwrap_or_default();
-			if !head.is_empty() && node.props.get("required") == Some(&Value::Bool(true)) {
+			if !head.is_empty() && node.props().get("required") == Some(&Value::Bool(true)) {
 				head.push_str(" *");
 			}
 			let flagged = ["error", "warning"].iter().find_map(|k| {
 				node
-					.props
+					.props()
 					.get(*k)
 					.filter(|v| !matches!(v, Value::Null | Value::Bool(false)) && v.as_str() != Some(""))
 			});
@@ -665,7 +665,7 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 			if !head.is_empty() {
 				out.push(head);
 			}
-			node.children.iter().for_each(|c| block(c, cols, out));
+			node.child_nodes().iter().for_each(|c| block(c, cols, out));
 			if !note.is_empty() {
 				out.push(note);
 			}
@@ -677,7 +677,7 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 				.chars()
 				.take(length)
 				.collect();
-			let dot = match node.props.get("mask") {
+			let dot = match node.props().get("mask") {
 				Some(Value::Bool(true)) => Some('•'),
 				Some(Value::String(mask)) => mask.chars().next(),
 				_ => None,
@@ -688,7 +688,7 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 		},
 		"buttons" => out.push(
 			node
-				.children
+				.child_nodes()
 				.iter()
 				.map(inline)
 				.filter(|s| !s.is_empty())
@@ -757,16 +757,16 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 				.flatten()
 				.collect();
 			node
-				.children
+				.child_nodes()
 				.iter()
 				.for_each(|c| block(c, cols, &mut lines));
 			out.extend(lines.into_iter().filter(|l| !l.is_empty()));
 		},
 		"skeleton" => {},
-		"calendar" | "date" => match node.props.get("value") {
+		"calendar" | "date" => match node.props().get("value") {
 			Some(value) => out.push(date_text(value)),
 			None => {
-				if node.kind == "date"
+				if node.kind() == "date"
 					&& let Some(placeholder) = text(node, "placeholder")
 				{
 					out.push(placeholder);
@@ -796,7 +796,7 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 				.join("  "),
 		),
 		"nav" => {
-			let active = node.props.get("active");
+			let active = node.props().get("active");
 			out.push(
 				list(node, "items")
 					.iter()
@@ -818,11 +818,11 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 					.join("  "),
 			);
 		},
-		"split" | "scroll" => node.children.iter().for_each(|c| block(c, cols, out)),
+		"split" | "scroll" => node.child_nodes().iter().for_each(|c| block(c, cols, out)),
 		"carousel" => {
-			if let Some(last) = node.children.len().checked_sub(1) {
+			if let Some(last) = node.child_nodes().len().checked_sub(1) {
 				let at = number(node, "index").unwrap_or(0.0).clamp(0.0, last as f64) as usize;
-				block(&node.children[at], cols, out);
+				block(&node.child_nodes()[at], cols, out);
 			}
 		},
 		"message" => {
@@ -833,7 +833,7 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 				.join(" ");
 			let mut rest = Vec::new();
 			node
-				.children
+				.child_nodes()
 				.iter()
 				.filter(|c| slot_of(node, c).is_none())
 				.for_each(|c| block(c, cols, &mut rest));
@@ -875,7 +875,7 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 			if !head.is_empty() {
 				out.push(head);
 			}
-			let key = |c: &Node<M>| c.props.get("key").map(value_text);
+			let key = |c: &Node<M>| c.props().get("key").map(value_text);
 			let mut ids = Vec::new();
 			for (i, line) in list(node, "lines").iter().enumerate() {
 				let id = line
@@ -894,7 +894,11 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 					Some(state) => format!("- {words} ({state})"),
 					None => format!("- {words}"),
 				});
-				if let Some(content) = node.children.iter().find(|c| key(c).as_ref() == Some(&id)) {
+				if let Some(content) = node
+					.child_nodes()
+					.iter()
+					.find(|c| key(c).as_ref() == Some(&id))
+				{
 					let mut under = Vec::new();
 					block(content, cols, &mut under);
 					out.extend(
@@ -906,13 +910,13 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 				ids.push(id);
 			}
 			node
-				.children
+				.child_nodes()
 				.iter()
 				.filter(|c| !key(c).is_some_and(|k| ids.contains(&k)))
 				.for_each(|c| block(c, cols, out));
 		},
 		"stacktrace" => {
-			let error = node.props.get("error");
+			let error = node.props().get("error");
 			let head = ["type", "message"]
 				.iter()
 				.filter_map(|k| error?.get(*k).map(value_text))
@@ -982,29 +986,29 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 			if !line.is_empty() {
 				push_text(&line, out);
 			}
-			node.children.iter().for_each(|c| block(c, cols, out));
+			node.child_nodes().iter().for_each(|c| block(c, cols, out));
 		},
 	}
 }
 
 /// A node as one line of text.
 fn inline<M>(node: &Node<M>) -> String {
-	if node.props.get("hidden") == Some(&Value::Bool(true)) {
+	if node.props().get("hidden") == Some(&Value::Bool(true)) {
 		return String::new();
 	}
 	let joined = |sep: &str| {
 		node
-			.children
+			.child_nodes()
 			.iter()
 			.map(inline)
 			.filter(|s| !s.is_empty())
 			.collect::<Vec<_>>()
 			.join(sep)
 	};
-	let parts: Vec<String> = match node.kind.as_str() {
+	let parts: Vec<String> = match node.kind() {
 		"card" | "section" | "overlay" => {
 			let body = node
-				.children
+				.child_nodes()
 				.iter()
 				.filter(|c| slot_of(node, c).is_none())
 				.map(inline)
@@ -1217,19 +1221,19 @@ fn cell_text(cell: &Value) -> String {
 
 /// The child filling slot `name` (`head`, `end`, `foot`) of a panel.
 fn slot<'a, M>(node: &'a Node<M>, name: &str) -> Option<&'a Node<M>> {
-	if !node.slots.contains(&name) {
+	if !node.inner().slots.contains(&name) {
 		return None;
 	}
 	node
-		.children
+		.child_nodes()
 		.iter()
-		.find(|c| c.props.get("key").and_then(Value::as_str) == Some(name))
+		.find(|c| c.props().get("key").and_then(Value::as_str) == Some(name))
 }
 
 /// The slot `child` fills in `node`, if any.
 fn slot_of<'a, M>(node: &'a Node<M>, child: &Node<M>) -> Option<&'a str> {
-	let key = child.props.get("key").and_then(Value::as_str)?;
-	node.slots.iter().copied().find(|s| *s == key)
+	let key = child.props().get("key").and_then(Value::as_str)?;
+	node.inner().slots.iter().copied().find(|s| *s == key)
 }
 
 /// A panel's head line: the head (text or slotted node), its `meta` and
@@ -1291,14 +1295,14 @@ fn tag<M>(node: &Node<M>) -> &str {
 
 /// Whether a child of an `el` starts a line of its own.
 fn is_block<M>(node: &Node<M>) -> bool {
-	node.kind != "el" || BLOCK_TAGS.contains(&tag(node))
+	node.kind() != "el" || BLOCK_TAGS.contains(&tag(node))
 }
 
 /// An `el` (and its children) as one line.
 fn el_inline<M>(node: &Node<M>) -> String {
 	match tag(node) {
 		"input" => {
-			let on = node.props.get("checked") == Some(&Value::Bool(true));
+			let on = node.props().get("checked") == Some(&Value::Bool(true));
 			let radio = string(node, "type") == Some("radio");
 			return match (radio, on) {
 				(true, true) => "(*)",
@@ -1315,7 +1319,13 @@ fn el_inline<M>(node: &Node<M>) -> String {
 	if let Some(t) = text(node, "text") {
 		parts.push(t);
 	}
-	parts.extend(node.children.iter().map(inline).filter(|s| !s.is_empty()));
+	parts.extend(
+		node
+			.child_nodes()
+			.iter()
+			.map(inline)
+			.filter(|s| !s.is_empty()),
+	);
 	let body = parts.join(" ");
 	if tag(node) == "button" {
 		format!("[ {body} ]")
@@ -1326,7 +1336,7 @@ fn el_inline<M>(node: &Node<M>) -> String {
 
 /// An `el` as lines: inline content joins, block children start lines.
 fn el_block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
-	if node.props.get("hidden") == Some(&Value::Bool(true)) {
+	if node.props().get("hidden") == Some(&Value::Bool(true)) {
 		return;
 	}
 	match tag(node) {
@@ -1339,7 +1349,7 @@ fn el_block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 		"tr" => {
 			out.push(
 				node
-					.children
+					.child_nodes()
 					.iter()
 					.map(inline)
 					.collect::<Vec<_>>()
@@ -1360,12 +1370,12 @@ fn el_block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 	let prefix = if tag(node) == "li" { "- " } else { "" };
 	let mut inner = Vec::new();
 	let mut line = text(node, "text").unwrap_or_default();
-	for child in &node.children {
+	for child in node.child_nodes() {
 		if is_block(child) {
 			if !line.is_empty() {
 				inner.push(std::mem::take(&mut line));
 			}
-			if child.kind == "el" {
+			if child.kind() == "el" {
 				el_block(child, cols, &mut inner);
 			} else {
 				block(child, cols, &mut inner);
@@ -1394,9 +1404,9 @@ fn el_block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 
 /// The rows (`tr`) of an `el` table as cells.
 fn collect_rows<M>(node: &Node<M>, rows: &mut Vec<Vec<String>>) {
-	for child in &node.children {
-		match (child.kind.as_str(), tag(child)) {
-			("el", "tr") => rows.push(child.children.iter().map(inline).collect()),
+	for child in node.child_nodes() {
+		match (child.kind(), tag(child)) {
+			("el", "tr") => rows.push(child.child_nodes().iter().map(inline).collect()),
 			("el", "thead" | "tbody") => collect_rows(child, rows),
 			_ => {},
 		}

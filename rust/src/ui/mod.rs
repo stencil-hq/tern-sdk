@@ -2899,12 +2899,11 @@ fn push<M>(node: &mut Node<M>, key: &str, value: &impl serde::Serialize) {
 	let Ok(value) = serde_json::to_value(value) else {
 		return;
 	};
-	match node.props.get_mut(key) {
+	let props = &mut node.inner_mut().props;
+	match props.get_mut(key) {
 		Some(serde_json::Value::Array(list)) => list.push(value),
 		_ => {
-			node
-				.props
-				.insert(key.to_owned(), serde_json::Value::Array(vec![value]));
+			props.insert(key.to_owned(), serde_json::Value::Array(vec![value]));
 		},
 	}
 }
@@ -2917,7 +2916,7 @@ mod tests {
 
 	fn wire<M>(node: impl Into<Node<M>>) -> serde_json::Value {
 		let node = node.into();
-		json!({ "k": node.kind, "p": node.props })
+		json!({ "k": node.kind(), "p": node.props() })
 	}
 
 	#[test]

@@ -33,13 +33,21 @@ pub enum Trigger {
 
 /// A node: a kind, props, children and handlers. It has no id until it is
 /// reconciled. Every kind's builder converts into it.
+///
+/// Cloning is O(1): the content is shared and copied only when a clone is
+/// changed.
 pub struct Node<M = ()> {
+	inner: Arc<Inner<M>>,
+}
+
+/// What a [`Node`] holds, shared between its clones.
+pub struct Inner<M> {
 	/// The kind.
 	pub(crate) kind:     String,
 	/// Props.
 	pub(crate) props:    Map<String, Value>,
 	/// Children in order.
-	pub(crate) children: Vec<Self>,
+	pub(crate) children: Vec<Node<M>>,
 	/// Handlers, in the order they were attached.
 	pub(crate) handlers: Vec<(Trigger, Handler<M>)>,
 	/// Slot props (`head`, `end`, `foot`) given a node: the child keyed by
@@ -47,7 +55,7 @@ pub struct Node<M = ()> {
 	pub(crate) slots:    Vec<&'static str>,
 }
 
-impl<M> Clone for Node<M> {
+impl<M> Clone for Inner<M> {
 	fn clone(&self) -> Self {
 		Self {
 			kind:     self.kind.clone(),
@@ -59,13 +67,20 @@ impl<M> Clone for Node<M> {
 	}
 }
 
+impl<M> Clone for Node<M> {
+	fn clone(&self) -> Self {
+		Self { inner: Arc::clone(&self.inner) }
+	}
+}
+
 impl<M> fmt::Debug for Node<M> {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		let inner = self.inner();
 		f.debug_struct("Node")
-			.field("kind", &self.kind)
-			.field("props", &self.props)
-			.field("children", &self.children)
-			.field("handlers", &self.handlers.iter().map(|(t, _)| t).collect::<Vec<_>>())
+			.field("kind", &inner.kind)
+			.field("props", &inner.props)
+			.field("children", &inner.children)
+			.field("handlers", &inner.handlers.iter().map(|(t, _)| t).collect::<Vec<_>>())
 			.finish()
 	}
 }
@@ -73,33 +88,53 @@ impl<M> fmt::Debug for Node<M> {
 impl<M> Node<M> {
 	/// A node of any kind, without props.
 	pub fn new(kind: impl Into<String>) -> Self {
-		Self {
+		Self::from_inner(Inner {
 			kind:     kind.into(),
 			props:    Map::new(),
 			children: Vec::new(),
 			handlers: Vec::new(),
 			slots:    Vec::new(),
-		}
+		})
+	}
+
+	/// A node holding `inner`.
+	pub(crate) fn from_inner(inner: Inner<M>) -> Self {
+		Self { inner: Arc::new(inner) }
+	}
+
+	/// The node's content, for reading.
+	pub(crate) fn inner(&self) -> &Inner<M> {
+		&self.inner
+	}
+
+	/// The node's content, for changing; copied first when shared.
+	pub(crate) fn inner_mut(&mut self) -> &mut Inner<M> {
+		Arc::make_mut(&mut self.inner)
+	}
+
+	/// The node's content by value; copied only when shared.
+	pub(crate) fn into_inner(self) -> Inner<M> {
+		Arc::unwrap_or_clone(self.inner)
 	}
 
 	/// The kind.
 	pub fn kind(&self) -> &str {
-		&self.kind
+		&self.inner().kind
 	}
 
 	/// The props.
-	pub const fn props(&self) -> &Map<String, Value> {
-		&self.props
+	pub fn props(&self) -> &Map<String, Value> {
+		&self.inner().props
 	}
 
 	/// The children.
 	pub fn child_nodes(&self) -> &[Self] {
-		&self.children
+		&self.inner().children
 	}
 
 	/// A prop as text: a string, or spans joined.
 	pub(crate) fn text_prop(&self, key: &str) -> Option<String> {
-		match self.props.get(key)? {
+		match self.inner().props.get(key)? {
 			Value::String(s) => Some(s.clone()),
 			Value::Array(spans) => Some(spans_text(spans)),
 			_ => None,
@@ -110,10 +145,10 @@ impl<M> Node<M> {
 	pub(crate) fn set(&mut self, key: &str, value: &impl Serialize) {
 		match serde_json::to_value(value) {
 			Ok(Value::Null) => {
-				self.props.remove(key);
+				self.inner_mut().props.remove(key);
 			},
 			Ok(value) => {
-				self.props.insert(key.to_owned(), value);
+				self.inner_mut().props.insert(key.to_owned(), value);
 			},
 			Err(err) => tracing::warn!(key, %err, "prop not serializable; left unset"),
 		}
@@ -122,24 +157,29 @@ impl<M> Node<M> {
 	/// Puts `node` in slot `slot` (`head`, `end`, `foot`): the child keyed
 	/// `slot`, replacing an earlier one, with the prop sent as its id.
 	pub(crate) fn set_slot(&mut self, slot: &'static str, mut node: Self) {
-		node.props.insert("key".into(), Value::String(slot.into()));
-		self.props.remove(slot);
-		self
+		node
+			.inner_mut()
+			.props
+			.insert("key".into(), Value::String(slot.into()));
+		let inner = self.inner_mut();
+		inner.props.remove(slot);
+		inner
 			.children
-			.retain(|c| c.props.get("key").and_then(Value::as_str) != Some(slot));
-		self.children.push(node);
-		if !self.slots.contains(&slot) {
-			self.slots.push(slot);
+			.retain(|c| c.inner().props.get("key").and_then(Value::as_str) != Some(slot));
+		inner.children.push(node);
+		if !inner.slots.contains(&slot) {
+			inner.slots.push(slot);
 		}
 	}
 
 	/// Clears slot `slot` (a plain prop value replaces the node).
 	pub(crate) fn clear_slot(&mut self, slot: &str) {
-		if let Some(at) = self.slots.iter().position(|s| *s == slot) {
-			self.slots.remove(at);
-			self
+		if self.inner().slots.contains(&slot) {
+			let inner = self.inner_mut();
+			inner.slots.retain(|s| *s != slot);
+			inner
 				.children
-				.retain(|c| c.props.get("key").and_then(Value::as_str) != Some(slot));
+				.retain(|c| c.inner().props.get("key").and_then(Value::as_str) != Some(slot));
 		}
 	}
 
@@ -147,11 +187,12 @@ impl<M> Node<M> {
 	pub(crate) fn set_text(&mut self, text: crate::ui::Text) {
 		match text {
 			crate::ui::Text::Plain(s) => {
-				self.props.remove("spans");
-				self.props.insert("text".into(), Value::String(s));
+				let props = &mut self.inner_mut().props;
+				props.remove("spans");
+				props.insert("text".into(), Value::String(s));
 			},
 			crate::ui::Text::Spans(spans) => {
-				self.props.remove("text");
+				self.inner_mut().props.remove("text");
 				self.set("spans", &spans);
 			},
 		}
@@ -181,18 +222,25 @@ impl<M> Node<M> {
 			Some(Value::Array(c)) => c.iter().map(Self::from_json).collect::<Result<_, _>>()?,
 			Some(other) => return Err(Error::InvalidView(format!("`c` must be a list, got {other}"))),
 		};
-		Ok(Self { children, props, ..Self::new(kind) })
+		Ok(Self::from_inner(Inner {
+			kind: kind.to_owned(),
+			props,
+			children,
+			handlers: Vec::new(),
+			slots: Vec::new(),
+		}))
 	}
 
 	/// The node's wire form without ids `{k, p?, c?}` (handlers dropped).
 	pub fn to_json(&self) -> Value {
+		let inner = self.inner();
 		let mut obj = Map::new();
-		obj.insert("k".into(), Value::String(self.kind.clone()));
-		if !self.props.is_empty() {
-			obj.insert("p".into(), Value::Object(self.props.clone()));
+		obj.insert("k".into(), Value::String(inner.kind.clone()));
+		if !inner.props.is_empty() {
+			obj.insert("p".into(), Value::Object(inner.props.clone()));
 		}
-		if !self.children.is_empty() {
-			obj.insert("c".into(), Value::Array(self.children.iter().map(Self::to_json).collect()));
+		if !inner.children.is_empty() {
+			obj.insert("c".into(), Value::Array(inner.children.iter().map(Self::to_json).collect()));
 		}
 		Value::Object(obj)
 	}
@@ -214,7 +262,9 @@ pub fn spans_text(spans: &[Value]) -> String {
 /// wrapped).
 impl<M> From<Vec<Self>> for Node<M> {
 	fn from(children: Vec<Self>) -> Self {
-		Self { children, ..Self::new("col") }
+		let mut node = Self::new("col");
+		node.inner_mut().children = children;
+		node
 	}
 }
 
@@ -576,6 +626,7 @@ macro_rules! actions_methods {
 			M: Clone + Send + Sync + 'static,
 		{
 			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
 				.handlers
 				.push(($crate::ui::node::Trigger::Click, $crate::ui::node::msg_handler(msg)));
 			self
@@ -588,6 +639,7 @@ macro_rules! actions_methods {
 			M: Clone + Send + Sync + 'static,
 		{
 			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
 				.handlers
 				.push(($crate::ui::node::Trigger::Dblclick, $crate::ui::node::msg_handler(msg)));
 			self
@@ -599,6 +651,7 @@ macro_rules! actions_methods {
 			M: Clone + Send + Sync + 'static,
 		{
 			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
 				.handlers
 				.push((
 					$crate::ui::node::Trigger::Menu(act.into()),
@@ -619,6 +672,7 @@ macro_rules! event_methods {
 			M: Clone + Send + Sync + 'static,
 		{
 			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
 				.handlers
 				.push((
 					$crate::ui::node::Trigger::Action(act.into()),
@@ -634,6 +688,7 @@ macro_rules! event_methods {
 			f: impl Fn(&$crate::wire::Action) -> M + Send + Sync + 'static,
 		) -> Self {
 			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
 				.handlers
 				.push((
 					$crate::ui::node::Trigger::Action(act.into()),
@@ -646,6 +701,7 @@ macro_rules! event_methods {
 		/// line that opened is not collapsed) to a message.
 		pub fn on_toggle(mut self, f: impl Fn(bool) -> M + Send + Sync + 'static) -> Self {
 			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
 				.handlers
 				.push((
 					$crate::ui::node::Trigger::Event("toggle"),
@@ -658,6 +714,7 @@ macro_rules! event_methods {
 		/// item's own handler runs first.
 		pub fn on_select(mut self, f: impl Fn(&str) -> M + Send + Sync + 'static) -> Self {
 			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
 				.handlers
 				.push((
 					$crate::ui::node::Trigger::Event("select"),
@@ -669,6 +726,7 @@ macro_rules! event_methods {
 		/// Maps `activate` events (the item) to a message.
 		pub fn on_activate(mut self, f: impl Fn(&str) -> M + Send + Sync + 'static) -> Self {
 			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
 				.handlers
 				.push((
 					$crate::ui::node::Trigger::Event("activate"),
@@ -683,6 +741,7 @@ macro_rules! event_methods {
 			f: impl Fn(&$crate::wire::Change) -> M + Send + Sync + 'static,
 		) -> Self {
 			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
 				.handlers
 				.push((
 					$crate::ui::node::Trigger::Event("change"),
@@ -697,6 +756,7 @@ macro_rules! event_methods {
 			M: Clone + Send + Sync + 'static,
 		{
 			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
 				.handlers
 				.push(($crate::ui::node::Trigger::Event("focus"), $crate::ui::node::msg_handler(msg)));
 			self
@@ -708,6 +768,7 @@ macro_rules! event_methods {
 			f: impl Fn(&$crate::wire::Edit) -> M + Send + Sync + 'static,
 		) -> Self {
 			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
 				.handlers
 				.push(($crate::ui::node::Trigger::Event("edit"), $crate::ui::node::edit_handler(f)));
 			self
@@ -719,6 +780,7 @@ macro_rules! event_methods {
 			M: Clone + Send + Sync + 'static,
 		{
 			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
 				.handlers
 				.push(($crate::ui::node::Trigger::Event("undo"), $crate::ui::node::msg_handler(msg)));
 			self
@@ -727,6 +789,7 @@ macro_rules! event_methods {
 		/// Maps `send` events (the text to submit) to a message.
 		pub fn on_send(mut self, f: impl Fn(&str) -> M + Send + Sync + 'static) -> Self {
 			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
 				.handlers
 				.push(($crate::ui::node::Trigger::Event("send"), $crate::ui::node::send_handler(f)));
 			self
@@ -740,6 +803,7 @@ macro_rules! children_methods {
 		/// Adds a child.
 		pub fn child(mut self, child: impl Into<$crate::ui::Node<M>>) -> Self {
 			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
 				.children
 				.push(child.into());
 			self
@@ -751,6 +815,7 @@ macro_rules! children_methods {
 			children: impl IntoIterator<Item = C>,
 		) -> Self {
 			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
 				.children
 				.extend(children.into_iter().map(Into::into));
 			self
