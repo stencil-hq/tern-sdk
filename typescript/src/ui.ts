@@ -54,6 +54,7 @@ export type LeafKind =
    | 'nav'
    | 'attachment'
    | 'stacktrace'
+   | 'shell'
    | 'suggestions';
 
 /** Kinds whose children are plain text, taken as the `text` prop. */
@@ -186,6 +187,7 @@ export const ui: { readonly [K in BuildKind]: Builder<K> } = {
    attachment: builder('attachment'),
    trace: builder('trace'),
    stacktrace: builder('stacktrace'),
+   shell: builder('shell'),
    suggestions: builder('suggestions'),
    questions: builder('questions'),
    el: builder('el'),

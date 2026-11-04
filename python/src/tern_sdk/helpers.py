@@ -422,6 +422,8 @@ def _render(node: Mapping[str, Json], cols: int) -> list[str]:
             return _message(p, kids, cols)
         case "stacktrace":
             return _stacktrace(p)
+        case "shell":
+            return _shell(p)
         case "questions":
             return _questions(p)
         case "agent":
@@ -658,6 +660,50 @@ def _stacktrace(p: Mapping[str, Json]) -> list[str]:
         file = _text(frame.get("file"))
         where = ":".join(x for x in (file, _number(frame.get("line")), _number(frame.get("col"))) if x)
         out.append(f"  at {fn} ({where})" if file else f"  at {fn}")
+    return out
+
+
+def _shell(p: Mapping[str, Json]) -> list[str]:
+    """Readable fallback of the host's canonical semantic presentation."""
+    presentation = p.get("presentation")
+    if not isinstance(presentation, Mapping):
+        return []
+    preferences = presentation.get("preferences")
+    view = preferences.get("view", "pseudo") if isinstance(preferences, Mapping) else "pseudo"
+
+    def row(value: Mapping[str, Json]) -> str:
+        failed: set[str] = set()
+        command = ""
+        own = value.get("node")
+        gutter = False
+        marked = False
+        for segment in _items(value, "segments"):
+            node = segment.get("executionNode") or segment.get("node", own)
+            if segment.get("state") == "fail" and (not isinstance(node, str) or node not in failed):
+                marked = True
+                if not command and value.get("state") == "fail":
+                    gutter = True
+                else:
+                    command += "× "
+                if isinstance(node, str):
+                    failed.add(node)
+            command += _text(segment.get("text"))
+        if command.endswith("\n"):
+            command = command.removesuffix("\n").removesuffix("\r")
+        prefix = "× " if gutter or value.get("state") == "fail" and not marked else ""
+        command += "".join(f"  ‹{_text(watch.get('name'))} = {_text(watch.get('value'))}›" for watch in _items(value, "annotations"))
+        if view == "raw":
+            return prefix + command
+        depth = value.get("depth")
+        indent = "  " * max(0, int(depth)) if isinstance(depth, (int, float)) else ""
+        meta = _text(value.get("meta"))
+        return prefix + indent + command + (f"  {meta}" if meta else "")
+
+    out = [row(value) for value in _items(presentation, "rows")]
+    if output := _text(presentation.get("output")):
+        out.extend(output.split("\n"))
+    if message := _text(presentation.get("message")):
+        out.append(message)
     return out
 
 

@@ -171,6 +171,9 @@ pub mod kind {
 	pub const TRACE: &str = "trace";
 	/// An error and its stack frames.
 	pub const STACKTRACE: &str = "stacktrace";
+	/// Canonical Raw/Pseudo shell visualization with native
+	/// controls that emit `shell-viz` actions on this node's id.
+	pub const SHELL: &str = "shell";
 	/// Suggested prompts, sent with one click.
 	pub const SUGGESTIONS: &str = "suggestions";
 	/// A questionnaire answered in steps.
@@ -179,7 +182,7 @@ pub mod kind {
 	pub const EL: &str = "el";
 
 	/// Every kind of protocol version 1.
-	pub const ALL: [&str; 74] = [
+	pub const ALL: [&str; 75] = [
 		COL,
 		ROW,
 		CARD,
@@ -251,6 +254,7 @@ pub mod kind {
 		ATTACHMENT,
 		TRACE,
 		STACKTRACE,
+		SHELL,
 		SUGGESTIONS,
 		QUESTIONS,
 		EL,

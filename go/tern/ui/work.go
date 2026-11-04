@@ -677,6 +677,36 @@ const (
 // Node builds the stacktrace.
 func (s Stacktrace) Node() tern.Node { return Build(tern.KindStacktrace, s, nil) }
 
+// Shell draws the host-produced ShellVizPresentation (kind shell).
+// Python-like Pseudo is the default; the host parses announced compiled
+// units incrementally and keeps uncompiled source gaps verbatim.
+// Row annotations place variables at their latest setter, including replay;
+// top-level watches is canonical state, not a separately rendered strip.
+// Controls emit action with Act "shell-viz", Value the encoded operation,
+// and ID the shell node's ID. See docs/src/elements/text.md#shell.
+type Shell struct {
+	Common
+	// Inspector reveals replay controls and explicit gutter selection.
+	Inspector bool `json:"inspector,omitzero"`
+	// ReplayEpoch changes on explicit seek/reset/live or restart-from-end Play,
+	// never ordinary playback ticks, pause/resume, speed changes or Step.
+	ReplayEpoch uint64 `json:"replayEpoch,omitzero"`
+	// LiveOrigin means this mount observed real live execution, never historical loading.
+	LiveOrigin bool `json:"liveOrigin,omitzero"`
+	// Presentation is the required canonical semantic presentation.
+	Presentation any `json:"presentation"`
+	// Cwd is the directory the command ran in.
+	Cwd string `json:"cwd,omitzero"`
+	// Lang is the shell language: "bash" (default) or "zsh".
+	Lang string `json:"lang,omitzero"`
+	// Preview clamps the command to its first lines (PreviewLines) under a
+	// "N more lines" button while its disclosure is folded; never in the inspector.
+	Preview Preview `json:"preview,omitzero"`
+}
+
+// Node builds the shell.
+func (s Shell) Node() tern.Node { return Build(tern.KindShell, s, nil) }
+
 // Suggestions are prompts the user can pick (kind suggestions). A click
 // sends activate with Item the suggestion's id (else its text).
 type Suggestions struct {

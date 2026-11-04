@@ -12,7 +12,8 @@ from tern_sdk.session import Session
 
 def test_kinds_keep_terns_order_with_stats_and_button() -> None:
     kinds = list(wire.KINDS)
-    assert len(kinds) == 74
+    assert len(kinds) == 75
+    assert kinds[kinds.index("stacktrace") + 1 : kinds.index("stacktrace") + 3] == ["shell", "suggestions"]
     assert kinds[kinds.index("kv") + 1 : kinds.index("kv") + 3] == ["stats", "table"]
     assert kinds[kinds.index("input") + 1 : kinds.index("input") + 3] == ["button", "status"]
     assert kinds[kinds.index("effort") + 1 : kinds.index("effort") + 3] == ["select", "switch"]
@@ -43,6 +44,17 @@ def test_open_sends_font_only_when_given(connected: Session, term: Term) -> None
 def test_action_events_carry_the_row_item() -> None:
     ev = wire.decode_event({"ev": "action", "id": "main.t", "act": "approve", "item": "r1"})
     assert isinstance(ev, wire.ActionEvent) and ev.item == "r1"
+
+
+SHELL_PRESENTATION = {
+    "preferences": {"view": "pseudo"},
+    "rows": [
+        {"id": "ok", "depth": 0, "node": "0:0:1", "state": "ok", "segments": [{"text": 'print("ready")\n'}], "effects": [], "annotations": [{"name": "result", "value": "ready", "node": "0:0:1", "scopeId": "global:0", "setterSeq": 1}], "meta": "8ms"},
+        {"id": "bad", "depth": 1, "node": "0:0:0", "state": "fail", "segments": [{"text": "fal", "node": "0:0:3", "executionNode": "0:0:2", "state": "fail"}, {"text": "se", "node": "0:0:4", "executionNode": "0:0:2", "state": "fail"}], "effects": [], "meta": "exit 1"},
+    ],
+    "original": [], "watches": [{"name": "result", "value": "ready", "node": "0:0:1", "scopeId": "global:0", "setterSeq": 1}], "output": "",
+    "timeline": {"length": 0, "cursor": 0, "elapsedNs": 0, "durationNs": 0},
+}
 
 
 def test_plain_covers_the_wave_two_kinds() -> None:
@@ -90,6 +102,7 @@ def test_plain_covers_the_wave_two_kinds() -> None:
             [{"fn": "main", "file": "a.py", "line": 3, "col": 5}, {"file": ""}],
             error={"type": "KeyError", "message": "'x'"},
         ),
+        ui.shell(SHELL_PRESENTATION),
         ui.suggestions([{"text": "Fix tests"}]),
         ui.questions([{"id": "size", "prompt": "Which size?", "choices": ["s", {"value": "m", "label": "Medium"}]}]),
         ui.text(cites),
@@ -133,6 +146,8 @@ def test_plain_covers_the_wave_two_kinds() -> None:
         "KeyError: 'x'",
         "  at main (a.py:3:5)",
         "  at <anonymous>",
+        'print("ready")  ‹result = ready›  8ms',
+        "×   false  exit 1",
         "- Fix tests",
         "Which size?",
         "  - s",

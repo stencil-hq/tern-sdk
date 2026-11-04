@@ -83,6 +83,49 @@ function list(props: JsonObject, key: string): JsonObject[] {
    return Array.isArray(value) ? value.filter(isJsonObject) : [];
 }
 
+/** Readable fallback of the same semantic presentation as the native shell. */
+function shellLines(p: JsonObject): string[] {
+   const presentation = p['presentation'];
+   if (!isJsonObject(presentation)) return [];
+   const preferences = presentation['preferences'];
+   const view = isJsonObject(preferences) ? preferences['view'] ?? 'pseudo' : 'pseudo';
+   const row = (value: JsonObject): string => {
+      const failed = new Set<string>();
+      let command = '';
+      const own = typeof value['node'] === 'string' ? value['node'] : undefined;
+      let gutter = false;
+      let marked = false;
+      for (const segment of list(value, 'segments')) {
+         const node = typeof segment['executionNode'] === 'string' ? segment['executionNode'] :
+            typeof segment['node'] === 'string' ? segment['node'] : own;
+         if (segment['state'] === 'fail' && (node === undefined || !failed.has(node))) {
+            marked = true;
+            if (!command && value['state'] === 'fail') gutter = true;
+            else command += '× ';
+            if (node !== undefined) failed.add(node);
+         }
+         command += prop(segment, 'text');
+      }
+      if (command.endsWith('\n')) {
+         command = command.slice(0, -1);
+         if (command.endsWith('\r')) command = command.slice(0, -1);
+      }
+      const prefix = gutter || value['state'] === 'fail' && !marked ? '× ' : '';
+      const annotations = list(value, 'annotations').map(watch =>
+         `  ‹${prop(watch, 'name')} = ${prop(watch, 'value')}›`).join('');
+      if (view === 'raw') return prefix + command + annotations;
+      const meta = prop(value, 'meta');
+      return prefix + INDENT.repeat(Math.max(0, numProp(value, 'depth') ?? 0)) +
+         command + annotations + (meta ? `  ${meta}` : '');
+   };
+   const out = list(presentation, 'rows').map(row);
+   const output = prop(presentation, 'output');
+   if (output) out.push(...output.split('\n'));
+   const message = prop(presentation, 'message');
+   if (message) out.push(message);
+   return out;
+}
+
 /** `[####----] 50%` for a fraction, `[--------]` when unknown. */
 export function bar(value: number | undefined, width = 20): string {
    if (value === undefined) return `[${'-'.repeat(width)}]`;
@@ -727,6 +770,8 @@ class Plain {
             });
             return [...(head === '' ? [] : [head]), ...frames.map(frame => INDENT + frame)];
          }
+         case 'shell':
+            return shellLines(p);
          case 'suggestions':
             return list(p, 'items')
                .filter(item => prop(item, 'text') !== '')

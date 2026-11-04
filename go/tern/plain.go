@@ -372,6 +372,8 @@ func (p plainer) node(t *tree) []string {
 		return p.traceLines(t)
 	case KindStacktrace:
 		return stackLines(pr)
+	case KindShell:
+		return shellLines(pr)
 	case KindSuggestions:
 		var lines []string
 		items, _ := pr["items"].([]any)
@@ -1489,6 +1491,82 @@ func stackLines(pr map[string]any) []string {
 		lines = append(lines, "  at "+fn)
 	}
 	return lines
+}
+
+// shellLines reads the host's canonical presentation, never trace byte ranges.
+func shellLines(pr map[string]any) []string {
+	p, ok := pr["presentation"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	prefs, _ := p["preferences"].(map[string]any)
+	view := str(prefs, "view")
+	if view == "" {
+		view = "pseudo"
+	}
+	values := func(v map[string]any, key string) []any { a, _ := v[key].([]any); return a }
+	row := func(v map[string]any) string {
+		failed := make(map[string]bool)
+		command := ""
+		own, knownOwn := v["node"].(string)
+		gutter := false
+		marked := false
+		for _, value := range values(v, "segments") {
+			segment, _ := value.(map[string]any)
+			node, known := segment["executionNode"].(string)
+			if !known {
+				node, known = segment["node"].(string)
+			}
+			if !known {
+				node, known = own, knownOwn
+			}
+			if str(segment, "state") == "fail" && (!known || !failed[node]) {
+				marked = true
+				if command == "" && str(v, "state") == "fail" {
+					gutter = true
+				} else {
+					command += "× "
+				}
+				if known {
+					failed[node] = true
+				}
+			}
+			command += str(segment, "text")
+		}
+		if strings.HasSuffix(command, "\n") {
+			command = strings.TrimSuffix(command, "\n")
+			command = strings.TrimSuffix(command, "\r")
+		}
+		prefix := ""
+		if gutter || str(v, "state") == "fail" && !marked {
+			prefix = "× "
+		}
+		for _, value := range values(v, "annotations") {
+			watch, _ := value.(map[string]any)
+			command += "  ‹" + str(watch, "name") + " = " + str(watch, "value") + "›"
+		}
+		if view == "raw" {
+			return prefix + command
+		}
+		depth, _ := num(v["depth"])
+		result := prefix + strings.Repeat("  ", max(0, int(depth))) + command
+		if meta := str(v, "meta"); meta != "" {
+			result += "  " + meta
+		}
+		return result
+	}
+	var out []string
+	for _, value := range values(p, "rows") {
+		v, _ := value.(map[string]any)
+		out = append(out, row(v))
+	}
+	if output := str(p, "output"); output != "" {
+		out = append(out, strings.Split(output, "\n")...)
+	}
+	if message := str(p, "message"); message != "" {
+		out = append(out, message)
+	}
+	return out
 }
 
 // questionLines is each question's prompt over its choices as bullets.

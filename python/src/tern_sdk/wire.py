@@ -37,7 +37,7 @@ Kind: TypeAlias = Literal[
     "chart", "meter", "block", "effort", "select", "switch", "slider", "field", "otp", "buttons",
     "avatar", "avatars", "breadcrumb", "pager", "empty", "skeleton", "calendar", "date", "menu",
     "menubar", "nav", "split", "scroll", "carousel", "message", "attachment", "trace", "stacktrace",
-    "suggestions", "questions", "el",
+    "shell", "suggestions", "questions", "el",
 ]  # fmt: skip
 """A node kind."""
 KINDS: Final[tuple[Kind, ...]] = get_args(Kind)

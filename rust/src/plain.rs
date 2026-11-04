@@ -8,6 +8,8 @@
 //! `Page 2 of 7`, `- Searched tsp (done)`). It is not a copy of Tern's
 //! layout.
 
+use std::fmt::Write as _;
+
 use serde_json::{Map, Value};
 
 use crate::ui::{Node, View, node::spans_text};
@@ -946,6 +948,7 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 				});
 			}
 		},
+		"shell" => out.extend(shell_lines(node)),
 		"suggestions" => {
 			for item in list(node, "items") {
 				let text = item.get("text").map_or_default(value_text);
@@ -989,6 +992,86 @@ fn block<M>(node: &Node<M>, cols: usize, out: &mut Vec<String>) {
 			node.child_nodes().iter().for_each(|c| block(c, cols, out));
 		},
 	}
+}
+
+/// Readable fallback of the host's canonical shell presentation.
+fn shell_lines<M>(node: &Node<M>) -> Vec<String> {
+	fn values<'a>(v: &'a Value, key: &str) -> &'a [Value] {
+		v.get(key)
+			.and_then(Value::as_array)
+			.map_or_default(Vec::as_slice)
+	}
+	fn row(v: &Value, raw: bool) -> String {
+		let mut failed = Vec::new();
+		let mut command = String::new();
+		let own = v["node"].as_str();
+		let mut gutter = false;
+		let mut marked = false;
+		for segment in values(v, "segments") {
+			let node = segment["executionNode"]
+				.as_str()
+				.or_else(|| segment["node"].as_str())
+				.or(own);
+			if segment["state"] == "fail" && !node.is_some_and(|n| failed.contains(&n)) {
+				marked = true;
+				if command.is_empty() && v["state"] == "fail" {
+					gutter = true;
+				} else {
+					command.push_str("× ");
+				}
+				if let Some(node) = node {
+					failed.push(node);
+				}
+			}
+			command.push_str(segment["text"].as_str().unwrap_or_default());
+		}
+		if command.ends_with('\n') {
+			command.pop();
+			if command.ends_with('\r') {
+				command.pop();
+			}
+		}
+		let glyph = if gutter || v["state"] == "fail" && !marked {
+			"× "
+		} else {
+			""
+		};
+		for watch in values(v, "annotations") {
+			let _ = write!(
+				command,
+				"  ‹{} = {}›",
+				watch["name"].as_str().unwrap_or_default(),
+				watch["value"].as_str().unwrap_or_default()
+			);
+		}
+		if raw {
+			return format!("{glyph}{command}");
+		}
+		let depth = v["depth"]
+			.as_u64()
+			.and_then(|n| usize::try_from(n).ok())
+			.unwrap_or(0);
+		let meta = v["meta"]
+			.as_str()
+			.filter(|s| !s.is_empty())
+			.map_or_else(String::new, |s| format!("  {s}"));
+		format!("{glyph}{}{command}{meta}", "  ".repeat(depth))
+	}
+	let Some(p) = node.props().get("presentation") else {
+		return Vec::new();
+	};
+	let view = p["preferences"]["view"].as_str().unwrap_or("pseudo");
+	let mut out: Vec<String> = values(p, "rows")
+		.iter()
+		.map(|v| row(v, view == "raw"))
+		.collect();
+	if let Some(output) = p["output"].as_str().filter(|s| !s.is_empty()) {
+		out.extend(output.split('\n').map(str::to_owned));
+	}
+	if let Some(message) = p["message"].as_str().filter(|s| !s.is_empty()) {
+		out.push(message.to_owned());
+	}
+	out
 }
 
 /// A node as one line of text.
@@ -1084,7 +1167,7 @@ fn inline<M>(node: &Node<M>) -> String {
 		"chart" | "select" | "switch" | "slider" | "field" | "otp" | "buttons" | "avatar"
 		| "avatars" | "breadcrumb" | "pager" | "empty" | "skeleton" | "calendar" | "date"
 		| "menu" | "menubar" | "nav" | "split" | "scroll" | "carousel" | "message" | "attachment"
-		| "trace" | "stacktrace" | "suggestions" | "questions" => {
+		| "trace" | "stacktrace" | "shell" | "suggestions" | "questions" => {
 			let mut lines = Vec::new();
 			block(node, 80, &mut lines);
 			return lines
@@ -1655,6 +1738,34 @@ mod tests {
 			 Searched tsp (done)\n    3 hits\nTypeError: x is undefined\n  at main (src/a.ts:3:7)\n  \
 			 at <anonymous>\n- Explain this\nWhich database?\n  - postgres\n  - SQLite\n"
 		);
+	}
+
+	#[test]
+	fn shell_presentations_leave_success_unmarked() {
+		let presentation = serde_json::json!({
+			"preferences": {"view": "pseudo"},
+			"rows": [
+				{"id": "ok", "depth": 0, "node": "0:0:1", "state": "ok", "segments": [{"text": "print(\"ready\")\n"}], "effects": [], "annotations": [{"name": "result", "value": "ready", "node": "0:0:1", "scopeId": "global:0", "setterSeq": 1}], "meta": "8ms"},
+				{"id": "bad", "depth": 1, "node": "0:0:0", "state": "fail", "segments": [{"text": "fal", "node": "0:0:3", "executionNode": "0:0:2", "state": "fail"}, {"text": "se", "node": "0:0:4", "executionNode": "0:0:2", "state": "fail"}], "effects": [], "meta": "exit 1"}
+			],
+			"original": [], "watches": [{"name": "result", "value": "ready", "node": "0:0:1", "scopeId": "global:0", "setterSeq": 1}], "output": "",
+			"timeline": {"length": 0, "cursor": 0, "elapsedNs": 0, "durationNs": 0}
+		});
+		let view: View = View::new().main(crate::nodes![ui::shell(presentation)]);
+		let output = plain(view, 80);
+		let succeeded = output
+			.lines()
+			.find(|line| line.contains("print("))
+			.expect("successful command");
+		assert!(!succeeded.contains(['×', '✓']));
+		let failed = output
+			.lines()
+			.find(|line| line.contains("false"))
+			.expect("failed command");
+		assert_eq!(failed.matches('×').count(), 1, "one failure mark across both syntax segments");
+		let mut tokens = failed.split_whitespace();
+		assert_eq!(tokens.next(), Some("×"));
+		assert_eq!(tokens.next(), Some("false"), "the failure mark precedes its command");
 	}
 
 	#[test]

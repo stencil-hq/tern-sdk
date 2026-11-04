@@ -803,6 +803,20 @@ describe('controls, chat and work kinds', () => {
             }),
             'TypeError: x is undefined\n  at run (src/a.ts:3:7)\n  at <anonymous>',
          ],
+         [
+            ui.shell({
+               presentation: {
+                  preferences: { view: 'pseudo', layers: { color: true, inline: true, idioms: true, effects: true, unwrap: true }, split: false, playing: false, speed: 1, expandedNodes: [] },
+                  rows: [
+                     { id: 'ok', depth: 0, node: "0:0:1", state: 'ok', segments: [{ text: 'print("ready")\n' }], effects: [], annotations: [{ name: 'result', value: 'ready', node: "0:0:1", scope: 'global', scopeId: 'global:0', setterSeq: 1 }], meta: '8ms' },
+                     { id: 'bad', depth: 1, node: "0:0:0", state: 'fail', segments: [{ text: 'fal', node: '0:0:3', executionNode: '0:0:2', state: 'fail' }, { text: 'se', node: '0:0:4', executionNode: '0:0:2', state: 'fail' }], effects: [], meta: 'exit 1' },
+                  ],
+                  original: [], watches: [{ name: 'result', value: 'ready', node: "0:0:1", scopeId: 'global:0', setterSeq: 1 }], output: '',
+                  timeline: { length: 0, cursor: 0, elapsedNs: 0, durationNs: 0 },
+               },
+            }),
+            'print("ready")  ‹result = ready›  8ms\n×   false  exit 1',
+         ],
          [ui.suggestions({ items: [{ text: 'Explain' }, { text: 'Fix' }] }), '- Explain\n- Fix'],
          [
             ui.questions({

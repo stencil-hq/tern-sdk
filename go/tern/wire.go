@@ -98,6 +98,7 @@ const (
 	KindAttachment  = "attachment"
 	KindTrace       = "trace"
 	KindStacktrace  = "stacktrace"
+	KindShell       = "shell"
 	KindSuggestions = "suggestions"
 	KindQuestions   = "questions"
 )
@@ -112,8 +113,8 @@ var Kinds = []string{
 	KindAgent, KindChecklist, KindBlock, KindPrefs, KindEl, KindSelect, KindSwitch, KindSlider,
 	KindField, KindOtp, KindButtons, KindAvatar, KindAvatars, KindBreadcrumb, KindPager, KindEmpty,
 	KindSkeleton, KindCalendar, KindDate, KindMenu, KindMenubar, KindNav, KindSplit, KindScroll,
-	KindCarousel, KindMessage, KindAttachment, KindTrace, KindStacktrace, KindSuggestions,
-	KindQuestions,
+	KindCarousel, KindMessage, KindAttachment, KindTrace, KindStacktrace, KindShell,
+	KindSuggestions, KindQuestions,
 }
 
 // TextKinds lists the kinds whose primary text lives in the text prop and

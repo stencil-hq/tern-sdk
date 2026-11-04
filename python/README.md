@@ -197,7 +197,8 @@ with an older Tern.
   `ui.avatar(text)`, `ui.avatars(items, *, max)` and `ui.attachment(name, *, state, progress, removable)`.
 - Conversation and work: `ui.message(*body, author, time, side, avatar, reactions, actions)` (an
   `avatar` node becomes a child keyed `avatar`), `ui.trace(lines, *contents)` (a child keyed by a line's
-  `id` is its content), `ui.stacktrace(frames, *, error, selected)`, `ui.suggestions(items)` and
+  `id` is its content), `ui.stacktrace(frames, *, error, selected)`, `ui.shell(presentation, *, trace, cwd, lang, inspector, replay_epoch, live_origin)`
+  (the shared Raw/Pseudo `ShellVizPresentation`; controls send `shell-viz` actions), `ui.suggestions(items)` and
   `ui.questions(items, *other_inputs, step, answers)`.
 - Extended kinds: `ui.rule(label, *, variant, icon, time, end)`, `ui.text(..., cite, sources)` with
   `ui.span(t, cite=...)`, `ui.chart` kinds `line`, `area` and `donut` (`ChartSeries`, `labels`, `unit`,

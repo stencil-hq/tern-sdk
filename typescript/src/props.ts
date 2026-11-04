@@ -2074,6 +2074,129 @@ export interface StacktraceProps {
    readonly variant?: 'frames' | 'split' | 'mono' | (string & {});
 }
 
+/** Exact Raw source or the host's Python-like Pseudo presentation. */
+export type ShellVizView = 'raw' | 'pseudo';
+/** Independently toggleable semantic presentation layers. */
+export type ShellVizLayer = 'color' | 'inline' | 'idioms' | 'effects' | 'unwrap';
+/** Enabled semantic layers; color-off producers retain chips and badges without syntax colors. */
+export type ShellVizLayers = Readonly<Record<ShellVizLayer, boolean>>;
+/** Host-owned display and retained-history playback preferences. */
+export interface ShellVizPreferences {
+   /** Python-like pseudo is the default; parsing follows compiled-unit announcements. */
+   readonly view: ShellVizView;
+   readonly layers: ShellVizLayers;
+   readonly split: boolean;
+   /** Absent means live; otherwise the number of retained records applied. */
+   readonly cursor?: number;
+   readonly playing: boolean;
+   readonly speed: number;
+   /** Opaque native unit:source:node identity; never interpret its components in the UI. */
+   readonly selectedNode?: string;
+   readonly expandedNodes: readonly string[];
+}
+/** One already-tokenized semantic run; all ranges are outer-script UTF-16 [lo, hi). */
+export interface ShellVizSegment {
+   readonly text: string;
+   readonly style?: string;
+   readonly node?: string;
+   /** Actual command owning state/completion; node still identifies the source token for links and selection. */
+   readonly executionNode?: string;
+   readonly range?: readonly [number, number];
+   readonly tip?: string;
+   readonly expanded?: string;
+   readonly language?: string;
+   /** Real status of an inner executable part, independent of its enclosing row. */
+   readonly state?: 'pending' | 'running' | 'ok' | 'fail' | 'skipped';
+   /** True only for the currently executing executable part. */
+   readonly active?: boolean;
+   /** Actual retained CmdEnd timestamp and sequence, paired with executionNode (or node) for a stable 500ms trail. */
+   readonly executedAtNs?: number;
+   readonly executionSeq?: number;
+}
+/** A heuristic side-effect annotation, not a safety guarantee. */
+export interface ShellVizEffect {
+   readonly kind: 'network' | 'write' | 'destructive' | 'secret' | 'privilege' | 'background';
+   readonly glyph: string;
+   readonly label: string;
+   readonly why: string;
+}
+/** A stable semantic row with optional real execution status and inspectable details. */
+export interface ShellVizRow {
+   readonly id: string;
+   readonly depth: number;
+   readonly node?: string;
+   readonly range?: readonly [number, number];
+   readonly role?: 'stmt' | 'head' | 'mid' | 'tail' | 'raw' | 'context' | 'document';
+   readonly state?: 'pending' | 'running' | 'ok' | 'fail' | 'skipped';
+   readonly active?: boolean;
+   /** Latest actual leaf completion, never a scope's synthetic execution. */
+   readonly executedAtNs?: number;
+   readonly executionSeq?: number;
+   readonly segments: readonly ShellVizSegment[];
+   readonly effects: readonly ShellVizEffect[];
+   /** Latest recorded values set at this row, one per scoped variable; move on replay/assignment. */
+   readonly annotations?: readonly ShellVizWatch[];
+   readonly meta?: string;
+   readonly detail?: string;
+}
+/** A recorded variable value, possibly truncated by the execution producer. */
+export interface ShellVizWatch {
+   readonly name: string;
+   readonly value: string;
+   readonly fullLength?: number;
+   readonly scope?: string;
+   /** The latest setter's opaque native identity and exact outer-script UTF-16 source range. */
+   readonly node?: string;
+   readonly range?: readonly [number, number];
+   /** Retained history sequence of the latest setter, used to move notes during replay. */
+   readonly setterSeq?: number;
+   /** Stable execution scope identity; equal names in different scopes remain distinct. */
+   readonly scopeId?: string;
+}
+/** Canonical semantic presentation shared by native and ANSI renderers.
+ * Native controls emit action {id: shellId, act: 'shell-viz', value}.
+ * Values: view:<view>, layer:<layer>, split, inspect, play, pause, step,
+ * reset, live, speed:<factor>, seek:<record>, select:<node>, expand:<node>.
+ * The host updates preferences and resends this presentation. */
+export interface ShellVizPresentation {
+   readonly preferences: ShellVizPreferences;
+   readonly rows: readonly ShellVizRow[];
+   /** Raw counterpart for Pseudo split; empty when that pane is not requested. */
+   readonly original: readonly ShellVizRow[];
+   /** Canonical variable state/placement dataset, not a separately rendered watch strip. */
+   readonly watches: readonly ShellVizWatch[];
+   /** Visible stdout/stderr up to the selected cursor, including unattributed records. */
+   readonly output: string;
+   readonly timeline: {
+      readonly length: number;
+      readonly cursor: number;
+      readonly elapsedNs: number;
+      readonly durationNs: number;
+      readonly trimmed?: boolean;
+   };
+   readonly running?: boolean;
+   /** Real native run is not ended, even between two executable leaves. */
+   readonly executing?: boolean;
+   readonly message?: string;
+}
+/** Native shell visualization; semantic analysis belongs to the producer. */
+export interface ShellProps {
+   /** Reveal replay controls and explicit gutter selection only in the focused inspector. */
+   readonly inspector?: boolean;
+   /** Increment on explicit seek/reset/live or restart-from-end Play, never normal playback ticks. */
+   readonly replayEpoch?: number;
+   /** This mount observed real live execution, allowing a first already-completed snapshot to trail. */
+   readonly liveOrigin?: boolean;
+   /** Required shared semantic presentation, including all source references. */
+   readonly presentation: ShellVizPresentation;
+   /** The directory the command ran in. */
+   readonly cwd?: string;
+   /** `bash` (default) or `zsh`. */
+   readonly lang?: 'bash' | 'zsh' | (string & {});
+   /** Clamp the command to its first drawn lines under a "N more lines" button while folded; never in the inspector. */
+   readonly preview?: { readonly lines: number };
+}
+
 /** A suggested prompt; a click sends `activate` with its `id` (else its `text`). */
 export interface Suggestion {
    readonly id?: string;
@@ -2272,6 +2395,7 @@ export interface KindProps {
    attachment: AttachmentProps;
    trace: TraceProps;
    stacktrace: StacktraceProps;
+   shell: ShellProps;
    suggestions: SuggestionsProps;
    questions: QuestionsProps;
    el: ElProps;

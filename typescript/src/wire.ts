@@ -87,6 +87,7 @@ export const KINDS = [
    'attachment',
    'trace',
    'stacktrace',
+   'shell',
    'suggestions',
    'questions',
    'el',

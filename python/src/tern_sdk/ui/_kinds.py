@@ -1286,6 +1286,39 @@ def stacktrace(
     return make("stacktrace", own, (), common)
 
 
+def shell(
+    presentation: Mapping[str, Any],
+    *,
+    inspector: bool | None = None,
+    replay_epoch: int | None = None,
+    live_origin: bool | None = None,
+    cwd: str | None = None,
+    lang: str | None = None,
+    preview: LinesPreview | None = None,
+    **common: Unpack[Common],
+) -> Node:
+    """Draw the canonical ShellVizPresentation computed by the host.
+    Python-like Pseudo is the default view; units are parsed incrementally
+    as the shell compiles them, while uncompiled gaps remain raw source.
+    Variable values appear at row.annotations beside their latest setter;
+    watches is canonical state, never a separate strip. Replay moves notes
+    between setters; split original source is unannotated.
+    Normal UI is one Raw/Pseudo switch plus a menu on the first code line;
+    replay exists only with inspector=True. There is no visible event
+    counter. preview={"lines": n} clamps the command to n drawn lines under
+    a "N more lines" button while folded (never in the inspector).
+    replay_epoch changes on explicit seek/reset/live
+    or restart-from-end Play, not ordinary playback ticks or pause/resume.
+    live_origin is true only when the mount observed actual execution,
+    never when loading historical transcripts.
+    Native controls send action with act='shell-viz', the shell node id,
+    and an encoded value (view:pseudo, layer:inline, split, play, pause,
+    step, reset, live, speed:2, seek:42, select:0:0:31, expand:0:0:31, inspect).
+    Source ranges are outer-script UTF-16 offsets and node keys are opaque.
+    Syntax and execution history remain owned by the producer."""
+    return make("shell", {"presentation": presentation, "inspector": inspector, "replayEpoch": replay_epoch, "liveOrigin": live_origin, "cwd": cwd, "lang": lang, "preview": preview}, (), common)
+
+
 def suggestions(
     items: Sequence[Suggestion],
     *,

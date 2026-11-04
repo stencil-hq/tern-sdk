@@ -62,6 +62,7 @@ from ._kinds import (
     section,
     seg,
     select,
+    shell,
     shimmer,
     skeleton,
     slider,
@@ -315,7 +316,7 @@ __all__ = [
     "effort", "el", "elapsed", "empty", "field", "html", "icon", "image", "input", "item", "json",
     "kbd", "kv", "list", "math", "md", "media", "menu", "menubar", "message", "meter", "nav",
     "node", "otp", "overlay", "pager", "picker", "prefs", "progress", "questions", "rate", "row",
-    "rows", "rule", "scroll", "section", "seg", "select", "shimmer", "skeleton", "slider",
+    "rows", "rule", "scroll", "section", "seg", "select", "shell", "shimmer", "skeleton", "slider",
     "spacer", "span", "spinner", "split", "stacktrace", "stats", "status", "suggestions", "switch",
     "table", "tabs", "text", "toast", "tool", "trace", "tree",
 ]  # fmt: skip

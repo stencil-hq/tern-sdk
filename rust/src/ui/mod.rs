@@ -201,6 +201,7 @@ from_node!(
 	Attachment,
 	Trace,
 	Stacktrace,
+	Shell,
 	Suggestions,
 	Questions
 );
@@ -345,6 +346,7 @@ slot_from!(
 	Attachment,
 	Trace,
 	Stacktrace,
+	Shell,
 	Suggestions,
 	Questions
 );
@@ -2828,6 +2830,52 @@ impl<M> Stacktrace<M> {
 /// An error and its stack.
 pub fn stacktrace<M>(error: StackError) -> Stacktrace<M> {
 	new::<M, Stacktrace<M>>("stacktrace").error(error)
+}
+
+common_kind!(
+	/// `shell`: host-produced semantic shell visualization. Controls send
+	/// `action` with this node's id, act `shell-viz`, and an encoded value.
+	Shell
+);
+
+impl<M> Shell<M> {
+	props! {
+		/// Reveal replay controls and explicit gutter selection in the focused inspector.
+		inspector(bool) = "inspector";
+		/// Increment for explicit seek/reset/live or restart-from-end Play, not playback ticks.
+		replay_epoch(u64) = "replayEpoch";
+		/// This mount observed actual live execution; never set for historical loading.
+		live_origin(bool) = "liveOrigin";
+		/// The required canonical `ShellVizPresentation`; source ranges are UTF-16.
+		presentation(serde_json::Value) = "presentation";
+		/// The directory the command ran in.
+		cwd(String) = "cwd";
+		/// The shell language (`bash`, the default, or `zsh`).
+		lang(String) = "lang";
+	}
+
+	/// Clamps the command to `lines` drawn lines under a "more lines" button
+	/// while its disclosure is folded; never in the inspector.
+	pub fn preview(mut self, lines: u32) -> Self {
+		self
+			.0
+			.set("preview", &serde_json::json!({ "lines": lines }));
+		self
+	}
+}
+
+/// Draws a canonical `ShellVizPresentation` supplied by the host.
+///
+/// Python-like Pseudo is the default; semantic parsing follows compiled
+/// unit announcements and leaves uncompiled gaps as verbatim source.
+/// Variable values render from `row.annotations` at their latest setter;
+/// top-level `watches` is state data, never a separately rendered strip.
+/// Control values include `view:pseudo`, `layer:inline`, `split`, `inspect`,
+/// `play`, `pause`, `step`, `reset`, `live`, `speed:2`, `seek:42`,
+/// `select:0:0:31` and `expand:0:0:31`; node identities are opaque native
+/// strings.
+pub fn shell<M>(presentation: serde_json::Value) -> Shell<M> {
+	new::<M, Shell<M>>("shell").presentation(presentation)
 }
 
 common_kind!(

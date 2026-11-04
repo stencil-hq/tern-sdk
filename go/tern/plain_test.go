@@ -136,6 +136,7 @@ func TestPlainSanitizesEveryOutputPath(t *testing.T) {
 		{KindMessage, map[string]any{"author": dirty, "status": dirty}},
 		{KindTrace, map[string]any{"title": dirty, "lines": []any{map[string]any{"title": dirty}}}},
 		{KindStacktrace, map[string]any{"error": map[string]any{"type": dirty}}},
+		{KindShell, map[string]any{"presentation": map[string]any{"rows": []any{map[string]any{"segments": []any{map[string]any{"text": dirty}}}}}}},
 		{KindQuestions, map[string]any{"items": []any{map[string]any{"id": "q", "prompt": dirty}}}},
 		{KindCard, map[string]any{"head": dirty, "meta": dirty}},
 		{KindTable, map[string]any{"cols": []any{map[string]any{"id": "x"}}, "empty": dirty}},
@@ -282,6 +283,17 @@ func TestPlainSlotsAndSparks(t *testing.T) {
 	}
 }
 
+// shellPresentation demonstrates successful gutters remaining empty.
+var shellPresentation = map[string]any{
+	"preferences": map[string]any{"view": "pseudo"},
+	"rows": []any{
+		map[string]any{"id": "ok", "depth": 0, "node": "0:0:1", "state": "ok", "segments": []any{map[string]any{"text": "print(\"ready\")\n"}}, "effects": []any{}, "annotations": []any{map[string]any{"name": "result", "value": "ready", "node": "0:0:1", "scopeId": "global:0", "setterSeq": 1}}, "meta": "8ms"},
+		map[string]any{"id": "bad", "depth": 1, "node": "0:0:0", "state": "fail", "segments": []any{map[string]any{"text": "fal", "node": "0:0:3", "executionNode": "0:0:2", "state": "fail"}, map[string]any{"text": "se", "node": "0:0:4", "executionNode": "0:0:2", "state": "fail"}}, "effects": []any{}, "meta": "exit 1"},
+	},
+	"original": []any{}, "watches": []any{map[string]any{"name": "result", "value": "ready", "node": "0:0:1", "scopeId": "global:0", "setterSeq": 1}}, "output": "",
+	"timeline": map[string]any{"length": 0, "cursor": 0, "elapsedNs": 0, "durationNs": 0},
+}
+
 func TestPlainNewKinds(t *testing.T) {
 	n := func(kind string, props map[string]any, children ...Element) Node {
 		return Node{Kind: kind, Props: props, Children: children}
@@ -351,6 +363,8 @@ func TestPlainNewKinds(t *testing.T) {
 		{"stacktrace", n(KindStacktrace, map[string]any{"error": map[string]any{"type": "TypeError", "message": "x"},
 			"frames": []any{map[string]any{"fn": "main", "file": "a.ts", "line": 3, "col": 7}, map[string]any{}}}),
 			"TypeError: x\n  at main (a.ts:3:7)\n  at <anonymous>\n"},
+		{"shell", n(KindShell, map[string]any{"presentation": shellPresentation}),
+			"print(\"ready\")  ‹result = ready›  8ms\n×   false  exit 1\n"},
 		{"suggestions", n(KindSuggestions, map[string]any{"items": []any{map[string]any{"text": "Fix it"},
 			map[string]any{"detail": "no text"}}}), "- Fix it\n"},
 		{"questions", n(KindQuestions, map[string]any{"items": []any{map[string]any{"id": "db", "prompt": "Which DB?",
