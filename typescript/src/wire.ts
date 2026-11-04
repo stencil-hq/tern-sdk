@@ -138,6 +138,7 @@ export const TERMINAL_FEATURES = [
    'styles',
    'flow',
    'font',
+   'pace',
 ] as const;
 
 /** A terminal feature of the `hello` reply, or a newer one. */

@@ -25,7 +25,7 @@ PROGRAM_FEATURES: Final = ("edit", "undo", "send")
 """Features a program may announce in its `hello`."""
 TERMINAL_FEATURES: Final = (
     "blobs", "settle", "adopt", "dock", "reduce-motion", "aside",
-    "scroll", "styles", "flow", "font",
+    "scroll", "styles", "flow", "font", "pace",
 )  # fmt: skip
 """Features a terminal may list in its `hello` reply."""
 

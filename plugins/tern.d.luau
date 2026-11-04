@@ -20,7 +20,17 @@ export type ToastLevel = "success" | "info" | "error"
 
 --- Where a file or block opens relative to the focused pane. `"over"` takes the focused (or
 --- target) pane's slot, parking that pane until the new block closes, then puts it back there.
-export type How = "default" | "beside" | "below" | "split" | "tab" | "replace" | "over" | "preview"
+--- `"glimpse"` shows it over the whole tab, in no split, until the next click outside it.
+export type How =
+	"default"
+	| "beside"
+	| "below"
+	| "split"
+	| "tab"
+	| "replace"
+	| "over"
+	| "preview"
+	| "glimpse"
 
 --- What asked Tern to open a file.
 export type Origin = "palette" | "files" | "drop" | "link" | "system" | "cli" | "carly"

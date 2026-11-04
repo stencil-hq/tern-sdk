@@ -296,6 +296,8 @@ pub mod feature {
 	pub const FLOW: &str = "flow";
 	/// Terminal: `o` takes `font` (`sans` | `mono`).
 	pub const FONT: &str = "font";
+	/// Terminal: an `md` with `stream` types its arriving text out itself.
+	pub const PACE: &str = "pace";
 }
 
 // ---------------------------------------------------------------------------

@@ -152,6 +152,8 @@ const (
 	TermFeatureFlow         = "flow"
 	// TermFeatureFont says Tern honors the open message's font.
 	TermFeatureFont = "font"
+	// TermFeaturePace says an md node with stream types its arriving text out itself.
+	TermFeaturePace = "pace"
 )
 
 // Message verbs, program to terminal and terminal to program.
