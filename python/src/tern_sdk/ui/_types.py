@@ -249,6 +249,8 @@ class Actions(TypedDict, total=False):
     click: str
     dblclick: str
     menu: Sequence[MenuEntry]
+    hold: Sequence[MenuEntry]
+    """Long-press entries (same shapes as `menu`): a phone's hold menu lists them; the desktop ignores them."""
 
 
 class LinesPreview(TypedDict):

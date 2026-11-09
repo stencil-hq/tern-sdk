@@ -66,6 +66,10 @@ type Handlers struct {
 	// OnMenu adds each name to actions.menu (sorted, after the names the node
 	// lists itself) and runs on that action.
 	OnMenu map[string]func(*Action)
+	// OnHold adds each name to actions.hold (sorted, after the names the node
+	// lists itself) and runs on that action. A phone's hold menu lists them;
+	// the desktop ignores them.
+	OnHold map[string]func(*Action)
 	// OnAction runs on action events whose act (or act=value) is its key.
 	OnAction map[string]func(*Action)
 	// OnToggle runs when the user folds or unfolds the node.
@@ -88,7 +92,7 @@ type Handlers struct {
 
 // empty reports whether no handler is set.
 func (h *Handlers) empty() bool {
-	return h.OnClick == nil && h.OnDblClick == nil && len(h.OnMenu) == 0 && len(h.OnAction) == 0 &&
+	return h.OnClick == nil && h.OnDblClick == nil && len(h.OnMenu) == 0 && len(h.OnHold) == 0 && len(h.OnAction) == 0 &&
 		h.OnToggle == nil && h.OnSelect == nil && h.OnActivate == nil && h.OnChange == nil &&
 		h.OnFocus == nil && h.OnEdit == nil && h.OnUndo == nil && h.OnSend == nil
 }
@@ -107,7 +111,7 @@ func menuID(entry any) string {
 // bind returns props (normalized JSON values) with the actions the
 // handlers need added.
 func (h *Handlers) bind(props map[string]any) map[string]any {
-	if h.OnClick == nil && h.OnDblClick == nil && len(h.OnMenu) == 0 {
+	if h.OnClick == nil && h.OnDblClick == nil && len(h.OnMenu) == 0 && len(h.OnHold) == 0 {
 		return props
 	}
 	actions := map[string]any{}
@@ -126,27 +130,35 @@ func (h *Handlers) bind(props map[string]any) map[string]any {
 			actions["dblclick"] = "dblclick"
 		}
 	}
-	if len(h.OnMenu) > 0 {
-		menu, _ := actions["menu"].([]any)
-		menu = slices.Clone(menu)
-		names := make([]string, 0, len(h.OnMenu))
-		for name := range h.OnMenu {
-			names = append(names, name)
-		}
-		slices.Sort(names)
-		for _, name := range names {
-			if !slices.ContainsFunc(menu, func(e any) bool { return menuID(e) == name }) {
-				menu = append(menu, name)
-			}
-		}
-		actions["menu"] = menu
-	}
+	addNames(actions, "menu", h.OnMenu)
+	addNames(actions, "hold", h.OnHold)
 	out := make(map[string]any, len(props)+1)
 	for k, v := range props {
 		out[k] = v
 	}
 	out["actions"] = actions
 	return out
+}
+
+// addNames adds the handlers' names to the actions list at key (sorted,
+// after the entries already there, skipping names already listed).
+func addNames(actions map[string]any, key string, handlers map[string]func(*Action)) {
+	if len(handlers) == 0 {
+		return
+	}
+	list, _ := actions[key].([]any)
+	list = slices.Clone(list)
+	names := make([]string, 0, len(handlers))
+	for name := range handlers {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+	for _, name := range names {
+		if !slices.ContainsFunc(list, func(e any) bool { return menuID(e) == name }) {
+			list = append(list, name)
+		}
+	}
+	actions[key] = list
 }
 
 // bound is a node's handlers with the action names they answer to.
@@ -172,6 +184,10 @@ func (b *bound) route(ev Event) bool {
 			b.OnMenu[name](e)
 		case b.OnMenu[e.Act] != nil:
 			b.OnMenu[e.Act](e)
+		case b.OnHold[name] != nil:
+			b.OnHold[name](e)
+		case b.OnHold[e.Act] != nil:
+			b.OnHold[e.Act](e)
 		case b.OnAction[name] != nil:
 			b.OnAction[name](e)
 		case b.OnAction[e.Act] != nil:

@@ -329,6 +329,7 @@ fn table_row_actions_route_with_the_row_as_item() {
 enum Msg {
 	Go,
 	Rerun,
+	Copy,
 	Notify(bool),
 }
 
@@ -342,7 +343,8 @@ fn events_route_to_handlers_and_the_rest_reach_the_loop() {
 			html::button("Go")
 				.key("go")
 				.on_click(Msg::Go)
-				.on_menu("rerun", Msg::Rerun),
+				.on_menu("rerun", Msg::Rerun)
+				.on_hold("copy", Msg::Copy),
 		)
 		.child(
 			html::checkbox("notify", "on")
@@ -352,11 +354,15 @@ fn events_route_to_handlers_and_the_rest_reach_the_loop() {
 	session.render(sf, view).expect("render");
 	let sent = written(&pipes);
 	let add = &frames(&sent)[0]["ops"][0];
-	assert_eq!(add[4]["c"][0]["c"][0]["p"]["actions"], json!({"click": "click", "menu": ["rerun"]}));
+	assert_eq!(
+		add[4]["c"][0]["c"][0]["p"]["actions"],
+		json!({"click": "click", "menu": ["rerun"], "hold": ["copy"]})
+	);
 
 	for body in [
 		json!({"ev": "action", "sf": "s1", "id": "main.f.go", "act": "click", "values": {"notify": false}}),
 		json!({"ev": "action", "sf": "s1", "id": "main.f.go", "act": "rerun"}),
+		json!({"ev": "action", "sf": "s1", "id": "main.f.go", "act": "copy"}),
 		json!({"ev": "change", "sf": "s1", "id": "main.f.n", "value": "on", "checked": true}),
 		json!({"ev": "action", "sf": "s1", "id": "main.f.go", "act": "other"}),
 		json!({"ev": "action", "sf": "s2", "id": "main.f.go", "act": "click"}),
@@ -370,11 +376,12 @@ fn events_route_to_handlers_and_the_rest_reach_the_loop() {
 	}
 	assert!(matches!(&got[0], Input::Msg(Msg::Go, Event::Action(a)) if a.values.is_some()));
 	assert!(matches!(&got[1], Input::Msg(Msg::Rerun, _)));
-	assert!(matches!(&got[2], Input::Msg(Msg::Notify(true), _)));
-	assert!(matches!(&got[3], Input::Event(Event::Action(a)) if a.act == "other"));
-	assert!(matches!(&got[4], Input::Event(_)), "another surface's event is not routed");
-	assert!(matches!(&got[5], Input::Key(k) if k.is("q")));
-	assert_eq!(got.len(), 6);
+	assert!(matches!(&got[2], Input::Msg(Msg::Copy, _)));
+	assert!(matches!(&got[3], Input::Msg(Msg::Notify(true), _)));
+	assert!(matches!(&got[4], Input::Event(Event::Action(a)) if a.act == "other"));
+	assert!(matches!(&got[5], Input::Event(_)), "another surface's event is not routed");
+	assert!(matches!(&got[6], Input::Key(k) if k.is("q")));
+	assert_eq!(got.len(), 7);
 }
 
 #[test]

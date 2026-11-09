@@ -29,6 +29,17 @@ def test_menu_handlers_add_their_names_once() -> None:
     assert route(n.handlers, sort) is noop
 
 
+def test_hold_handlers_add_their_names_once() -> None:
+    n = ui.card(actions={"hold": ["copy"], "menu": ["copy"]}, on_hold={"copy": noop, "retry": noop})
+    assert n.props["actions"] == {"hold": ["copy", "retry"], "menu": ["copy"]}
+    assert route(n.handlers, decode_event({"ev": "action", "act": "retry"})) is noop
+
+
+def test_toast_sends_its_action_and_label() -> None:
+    n = ui.toast("Deleted", action="undo", label="Undo it", ttl=3000)
+    assert n.to_json() == {"k": "toast", "p": {"text": "Deleted", "ttl": 3000, "action": "undo", "label": "Undo it"}}
+
+
 def test_action_and_event_handlers_route_by_event() -> None:
     seen: list[str] = []
     n = ui.editor(on_action={"go": lambda e: seen.append("go")}, on_edit=lambda e: seen.append("edit"))

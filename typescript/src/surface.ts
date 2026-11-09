@@ -239,6 +239,8 @@ export class Surface implements AsyncDisposable {
                handlers.onAction?.[event.act] ??
                handlers.onMenu?.[full] ??
                handlers.onMenu?.[event.act] ??
+               handlers.onHold?.[full] ??
+               handlers.onHold?.[event.act] ??
                (named('click') ? handlers.onClick : undefined) ??
                (named('dblclick') ? handlers.onDblClick : undefined);
             return fn && (() => fn(event));

@@ -241,18 +241,25 @@ def test_handlers_consume_their_events(connected: Session, term: Term) -> None:
     surface = connected.open()
     surface.render(
         [
-            ui.html.button("Go", key="go", on_click=clicked.append, on_menu={"rerun": lambda e: menu.append(e.act)}),
+            ui.html.button(
+                "Go",
+                key="go",
+                on_click=clicked.append,
+                on_menu={"rerun": lambda e: menu.append(e.act)},
+                on_hold={"copy": lambda e: menu.append(e.act)},
+            ),
             ui.list(ui.item("one", key="a"), key="l", on_select=lambda e: picked.append(e.item)),
         ]
     )
     term.event(ev="action", sf="s1", id="main.go", act="click")
     term.event(ev="action", sf="s1", id="main.go", act="rerun")
+    term.event(ev="action", sf="s1", id="main.go", act="copy")
     term.event(ev="select", sf="s1", id="main.l", item="main.l.a")
     term.event(ev="action", sf="s1", id="main.go", act="other")
     item = connected.poll(10.0)
     assert isinstance(item, ActionEvent) and item.act == "other"
     assert [e.id for e in clicked] == ["main.go"]
-    assert menu == ["rerun"] and picked == ["main.l.a"]
+    assert menu == ["rerun", "copy"] and picked == ["main.l.a"]
 
 
 def test_events_for_other_surfaces_or_unknown_ids_reach_the_loop(connected: Session, term: Term) -> None:

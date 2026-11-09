@@ -416,6 +416,8 @@ export interface Actions {
    readonly dblclick?: string;
    /** The right-click menu: action ids, or rows with icons, keys, checks and submenus. */
    readonly menu?: readonly MenuEntry[];
+   /** What a long press on a touch screen offers (same entries as `menu`); a phone's hold menu lists them, the desktop ignores them. */
+   readonly hold?: readonly MenuEntry[];
 }
 
 /** The props every node takes. */
@@ -1259,6 +1261,10 @@ export interface ToastProps {
    readonly text?: string;
    readonly sub?: string;
    readonly ttl?: number;
+   /** One button after the text (an action name, `name=value` allowed); the toast then stays 6 s and the button sends an `action` event. */
+   readonly action?: string;
+   /** The button's text (default: the action's name, labeled). */
+   readonly label?: string;
 }
 
 /** Where an overlay sits. */

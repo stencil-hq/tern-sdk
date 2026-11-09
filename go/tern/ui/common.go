@@ -65,6 +65,8 @@ type Common struct {
 	OnDblClick func(*tern.Action) `json:"-"`
 	// OnMenu adds context-menu actions and runs on them.
 	OnMenu map[string]func(*tern.Action) `json:"-"`
+	// OnHold adds long-press (hold menu) actions and runs on them.
+	OnHold map[string]func(*tern.Action) `json:"-"`
 	// OnAction runs on action events by act (or act=value).
 	OnAction map[string]func(*tern.Action) `json:"-"`
 	// OnToggle runs when the user folds or unfolds the node.
@@ -106,6 +108,7 @@ type CommonWithoutTitle struct {
 	OnClick    func(*tern.Action)            `json:"-"`
 	OnDblClick func(*tern.Action)            `json:"-"`
 	OnMenu     map[string]func(*tern.Action) `json:"-"`
+	OnHold     map[string]func(*tern.Action) `json:"-"`
 	OnAction   map[string]func(*tern.Action) `json:"-"`
 	OnToggle   func(*tern.Toggle)            `json:"-"`
 	OnSelect   func(*tern.Select)            `json:"-"`
@@ -120,7 +123,7 @@ type CommonWithoutTitle struct {
 func (c CommonWithoutTitle) common() Common {
 	return Common{
 		Props: c.Props, OnClick: c.OnClick, OnDblClick: c.OnDblClick,
-		OnMenu: c.OnMenu, OnAction: c.OnAction, OnToggle: c.OnToggle,
+		OnMenu: c.OnMenu, OnHold: c.OnHold, OnAction: c.OnAction, OnToggle: c.OnToggle,
 		OnSelect: c.OnSelect, OnActivate: c.OnActivate, OnChange: c.OnChange,
 		OnFocus: c.OnFocus, OnEdit: c.OnEdit, OnUndo: c.OnUndo, OnSend: c.OnSend,
 	}
@@ -146,6 +149,7 @@ type CommonWithoutMax struct {
 	OnClick    func(*tern.Action)            `json:"-"`
 	OnDblClick func(*tern.Action)            `json:"-"`
 	OnMenu     map[string]func(*tern.Action) `json:"-"`
+	OnHold     map[string]func(*tern.Action) `json:"-"`
 	OnAction   map[string]func(*tern.Action) `json:"-"`
 	OnToggle   func(*tern.Toggle)            `json:"-"`
 	OnSelect   func(*tern.Select)            `json:"-"`
@@ -160,7 +164,7 @@ type CommonWithoutMax struct {
 func (c CommonWithoutMax) common() Common {
 	return Common{
 		Props: c.Props, OnClick: c.OnClick, OnDblClick: c.OnDblClick,
-		OnMenu: c.OnMenu, OnAction: c.OnAction, OnToggle: c.OnToggle,
+		OnMenu: c.OnMenu, OnHold: c.OnHold, OnAction: c.OnAction, OnToggle: c.OnToggle,
 		OnSelect: c.OnSelect, OnActivate: c.OnActivate, OnChange: c.OnChange,
 		OnFocus: c.OnFocus, OnEdit: c.OnEdit, OnUndo: c.OnUndo, OnSend: c.OnSend,
 	}
@@ -186,6 +190,7 @@ type PickerCommon struct {
 	OnClick    func(*tern.Action)            `json:"-"`
 	OnDblClick func(*tern.Action)            `json:"-"`
 	OnMenu     map[string]func(*tern.Action) `json:"-"`
+	OnHold     map[string]func(*tern.Action) `json:"-"`
 	OnAction   map[string]func(*tern.Action) `json:"-"`
 	OnToggle   func(*tern.Toggle)            `json:"-"`
 	OnSelect   func(*tern.Select)            `json:"-"`
@@ -200,7 +205,7 @@ type PickerCommon struct {
 func (c PickerCommon) common() Common {
 	return Common{
 		Props: c.Props, OnClick: c.OnClick, OnDblClick: c.OnDblClick,
-		OnMenu: c.OnMenu, OnAction: c.OnAction, OnToggle: c.OnToggle,
+		OnMenu: c.OnMenu, OnHold: c.OnHold, OnAction: c.OnAction, OnToggle: c.OnToggle,
 		OnSelect: c.OnSelect, OnActivate: c.OnActivate, OnChange: c.OnChange,
 		OnFocus: c.OnFocus, OnEdit: c.OnEdit, OnUndo: c.OnUndo, OnSend: c.OnSend,
 	}
@@ -208,7 +213,7 @@ func (c PickerCommon) common() Common {
 
 // CommonWithoutActions holds common props for Message and Attachment, whose
 // Actions are icon buttons rather than pointer gestures. The conflicting
-// common prop and the handlers that set it (OnClick, OnDblClick, OnMenu)
+// common prop and the handlers that set it (OnClick, OnDblClick, OnMenu, OnHold)
 // are not exposed; OnAction handles the buttons.
 type CommonWithoutActions struct {
 	Key        string                        `json:"key,omitzero"`
@@ -262,7 +267,7 @@ func (c Common) common() Common { return c }
 // handlers is the node's handlers.
 func (c Common) handlers() tern.Handlers {
 	return tern.Handlers{
-		OnClick: c.OnClick, OnDblClick: c.OnDblClick, OnMenu: c.OnMenu, OnAction: c.OnAction,
+		OnClick: c.OnClick, OnDblClick: c.OnDblClick, OnMenu: c.OnMenu, OnHold: c.OnHold, OnAction: c.OnAction,
 		OnToggle: c.OnToggle, OnSelect: c.OnSelect, OnActivate: c.OnActivate, OnChange: c.OnChange,
 		OnFocus: c.OnFocus, OnEdit: c.OnEdit, OnUndo: c.OnUndo, OnSend: c.OnSend,
 	}
@@ -308,6 +313,10 @@ type Actions struct {
 	// Menu lists the context menu's rows: MenuAct names, MenuItem rows,
 	// MenuSep and MenuHeader, as the menu kind's items.
 	Menu []MenuEntry `json:"menu,omitzero"`
+	// Hold lists what a long press on a touch screen offers, in the same
+	// entry shapes as Menu; a phone's hold menu lists them as rows, a
+	// desktop ignores them.
+	Hold []MenuEntry `json:"hold,omitzero"`
 }
 
 // Build makes a node of kind from props, a struct of json-tagged fields

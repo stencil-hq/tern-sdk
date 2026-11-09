@@ -29,6 +29,8 @@ export interface Handlers {
    readonly onDblClick?: Handler<ActionEvent>;
    /** Context-menu entries by action name; the names join `actions.menu`. */
    readonly onMenu?: Readonly<Record<string, Handler<ActionEvent>>>;
+   /** Long-press (hold menu) entries by action name; the names join `actions.hold`. */
+   readonly onHold?: Readonly<Record<string, Handler<ActionEvent>>>;
    /** Handlers of `action` events by `act`. */
    readonly onAction?: Readonly<Record<string, Handler<ActionEvent>>>;
    readonly onToggle?: Handler<ToggleEvent>;
@@ -213,6 +215,11 @@ function takeHandler(handlers: Mutable<Handlers>, key: string, value: unknown): 
          if (map) handlers.onMenu = map;
          return true;
       }
+      case 'onHold': {
+         const map = handlerMap(value);
+         if (map) handlers.onHold = map;
+         return true;
+      }
       case 'onAction': {
          const map = handlerMap(value);
          if (map) handlers.onAction = map;
@@ -247,7 +254,7 @@ function takeHandler(handlers: Mutable<Handlers>, key: string, value: unknown): 
    }
 }
 
-/** `actions` with what the click, double-click and menu handlers need added. */
+/** `actions` with what the click, double-click, menu and hold handlers need added. */
 function withActions(props: Record<string, Json>, handlers: Handlers): void {
    const current = props['actions'];
    if (Array.isArray(current)) return;
@@ -260,16 +267,18 @@ function withActions(props: Record<string, Json>, handlers: Handlers): void {
    }
    if (handlers.onClick && actions['click'] === undefined) actions['click'] = 'click';
    if (handlers.onDblClick && actions['dblclick'] === undefined) actions['dblclick'] = 'dblclick';
-   if (handlers.onMenu) {
-      const old = actions['menu'];
-      const menu: Json[] = Array.isArray(old) ? [...old] : [];
-      for (const name in handlers.onMenu) {
-         const listed = menu.some(
+   for (const key of ['menu', 'hold'] as const) {
+      const named = key === 'menu' ? handlers.onMenu : handlers.onHold;
+      if (!named) continue;
+      const old = actions[key];
+      const list: Json[] = Array.isArray(old) ? [...old] : [];
+      for (const name in named) {
+         const listed = list.some(
             entry => entry === name || (isJsonObject(entry) && entry['id'] === name)
          );
-         if (!listed) menu.push(name);
+         if (!listed) list.push(name);
       }
-      actions['menu'] = menu;
+      actions[key] = list;
    }
    if (Object.keys(actions).length > 0) props['actions'] = actions;
 }

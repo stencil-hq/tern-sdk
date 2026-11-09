@@ -49,6 +49,12 @@ type Toast struct {
 	Sub string `json:"sub,omitzero"`
 	// TTL takes it down after this many ms.
 	TTL *float64 `json:"ttl,omitzero"`
+	// Action adds one button after the text (an action name, name=value
+	// allowed); the toast then stays 6 s, and clicking the button takes it
+	// down and sends an action event with that act.
+	Action string `json:"action,omitzero"`
+	// Label is the button's text (default: the action's name, labeled).
+	Label string `json:"label,omitzero"`
 }
 
 // Node builds the toast.

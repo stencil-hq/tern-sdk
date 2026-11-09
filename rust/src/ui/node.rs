@@ -25,6 +25,9 @@ pub enum Trigger {
 	Dblclick,
 	/// A context-menu action, added to `actions.menu`.
 	Menu(String),
+	/// A long-press action, added to `actions.hold` (a phone's hold menu;
+	/// the desktop ignores it).
+	Hold(String),
 	/// `action` events with this `act`.
 	Action(String),
 	/// Events of this `ev` (`toggle`, `select`, `change`, …).
@@ -655,6 +658,22 @@ macro_rules! actions_methods {
 				.handlers
 				.push((
 					$crate::ui::node::Trigger::Menu(act.into()),
+					$crate::ui::node::msg_handler(msg),
+				));
+			self
+		}
+
+		/// Adds `act` to the long-press (hold) menu a phone shows and sends
+		/// `msg` when it is picked. The desktop ignores it.
+		pub fn on_hold(mut self, act: impl Into<String>, msg: M) -> Self
+		where
+			M: Clone + Send + Sync + 'static,
+		{
+			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
+				.handlers
+				.push((
+					$crate::ui::node::Trigger::Hold(act.into()),
 					$crate::ui::node::msg_handler(msg),
 				));
 			self

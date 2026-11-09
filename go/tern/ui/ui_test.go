@@ -20,6 +20,13 @@ func props(t *testing.T, e tern.Element) string {
 	return string(b)
 }
 
+func TestToastSendsActionAndLabel(t *testing.T) {
+	got := props(t, ui.Toast{Text: "Deleted", Action: "undo", Label: "Undo it"})
+	if want := `{"action":"undo","label":"Undo it","text":"Deleted"}`; got != want {
+		t.Errorf("got %s, want %s", got, want)
+	}
+}
+
 func TestZeroPropsStayAbsent(t *testing.T) {
 	for name, e := range map[string]tern.Element{
 		"card": ui.Card{}, "text": ui.Text{}, "progress": ui.Progress{}, "editor": ui.Editor{},

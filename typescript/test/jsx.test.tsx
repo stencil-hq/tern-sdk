@@ -248,6 +248,24 @@ describe('TSX', () => {
       });
    });
 
+   test('hold handlers add their names to actions.hold beside the menu', () => {
+      const fn = (): void => {};
+      const tree = (
+         <text onHold={{ copy: fn, retry: fn }} actions={{ menu: ['copy'], hold: ['copy'] }} />
+      );
+      expect(json(tree)).toEqual({
+         k: 'text',
+         p: { actions: { menu: ['copy'], hold: ['copy', 'retry'] } },
+      });
+   });
+
+   test('a toast sends its action and label', () => {
+      expect(json(<toast text="Deleted" action="undo" label="Undo it" />)).toEqual({
+         k: 'toast',
+         p: { text: 'Deleted', action: 'undo', label: 'Undo it' },
+      });
+   });
+
    test('components, fragments, arrays and skipped children', () => {
       const Row = (props: { readonly name: string }) => (
          <row>

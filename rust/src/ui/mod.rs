@@ -1572,6 +1572,11 @@ impl<M> Toast<M> {
 		sub(String) = "sub";
 		/// Take it down after this many ms.
 		ttl(u64) = "ttl";
+		/// An action button after the text (`name=value` allowed); the toast
+		/// then stays 6 s and the button sends an `action` event.
+		action(String) = "action";
+		/// The button's text (default: the action's name, labeled).
+		label(String) = "label";
 	}
 }
 

@@ -56,6 +56,7 @@ class Handlers(TypedDict, total=False):
     on_click: Callable[[ActionEvent], object] | None
     on_dblclick: Callable[[ActionEvent], object] | None
     on_menu: Mapping[str, Callable[[ActionEvent], object]] | None
+    on_hold: Mapping[str, Callable[[ActionEvent], object]] | None
     on_action: Mapping[str, Callable[[ActionEvent], object]] | None
     on_toggle: Callable[[ToggleEvent], object] | None
     on_select: Callable[[SelectEvent], object] | None
@@ -215,16 +216,17 @@ def make(
             acts = ensure_actions()
             name = acts.setdefault(gesture, gesture)
             handlers[f"action:{name}"] = fn
-    menu = common.get("on_menu")
-    if menu:
-        acts = ensure_actions()
-        names = list(acts.get("menu") or [])
-        ids = {e if isinstance(e, str) else e.get("id") for e in names if isinstance(e, (str, dict))}
-        for name, fn in menu.items():
-            if name not in ids:
-                names.append(name)
-            handlers[f"action:{name}"] = fn
-        acts["menu"] = names
+    for key in ("menu", "hold"):
+        entries = common.get(f"on_{key}")
+        if entries:
+            acts = ensure_actions()
+            names = list(acts.get(key) or [])
+            ids = {e if isinstance(e, str) else e.get("id") for e in names if isinstance(e, (str, dict))}
+            for name, fn in entries.items():
+                if name not in ids:
+                    names.append(name)
+                handlers[f"action:{name}"] = fn
+            acts[key] = names
     for name, fn in (common.get("on_action") or {}).items():
         handlers[f"action:{name}"] = fn
     for py, route in _EVENT_HANDLERS:

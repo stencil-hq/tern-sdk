@@ -155,6 +155,7 @@ closures with side effects:
 | --- | --- |
 | `.on_click(msg)`, `.on_dblclick(msg)` | the node's click / double-click action (set to `"click"` / `"dblclick"` unless the node names it) |
 | `.on_menu("rerun", msg)` | the context-menu entry it adds |
+| `.on_hold("copy", msg)` | the hold-menu entry it adds (a phone's long press) |
 | `.on_action("name", msg)`, `.on_action_with("name", \|a\| …)` | `action` events with that `act` (`name` or `name=value`) |
 | `.on_toggle(\|collapsed\| …)`, `.on_select(\|item\| …)`, `.on_activate(\|item\| …)`, `.on_change(\|c\| …)`, `.on_edit(\|e\| …)`, `.on_send(\|text\| …)` | those events |
 | `.on_focus(msg)`, `.on_undo(msg)` | those events |

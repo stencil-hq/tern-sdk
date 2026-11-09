@@ -277,6 +277,19 @@ func TestOnMenuKeepsRichEntries(t *testing.T) {
 	}
 }
 
+func TestOnHoldAddsNamesBesideMenu(t *testing.T) {
+	h := Handlers{OnHold: map[string]func(*Action){"retry": func(*Action) {}, "copy": func(*Action) {}}}
+	props := normalizeProps(map[string]any{"actions": map[string]any{
+		"menu": []any{"copy"}, "hold": []any{map[string]any{"id": "copy", "icon": "copy"}, "-"}}})
+	b, err := Marshal(h.bind(props)["actions"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"hold":[{"icon":"copy","id":"copy"},"-","retry"],"menu":["copy"]}`; string(b) != want {
+		t.Errorf("got %s, want %s", b, want)
+	}
+}
+
 func TestStringActionValuesStillRoute(t *testing.T) {
 	called := false
 	b := bound{Handlers: Handlers{OnAction: map[string]func(*Action){"sort=name": func(*Action) { called = true }}}}
@@ -629,10 +642,11 @@ func TestHandlersRouteEvents(t *testing.T) {
 	s := connect(t, ft, opts)
 	sf, _ := s.Open(SurfaceOptions{})
 	ft.expect(VerbOpen)
-	var clicks, menus, changes int
+	var clicks, menus, holds, changes int
 	button := Node{Kind: KindEl, Props: map[string]any{"tag": "button", "text": "Go"}, Handlers: Handlers{
 		OnClick: func(a *Action) { clicks++ },
 		OnMenu:  map[string]func(*Action){"sort=name": func(a *Action) { menus++ }},
+		OnHold:  map[string]func(*Action){"copy": func(a *Action) { holds++ }},
 	}}
 	box := Node{Kind: KindEl, Props: map[string]any{"key": "box", "tag": "input", "type": "checkbox"}, Handlers: Handlers{
 		OnChange: func(c *Change) { changes++ },
@@ -643,11 +657,12 @@ func TestHandlersRouteEvents(t *testing.T) {
 	f := ft.expect(VerbFrame)
 	add := f["ops"].([]any)[0].([]any)[4].(map[string]any)
 	gotActions := add["c"].([]any)[0].(map[string]any)["p"].(map[string]any)["actions"]
-	if !jsonEqual(gotActions, map[string]any{"click": "click", "menu": []any{"sort=name"}}) {
+	if !jsonEqual(gotActions, map[string]any{"click": "click", "menu": []any{"sort=name"}, "hold": []any{"copy"}}) {
 		t.Fatalf("actions %v", gotActions)
 	}
 	ft.event(`{"ev":"action","sf":"s1","id":"main.0","act":"click"}`)
 	ft.event(`{"ev":"action","sf":"s1","id":"main.0","act":"sort","value":"name"}`)
+	ft.event(`{"ev":"action","sf":"s1","id":"main.0","act":"copy"}`)
 	ft.event(`{"ev":"change","sf":"s1","id":"main.box","value":"on","checked":true}`)
 	ft.event(`{"ev":"action","sf":"s1","id":"main.0","act":"other"}`)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -659,8 +674,8 @@ func TestHandlersRouteEvents(t *testing.T) {
 	if a, ok := in.(*Action); !ok || a.Act != "other" {
 		t.Fatalf("unhandled input %#v", in)
 	}
-	if clicks != 1 || menus != 1 || changes != 1 {
-		t.Fatalf("clicks %d menus %d changes %d", clicks, menus, changes)
+	if clicks != 1 || menus != 1 || holds != 1 || changes != 1 {
+		t.Fatalf("clicks %d menus %d holds %d changes %d", clicks, menus, holds, changes)
 	}
 	ft.send("q\x1b[A")
 	in, err = s.Next(ctx)

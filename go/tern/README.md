@@ -203,6 +203,8 @@ ui.Editor{Common: ui.Common{Key: "ed", OnSend: func(e *tern.Send) { … }}}
 - `OnClick` / `OnDblClick` set `actions.click` / `actions.dblclick` to
   `"click"` / `"dblclick"` unless the node names that action itself.
 - `OnMenu` adds its names (sorted) to `actions.menu` after the node's own.
+- `OnHold` adds its names (sorted) to `actions.hold` after the node's own:
+  what a long press offers on a phone (the desktop ignores it).
 - `OnAction` runs on `action` events by `act` (or `act=value` when the
   value is a string; a table's sort, an otp's cell or a questionnaire's
   answers arrive in `Action.Value` as decoded JSON).

@@ -1750,7 +1750,7 @@ macro_rules! int_key {
 
 int_key!(i32, i64, u32, u64, usize);
 
-/// What a pointer does on a node: `{click?, dblclick?, menu?}`.
+/// What a pointer does on a node: `{click?, dblclick?, menu?, hold?}`.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
 pub struct Actions {
 	/// The click action.
@@ -1763,6 +1763,10 @@ pub struct Actions {
 	/// separators, headers and submenus.
 	#[serde(skip_serializing_if = "Vec::is_empty")]
 	pub menu:     Vec<MenuEntry>,
+	/// Long-press entries (same shapes as `menu`): a phone's hold menu
+	/// lists them; the desktop ignores them.
+	#[serde(skip_serializing_if = "Vec::is_empty")]
+	pub hold:     Vec<MenuEntry>,
 }
 
 impl Actions {
@@ -1786,6 +1790,12 @@ impl Actions {
 	/// Adds a context-menu entry: an action's name, or a [`MenuEntry`].
 	pub fn menu(mut self, entry: impl Into<MenuEntry>) -> Self {
 		self.menu.push(entry.into());
+		self
+	}
+
+	/// Adds a hold-menu entry: an action's name, or a [`MenuEntry`].
+	pub fn hold(mut self, entry: impl Into<MenuEntry>) -> Self {
+		self.hold.push(entry.into());
 		self
 	}
 }

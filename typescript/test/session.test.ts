@@ -565,6 +565,11 @@ describe('input', () => {
                      menus.push('rerun');
                   },
                },
+               onHold: {
+                  copy: () => {
+                     menus.push('copy');
+                  },
+               },
             },
             'Go'
          ),
@@ -573,6 +578,7 @@ describe('input', () => {
       term.input.type('a');
       term.event({ ev: 'action', sf: 's1', id: 'main.go', act: 'click', values: { size: 'l' } });
       term.event({ ev: 'action', sf: 's1', id: 'main.go', act: 'rerun' });
+      term.event({ ev: 'action', sf: 's1', id: 'main.go', act: 'copy' });
       term.event({ ev: 'action', sf: 's1', id: 'main.other', act: 'other' });
       term.input.type('b');
       const seen: SessionInput[] = [];
@@ -581,7 +587,7 @@ describe('input', () => {
          if (seen.length === 3) break;
       }
       expect(clicks.map(c => c.values)).toEqual([{ size: 'l' }]);
-      expect(menus).toEqual(['rerun']);
+      expect(menus).toEqual(['rerun', 'copy']);
       expect(seen.map(i => (i.type === 'key' ? i.key.name : i.event.ev))).toEqual([
          'a',
          'action',

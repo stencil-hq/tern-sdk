@@ -132,6 +132,7 @@ Any builder takes handlers; each receives the typed event:
 | --- | --- |
 | `on_click`, `on_dblclick` | the click / double-click action (sets `actions.click` to `"click"` unless the node names its own) |
 | `on_menu={"rerun": fn}` | context-menu picks (adds the names to `actions.menu`) |
+| `on_hold={"copy": fn}` | hold-menu picks on a phone (adds the names to `actions.hold`) |
 | `on_action={"name": fn}` | `action` events with that `act` |
 | `on_toggle`, `on_select`, `on_activate`, `on_change`, `on_focus`, `on_edit`, `on_undo`, `on_send` | those events |
 

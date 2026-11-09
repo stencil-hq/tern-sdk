@@ -1147,9 +1147,21 @@ def seg(
     return make("seg", own, children, common)
 
 
-def toast(text: str, *, sub: str | None = None, ttl: float | None = None, **common: Unpack[Common]) -> Node:
-    """A transient notice (`tone="error"` for an error toast)."""
-    return make("toast", {"text": text, "sub": sub, "ttl": ttl}, (), common)
+def toast(
+    text: str,
+    *,
+    sub: str | None = None,
+    ttl: float | None = None,
+    action: str | None = None,
+    label: str | None = None,
+    **common: Unpack[Common],
+) -> Node:
+    """A transient notice (`tone="error"` for an error toast).
+
+    `action` adds one button after the text (the toast then stays 6 s); clicking it
+    takes the toast down and sends an `action` event with that act. `label` is the
+    button's text (default: the action's name, labeled)."""
+    return make("toast", {"text": text, "sub": sub, "ttl": ttl, "action": action, "label": label}, (), common)
 
 
 def overlay(

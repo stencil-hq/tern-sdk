@@ -233,7 +233,7 @@ fn attach<M>(
 					tracing::warn!(id, "`actions` is not an object here; pointer handler ignored");
 					continue;
 				};
-				match pointer {
+				match &pointer {
 					Trigger::Click | Trigger::Dblclick => {
 						let gesture = if pointer == Trigger::Click {
 							"click"
@@ -248,9 +248,14 @@ fn attach<M>(
 							.to_owned();
 						Route::Act(act)
 					},
-					Trigger::Menu(act) => {
+					Trigger::Menu(act) | Trigger::Hold(act) => {
+						let list = if matches!(pointer, Trigger::Hold(_)) {
+							"hold"
+						} else {
+							"menu"
+						};
 						let menu = actions
-							.entry("menu")
+							.entry(list)
 							.or_insert_with(|| Value::Array(Vec::new()));
 						if let Value::Array(menu) = menu
 							&& !menu
@@ -259,7 +264,7 @@ fn attach<M>(
 						{
 							menu.push(Value::String(act.clone()));
 						}
-						Route::Act(act)
+						Route::Act(act.clone())
 					},
 					Trigger::Action(_) | Trigger::Event(_) => unreachable!("matched above"),
 				}

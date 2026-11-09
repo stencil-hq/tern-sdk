@@ -202,6 +202,7 @@ Nodes carry handlers instead of naming actions by hand:
 | --- | --- |
 | `onClick`, `onDblClick` | the node's click/double-click action (sets `actions.click`/`dblclick` to `"click"`/`"dblclick"` unless named) |
 | `onMenu={{ rerun: fn }}` | a context-menu pick (names join `actions.menu`) |
+| `onHold={{ copy: fn }}` | a hold-menu pick on a phone (names join `actions.hold`) |
 | `onAction={{ name: fn }}` | `action` events with that `act` |
 | `onToggle`, `onSelect`, `onActivate`, `onChange`, `onFocus`, `onEdit`, `onUndo`, `onSend` | those events |
 
