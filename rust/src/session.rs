@@ -51,7 +51,7 @@ use crate::{
 	Error,
 	input::{Item, Parser},
 	keys::{Decoder, Key},
-	reconcile::{Doc, Routes},
+	reconcile::{Doc, Rendered},
 	record::Recorder,
 	term::{self, Terminal, Waker},
 	ui::View,
@@ -350,8 +350,8 @@ struct State<M> {
 	pending:    Option<Doc>,
 	/// View ops and raw ops waiting for credit.
 	queued:     Vec<Op>,
-	/// The handlers of the view last rendered.
-	routes:     Routes<M>,
+	/// The view last rendered, with its handlers.
+	rendered:   Rendered<M>,
 }
 
 impl<M> State<M> {
@@ -756,7 +756,7 @@ impl<M> Session<M> {
 			reset_main: options.adopt && previous.is_none(),
 			pending: None,
 			queued: Vec::new(),
-			routes: Routes::default(),
+			rendered: Rendered::default(),
 		});
 		Ok(Surface(self.surfaces.len() - 1))
 	}
@@ -785,11 +785,9 @@ impl<M> Session<M> {
 	/// # Errors
 	/// [`Error::DuplicateId`] (nothing is sent), a closed surface, or I/O.
 	pub fn render(&mut self, sf: Surface, view: impl Into<View<M>>) -> Result<(), Error> {
-		let (doc, routes) = Doc::build(view.into())?;
 		let credits = self.caps.credits;
 		let state = open(&mut self.surfaces, sf)?;
-		state.routes = routes;
-		state.pending = Some(doc);
+		state.pending = Some(state.rendered.render(view.into())?);
 		if state.blocked(credits) {
 			// Pick up acks already waiting, which may release the frame.
 			return self.pump(Duration::ZERO);
@@ -1097,7 +1095,7 @@ impl<M> Session<M> {
 		let msg = event
 			.sf()
 			.and_then(|sf| self.by_id(sf))
-			.and_then(|i| self.surfaces[i].routes.route(&event));
+			.and_then(|i| self.surfaces[i].rendered.route(&event));
 		self.inbox.push_back(match msg {
 			Some(msg) => Input::Msg(msg, event),
 			None => Input::Event(event),

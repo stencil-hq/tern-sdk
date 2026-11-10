@@ -137,6 +137,12 @@ is `<parent>.<key>` (its `key` prop, else its index). The editor in
 `View::new().dock([ui::editor().key("ed")])` is `dock.ed`, which is what
 `session.focus(sf, Some("dock.ed"))` names.
 
+A render costs what changed since the last one when the view keeps its
+unchanged parts as clones of the nodes it rendered before (cloning a node
+is O(1) and shares it): a node the last render had at the same id is
+neither rebuilt nor diffed, and its handlers stay routed. A node changed
+after cloning is copied first, so it is rebuilt and diffed as usual.
+
 `Doc::from_json` accepts the plugin wire form `{main?, dock?, layer?}`:
 region roots must be nodes with a string `k`, not lists. A null view is
 empty; null or absent `p`/`c` means no props/children. An empty object `c`

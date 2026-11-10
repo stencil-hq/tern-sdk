@@ -115,9 +115,9 @@ impl<M> Node<M> {
 		Arc::make_mut(&mut self.inner)
 	}
 
-	/// The node's content by value; copied only when shared.
-	pub(crate) fn into_inner(self) -> Inner<M> {
-		Arc::unwrap_or_clone(self.inner)
+	/// The node's content by value, or the node back when a clone shares it.
+	pub(crate) fn try_into_inner(self) -> Result<Inner<M>, Self> {
+		Arc::try_unwrap(self.inner).map_err(|inner| Self { inner })
 	}
 
 	/// The kind.
