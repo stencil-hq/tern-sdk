@@ -114,6 +114,41 @@ describe('TSX', () => {
       });
    });
 
+   test('editor viewport props and per-line spans survive typed JSX', () => {
+      const tree = (
+         <editor
+            text={'const π = "🌍";\nπ'}
+            cursor={0}
+            lang="javascript"
+            highlight={false}
+            nowrap={false}
+            topline={0}
+            followCursor={false}
+            gutter={['1 │ ', [span('●', 'error'), ' 2 ']] as const}
+            virt={[' → 🌍', [span('✓', 'success'), ' 值']] as const}
+         />
+      );
+      expect(json(tree)).toEqual({
+         k: 'editor',
+         p: {
+            text: 'const π = "🌍";\nπ',
+            cursor: 0,
+            lang: 'javascript',
+            highlight: false,
+            nowrap: false,
+            topline: 0,
+            followCursor: false,
+            gutter: ['1 │ ', [{ t: '●', s: 'error' }, ' 2 ']],
+            virt: [' → 🌍', [{ t: '✓', s: 'success' }, ' 值']],
+         },
+      });
+   });
+
+   test('omitted editor viewport props leave defaults to Tern', () => {
+      expect(json(<editor text="draft" />)).toEqual({ k: 'editor', p: { text: 'draft' } });
+      expect(json(ui.editor())).toEqual({ k: 'editor' });
+   });
+
    test('meter cells carry the required meter wrapper on the wire', () => {
       const cells = { usage: { meter: { value: 0.5, title: 'Half' } } };
       const table = ui.table({ cols: [{ id: 'usage' }], rows: [{ id: 'a', cells }] });

@@ -1239,7 +1239,19 @@ export interface InputProps extends FieldTextProps {
 
 /** Props of `editor`. */
 export interface EditorProps extends FieldTextProps {
+   /** False disables syntax highlighting while keeping `lang`'s code presentation; default true. */
+   readonly highlight?: boolean;
    readonly maxLines?: number;
+   /** Clip long lines instead of soft-wrapping; default false. */
+   readonly nowrap?: boolean;
+   /** Zero-based logical line at the top; overrides automatic caret scrolling. */
+   readonly topline?: number;
+   /** False preserves scrolling when the caret moves; default true. `topline` takes precedence. */
+   readonly followCursor?: boolean;
+   /** One entry per logical line in a shared gutter column; not part of the text. */
+   readonly gutter?: readonly Spans[];
+   /** One entry per logical line, drawn at its end; not part of the text. */
+   readonly virt?: readonly Spans[];
 }
 
 /** Props of `status`. */

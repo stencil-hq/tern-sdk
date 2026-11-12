@@ -1420,6 +1420,8 @@ impl<M> Editor<M> {
 		mode(String) = "mode";
 		/// The text is code in this language.
 		lang(String) = "lang";
+		/// Set false to use `decor` colors without native syntax highlighting (default true).
+		highlight(bool) = "highlight";
 		/// Not editable.
 		readonly(bool) = "readonly";
 		/// Accepts an atomic `send`.
@@ -1428,6 +1430,16 @@ impl<M> Editor<M> {
 		typeahead(bool) = "typeahead";
 		/// Cap the height at this many lines.
 		max_lines(u32) = "maxLines";
+		/// Clip long lines instead of soft-wrapping them (default false).
+		nowrap(bool) = "nowrap";
+		/// Zero-based line at the top; takes precedence over cursor following.
+		topline(u32) = "topline";
+		/// Follow caret movement when `topline` is absent (default true); false preserves scroll.
+		follow_cursor(bool) = "followCursor";
+		/// One entry per logical line, in a shared gutter; not part of the text or its offsets.
+		gutter(Vec<Text>) = "gutter";
+		/// One entry per logical line, at its end; not part of the text or its offsets.
+		virt(Vec<Text>) = "virt";
 		/// The look (`field` frames it as a prompt input).
 		variant(InputVariant) = "variant";
 		/// Buttons attached inside the ring, in order.
@@ -2989,6 +3001,45 @@ mod tests {
 		assert_eq!(
 			wire::<()>(super::json(json!({"a": 1})).open(1)),
 			json!({"k": "json", "p": {"value": {"a": 1}, "open": 1}})
+		);
+	}
+
+	#[test]
+	fn editor_viewport_props_serialize() {
+		let source = "let café = \"🦆\";\nprint(café)\n";
+		assert_eq!(
+			wire(
+				editor::<()>()
+					.text(source)
+					.cursor(4usize)
+					.highlight(false)
+					.nowrap(true)
+					.topline(0u32)
+					.follow_cursor(false)
+					.gutter(vec!["1 │ ".into(), span("2 │ ").style("accent").into(), "".into()])
+					.virt(vec!["".into(), span(" : number").style("muted").into(), "end".into()])
+			)["p"],
+			json!({
+				"text": source, "cursor": 4, "highlight": false, "nowrap": true,
+				"topline": 0, "followCursor": false,
+				"gutter": ["1 │ ", [{"t": "2 │ ", "s": "accent"}], ""],
+				"virt": ["", [{"t": " : number", "s": "muted"}], "end"]
+			})
+		);
+	}
+
+	#[test]
+	fn editor_viewport_props_are_optional_and_can_clear_line_annotations() {
+		assert_eq!(wire(editor::<()>())["p"], json!({}));
+		assert_eq!(
+			wire(
+				editor::<()>()
+					.gutter(vec!["1 │ ".into()])
+					.virt(vec![" : number".into()])
+					.gutter(vec![])
+					.virt(vec![])
+			)["p"],
+			json!({"gutter": [], "virt": []})
 		);
 	}
 
