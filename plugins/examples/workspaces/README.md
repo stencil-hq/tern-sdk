@@ -29,7 +29,8 @@ Opens the tabs a project describes in `.tern/workspace.json` at its root.
   restored session already has are adopted instead of opened twice.
 - **New Tab** from a pane inside an opened workspace starts at the
   workspace root; elsewhere it behaves as usual.
-- **Status line**: panes inside an opened workspace show its name.
+- **Status segment**: panes inside an opened workspace show its name in the
+  widget bar's Plugin segments widget.
 
 The plugin is window-only: it needs no daemon side and nothing on remote
 hosts.

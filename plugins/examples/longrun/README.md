@@ -13,9 +13,9 @@ command joins a history of the last 50 slow commands.
   (`ctrl+alt+shift+l` off macOS), that focuses the block or opens it in a
   new tab.
 - **Status segment**: once the focused pane's command has run for a
-  second, the status line shows its program and running time
-  ("cargo · 42s"), ticking once a second until it ends; clicking it opens
-  the block.
+  second, the widget bar's Plugin segments widget shows its program and
+  running time ("cargo · 42s"), ticking once a second until it ends;
+  clicking it opens the block.
 
 Shell integration must be on: the timings come from the shell's prompt
 marks.

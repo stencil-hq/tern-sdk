@@ -1,7 +1,8 @@
 --!strict
 -- longrun, window half: the "Show slow commands" command and its key, and a
--- status line segment with the focused pane's running command and how long
--- it has been running, ticking once a second.
+-- status segment (the widget bar's Plugin segments widget) with the focused
+-- pane's running command and how long it has been running, ticking once a
+-- second.
 
 local common = require("./common")
 

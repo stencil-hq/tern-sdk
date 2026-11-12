@@ -2,7 +2,8 @@
 -- workspaces, window half: opens the tabs a project's
 -- `.tern/workspace.json` describes, from the palette or at launch
 -- (`TERN_WORKSPACE`), starts new tabs at the root of the workspace the
--- focused pane is in, and names that workspace in the status line.
+-- focused pane is in, and names that workspace in a status segment (the
+-- widget bar's Plugin segments widget).
 
 local workspace = require("./workspace")
 
