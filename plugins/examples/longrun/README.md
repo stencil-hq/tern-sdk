@@ -12,6 +12,11 @@ command joins a history of the last 50 slow commands.
 - **Show slow commands**: a palette command, bound to `cmd+alt+shift+l`
   (`ctrl+alt+shift+l` off macOS), that focuses the block or opens it in a
   new tab.
+- **Slow commands widget**: place it in the widget bar (palette › Edit
+  widgets…) to see how many commands run past the threshold on the host
+  ("2 slow"), with their command lines in its tooltip; clicking it opens
+  the block. It renders on the host, so a window on another machine shows
+  the host's commands.
 - **Status segment**: once the focused pane's command has run for a
   second, the widget bar's Plugin segments widget shows its program and
   running time ("cargo · 42s"), ticking once a second until it ends;

@@ -1,0 +1,12 @@
+schema = 1
+id = "vbulletin"
+name = "vBulletin"
+version = "0.1.0"
+description = "A vBulletin 3.8 message board as a block."
+icon = "message"
+host = "host.luau"
+styles = ["vbulletin.css"]
+
+[[blocks]]
+id = "forum"
+title = "vBulletin"

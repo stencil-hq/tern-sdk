@@ -1,8 +1,9 @@
 --!strict
 -- longrun, host half: a `command_finished` hook that toasts when a command
 -- took longer than the threshold and keeps the last 50 such commands in
--- `tern.kv`, and the "Slow Commands" block that lists them beside the
--- commands running right now.
+-- `tern.kv`, the "Slow Commands" block that lists them beside the
+-- commands running right now, and a widget-bar widget counting the commands
+-- running past the threshold on this host, in every window attached to it.
 
 local common = require("./common")
 local ui = tern.ui
@@ -104,6 +105,47 @@ local function schedule()
 	end)
 end
 
+-- The widget: how many commands run past the threshold now, on any pane of
+-- this host. It renders here, where the commands run, so a window on another
+-- machine shows this host's count; `tern.chrome.refresh()` renders it again
+-- (from a hook, or from the timer below when a command crosses the
+-- threshold) and windows hear only a changed view.
+tern.chrome.widget("slow", {
+	name = "Slow commands",
+	description = "Commands running past the threshold on this host",
+	icon = "clock",
+	render = function()
+		local now, limit = tern.now(), threshold()
+		local lines: { string } = {}
+		for _, run in running do
+			if now - run.started >= limit and not common.interactive(run.line) then
+				table.insert(lines, common.clip(run.line, 60))
+			end
+		end
+		if #lines == 0 then
+			return nil
+		end
+		table.sort(lines)
+		return {
+			text = `{#lines} slow`,
+			tone = "accent",
+			title = table.concat(lines, "\n"),
+			command = "plugin.longrun.show",
+		}
+	end,
+})
+
+-- Renders the widget again when the command `run` of `pane` reaches the
+-- threshold, if it still runs then: from a timer, no `cx` needed.
+local function watch(pane: number, run: Run)
+	local left = math.max(0, threshold() - (tern.now() - run.started))
+	tern.timer(left, function()
+		if running[pane] == run then
+			tern.chrome.refresh()
+		end
+	end)
+end
+
 local function remember(record: Record)
 	table.insert(slow, 1, record)
 	while #slow > KEEP do
@@ -113,7 +155,9 @@ local function remember(record: Record)
 end
 
 tern.on("command_started", function(ev: CommandStartedEvent, _cx: EffectCx)
-	running[ev.pane] = { line = ev.line, cwd = ev.cwd, started = tern.now() }
+	local run = { line = ev.line, cwd = ev.cwd, started = tern.now() }
+	running[ev.pane] = run
+	watch(ev.pane, run)
 	schedule()
 end)
 
@@ -134,12 +178,14 @@ tern.on("command_finished", function(ev: CommandFinishedEvent, cx: EffectCx)
 		end
 	end
 	refresh()
+	tern.chrome.refresh()
 	schedule()
 end)
 
 tern.on("pane_exited", function(ev: PaneExitedEvent, _cx: EffectCx)
 	running[ev.pane] = nil
 	refresh()
+	tern.chrome.refresh()
 	schedule()
 end)
 
@@ -260,6 +306,11 @@ local function nudge(delta: number)
 	local value = math.max(STEP_MS, threshold() + delta)
 	tern.kv.set("threshold_ms", value)
 	refresh()
+	-- The widget counts against the new threshold, now and as runs reach it.
+	for pane, run in running do
+		watch(pane, run)
+	end
+	tern.chrome.refresh()
 end
 
 tern.block.define("slow", {

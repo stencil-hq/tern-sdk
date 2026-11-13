@@ -1159,10 +1159,10 @@ export type StatusSegment = {
 	command: string?,
 }
 
---- Window only: how a widget draws: its text alone, or a bar, ring or sparkline before it.
+--- How a widget draws: its text alone, or a bar, ring or sparkline before it.
 export type WidgetStyle = "text" | "bar" | "ring" | "graph"
 
---- Window only: a widget a plugin offers the widget bar (`tern.chrome.widget`).
+--- A widget a plugin offers the widget bar (`tern.chrome.widget`), from either half.
 export type WidgetSpec = {
 	--- Its name in the bar's editor.
 	name: string,
@@ -1172,12 +1172,13 @@ export type WidgetSpec = {
 	icon: string?,
 	--- The styles the user may pick, the first the default; default `{ "text" }`. Raises on an unknown word.
 	styles: { WidgetStyle }?,
-	--- What it shows for the focused pane (nil when no pane is focused); nil shows nothing. A pure formatter:
-	--- 4 ms, cached per input like the other chrome formatters.
+	--- What it shows; nil shows nothing. A pure formatter: 4 ms. In a window half it gets the focused pane (nil
+	--- when no pane is focused) and is cached per input like the other chrome formatters; in the host half it
+	--- gets nil and runs when the widget is registered and at each `tern.chrome.refresh`.
 	render: (pane: StatusPaneInfo?) -> WidgetView?,
 }
 
---- Window only: what a widget's `render` shows. A field of the wrong type fails the render.
+--- What a widget's `render` shows. A field of the wrong type fails the render.
 export type WidgetView = {
 	--- Its text (may be empty).
 	text: string,
@@ -2332,8 +2333,9 @@ declare tern: {
 		link: (fn: (link: LinkRequest, cx: WindowCx) -> RouteDecision?) -> (),
 	},
 
-	--- Window only: pure formatters for window chrome, cached per input (cleared on reload, a registration or
-	--- `refresh`). The chrome redraws on session changes and pane output; `refresh` redraws it for anything else.
+	--- Pure formatters for window chrome. In the window half they are cached per input (cleared on reload, a
+	--- registration or `refresh`), and the chrome redraws on session changes and pane output; `refresh` redraws it
+	--- for anything else. The host half has `widget` and `refresh` alone: its widgets render on the host.
 	chrome: {
 		--- Window only: a tab's title; nil keeps the default.
 		tab_title: (fn: (tab: TabInfo) -> string?) -> (),
@@ -2342,18 +2344,24 @@ declare tern: {
 		--- Window only: segments for the focused pane, shown in the widget bar's "Plugin segments" widget; nil
 		--- adds none.
 		status: (fn: (pane: StatusPaneInfo) -> { StatusSegment }?) -> (),
-		--- Window only: offers widget `id` (`^[a-z][a-z0-9-]{0,31}$`) to the widget bar, where the user places it
-		--- (palette › Edit widgets…) as `<plugin>/<id>`. Registering an id again replaces it in place; nil takes it
-		--- away. Raises on a bad id, a missing name or render, an unknown icon or style.
+		--- Offers widget `id` (`^[a-z][a-z0-9-]{0,31}$`) to the widget bar, where the user places it (palette › Edit
+		--- widgets…) as `<plugin>/<id>`. Registering an id again replaces it in place; nil takes it away. Raises on a
+		--- bad id, a missing name or render, an unknown icon or style. In the host half, `render` runs on the host
+		--- (the session daemon) with no pane, when the widget is registered and at each `tern.chrome.refresh`; what
+		--- it returns reaches every window attached to that host, on this machine or another, so a widget can show
+		--- state only the host has. A window half's widget of the same id wins in its window; with several hosts
+		--- offering it, the focused pane's host's shows.
 		widget: (id: string, spec: WidgetSpec?) -> (),
 		--- Window only: the icon tabs, pane rows and parked cards show for `program`: a program key (`codex`, `vim`,
 		--- `shell`; the icons' `data-program`) or a command name (`nvim`, `npm`; `TabInfo.program`). `icon` is a Tern
 		--- icon name (`provider-openai`, `provider:openai`, `sparkle`); nil takes this plugin's choice back. Wins over
 		--- the `program_icons` setting; the first plugin in id order wins a program. Raises on an unknown icon.
 		program_icon: (program: string, icon: string?) -> (),
-		--- Window only: drops this window's cached formatter results and redraws its tabs, widgets and title on the
-		--- next frame, so answers that depend on more than their input (a clock, a file, a process result) show.
-		--- Call it from a timer, event or command, not from a formatter (that raises an error).
+		--- In a window half, drops this window's cached formatter results and redraws its tabs, widgets and title on
+		--- the next frame, so answers that depend on more than their input (a clock, a file, a process result) show.
+		--- In the host half, renders this plugin's host widgets again once the current call returns and sends every
+		--- attached window those that changed. Call it from a timer, event, process or fetch callback or command,
+		--- not from a formatter or `render` (that raises an error).
 		refresh: () -> (),
 	},
 
