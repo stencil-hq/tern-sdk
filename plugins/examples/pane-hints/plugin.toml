@@ -1,0 +1,6 @@
+schema = 1
+id = "pane-hints"
+name = "Pane Hints"
+version = "0.2.0"
+description = "Show large numbers over panes and select one by number."
+window = "window.luau"
