@@ -2149,6 +2149,9 @@ declare tern: {
 		decode: (text: string) -> string,
 	},
 
+	--- SHA-256 of `data`'s bytes as 64 lowercase hex digits.
+	sha256: (data: string) -> string,
+
 	--- Monotonic milliseconds (fractional).
 	now: () -> number,
 
