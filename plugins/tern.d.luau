@@ -517,6 +517,28 @@ export type SpawnSpec = {
 	env: { [string]: string },
 }
 
+--- Host only: a chat session a pane is about to open again (after a restart, or in a fork), for the `reopen` hook. Tern
+--- runs or types `command`, then the flag (`--resume`, `--restore`, `--fork`) and the session.
+export type ReopenEvent = {
+	--- The pane that ran the chat: the pane a restart starts again, or the pane a fork copies.
+	pane: number,
+	--- Where it opens.
+	cwd: string,
+	--- The pane's shell (`/bin/zsh`), whose command line the result goes into.
+	shell: string,
+	--- `omp`, or `acp` for a `tern acp` chat.
+	agent: "omp" | "acp",
+	--- An omp's session file, or a `tern acp` chat's `<agent>:<session>`.
+	session: string,
+	--- `resume` or `restore` after a restart, `fork` in a fork.
+	how: "resume" | "restore" | "fork",
+	--- What runs before the flag: `omp` typed at a shell's prompt, an agent pane's own command, or `tern acp`; an
+	--- earlier plugin's result.
+	command: string,
+	--- The command line the pane's shell was running (`sandbox -k omp`), when known.
+	line: string?,
+}
+
 --- Native pane kinds; agent and plugin blocks are programs with terminal surfaces.
 export type PaneKind = "terminal" | "agent" | "plugin" | "browser" | "file" | "git"
 	| "database" | "notebook" | "board" | "canvas" | "procs" | "screen" | "profile" | "carly"
@@ -2305,13 +2327,15 @@ declare tern: {
 	--- Subscribes `fn` to lifecycle event `name`; annotate its parameters with the payload types.
 	--- Both: `unload(cx)` before a reload replaces the plugin or it is turned off (stop the processes it supervises),
 	--- and `process_exit(ev: ProcessExitEvent, cx)`.
-	--- Host: `spawn(spec: SpawnSpec) -> SpawnSpec?` (sync filter) and `(ev, cx: EffectCx)` for `command_started`,
+	--- Host: `spawn(spec: SpawnSpec) -> SpawnSpec?` and `reopen(ev: ReopenEvent) -> string?` (sync filters; a string
+	--- replaces `ev.command`) and `(ev, cx: EffectCx)` for `command_started`,
 	--- `command_finished`, `cwd`, `title`, `pane_exited`. Window: `window_start(cx: WindowCx)` and `(ev, cx: WindowCx)`
 	--- for `focus`, `pane_created`, `pane_closed`, `tab_created`, `tab_closed`, `command_started`, `command_finished`, `cwd`,
 	--- `title`, `agent_finished`, `agent_state` (AgentStateEvent), `float_moved` (FloatMovedEvent), `session_ended`
 	--- (SessionEndedEvent), `budget` (BudgetEvent) and `canvas_action(ev: CanvasAction, cx) -> boolean?` (truthy
 	--- consumes the owner's click).
-	--- `window_start` runs once per plugin per window. The `spawn` wait (50 ms) counts from when the request is queued.
+	--- `window_start` runs once per plugin per window. The `spawn` and `reopen` waits (50 ms) count from when the
+	--- request is queued.
 	on: (name: string, fn: (...any) -> ...any) -> (),
 
 	--- Window only: adds a palette command, also bindable as action `plugin.<plugin>.<id>`.

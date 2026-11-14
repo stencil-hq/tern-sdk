@@ -527,6 +527,10 @@ pub struct Decor {
 	/// An effect.
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub fx:   Option<super::types::Fx>,
+	/// The id of an image blob the range stands for (an attachment drawn as
+	/// a token): copying the range copies the image.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub blob: Option<String>,
 }
 
 /// A shimmer's sweep colors, as span tokens.

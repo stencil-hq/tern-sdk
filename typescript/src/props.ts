@@ -1167,6 +1167,8 @@ export interface Decor {
    readonly to: number;
    readonly s: SpanToken;
    readonly fx?: SpanFx;
+   /** The id of an image blob the range stands for (an attachment drawn as a token): copying the range copies the image. */
+   readonly blob?: string;
 }
 
 /** A button attached to an `input` or `editor`. */

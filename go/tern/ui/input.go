@@ -76,6 +76,9 @@ type Decor struct {
 	To   int    `json:"to"`
 	S    string `json:"s"`
 	Fx   Fx     `json:"fx,omitzero"`
+	// Blob is the id of an image blob the range stands for (an attachment
+	// drawn as a token): copying the range copies the image.
+	Blob string `json:"blob,omitzero"`
 }
 
 // Editor is a multi-line text field with a caret (kind editor).

@@ -601,8 +601,11 @@ class ChartCol(TypedDict):
     label: str
 
 
-Decor = TypedDict("Decor", {"from": Required[int], "to": Required[int], "s": Required[str], "fx": Fx}, total=False)
-"""A styled UTF-16 range of an editor's or input's text."""
+Decor = TypedDict(
+    "Decor", {"from": Required[int], "to": Required[int], "s": Required[str], "fx": Fx, "blob": str}, total=False
+)
+"""A styled UTF-16 range of an editor's or input's text; ``blob`` names an image blob the range stands for
+(an attachment drawn as a token), which copying the range copies."""
 
 
 class AddonButton(TypedDict, total=False):
