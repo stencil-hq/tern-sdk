@@ -273,6 +273,7 @@ export class Session implements AsyncIterable<SessionInput>, AsyncDisposable {
             ...(surface.listen ? {} : { listen: false }),
             ...(options.adopt ? { adopt: true } : {}),
             ...(options.closable ? { closable: true } : {}),
+            ...(options.chat ? { chat: true } : {}),
             ...(options.font === undefined ? {} : { font: options.font }),
          },
       });

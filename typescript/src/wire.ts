@@ -30,6 +30,7 @@ export const KINDS = [
    'math',
    'image',
    'media',
+   'web',
    'kv',
    'stats',
    'table',
@@ -215,6 +216,7 @@ export interface OpenMessage {
    readonly listen?: boolean;
    readonly adopt?: boolean;
    readonly closable?: boolean;
+   readonly chat?: boolean;
    /** The base face of the surface's regions; Tern's default is `"mono"`. */
    readonly font?: SurfaceFont;
 }

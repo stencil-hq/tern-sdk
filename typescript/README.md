@@ -190,6 +190,9 @@ second session cannot acquire the same input.
 `open({closable: true})` tells Tern closing the pane loses nothing: while the
 surface is open, the pane closes without the "a program is running" prompt.
 
+`open({chat: true})` opens a chat session: `main` is its transcript, `dock` its
+composer; Tern draws it in the user's chat style and treats the pane as an agent.
+
 `open({id, adopt: true})` reuses this session's last-sent view (without dock
 or layer) and frame sequence for a closed surface. For an unknown id, the
 first frame deletes `main` before adding the new view.

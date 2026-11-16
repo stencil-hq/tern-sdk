@@ -30,6 +30,8 @@ export interface OpenOptions {
    readonly adopt?: boolean;
    /** `true`: closing the pane loses nothing, so Tern closes it without asking. */
    readonly closable?: boolean;
+   /** `true`: a chat session (`main` a transcript, `dock` its composer), its pane an agent. */
+   readonly chat?: boolean;
    /**
     * The base face: `"sans"` for apps (people text in the UI face, machine
     * strings stay mono), `"mono"` (Tern's default) for terminal-like output.

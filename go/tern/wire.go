@@ -49,6 +49,7 @@ const (
 	KindIcon        = "icon"
 	KindImage       = "image"
 	KindMedia       = "media"
+	KindWeb         = "web"
 	KindList        = "list"
 	KindItem        = "item"
 	KindTabs        = "tabs"
@@ -107,7 +108,7 @@ const (
 var Kinds = []string{
 	KindCol, KindRow, KindCard, KindSection, KindRule, KindSpacer, KindText, KindMd, KindCode,
 	KindDiff, KindAnsi, KindRows, KindMath, KindKV, KindStats, KindTable, KindTree, KindJSON,
-	KindBadge, KindKbd, KindIcon, KindImage, KindMedia, KindList, KindItem, KindTabs, KindPicker,
+	KindBadge, KindKbd, KindIcon, KindImage, KindMedia, KindWeb, KindList, KindItem, KindTabs, KindPicker,
 	KindSpinner, KindShimmer, KindElapsed, KindRate, KindProgress, KindMeter, KindChart, KindEffort,
 	KindEditor, KindInput, KindButton, KindStatus, KindSeg, KindToast, KindOverlay, KindTool,
 	KindAgent, KindChecklist, KindBlock, KindPrefs, KindEl, KindSelect, KindSwitch, KindSlider,
@@ -198,6 +199,7 @@ type OpenMsg struct {
 	Adopt    bool   `json:"adopt,omitempty"`
 	Listen   *bool  `json:"listen,omitempty"`
 	Closable bool   `json:"closable,omitempty"`
+	Chat     bool   `json:"chat,omitempty"`
 	Font     Font   `json:"font,omitempty"`
 }
 

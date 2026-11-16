@@ -186,6 +186,10 @@ frames retain their view and queued ops for retry. Ack-triggered write failures
 are returned by `Next`/`Run`. `Adopt` preserves a previously closed surface's
 last-sent main region and sequence; unknown adopted ids delete `main` first.
 
+`SurfaceOptions{Chat: true}` opens a chat session: `main` is its transcript,
+`dock` its composer; Tern draws it in the user's chat style and treats the
+pane as an agent.
+
 ## Handlers
 
 Set handlers on a node through `ui.Common` (or `tern.Handlers` on a

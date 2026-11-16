@@ -12,7 +12,7 @@ from tern_sdk.session import Session
 
 def test_kinds_keep_terns_order_with_stats_and_button() -> None:
     kinds = list(wire.KINDS)
-    assert len(kinds) == 75
+    assert len(kinds) == 76
     assert kinds[kinds.index("stacktrace") + 1 : kinds.index("stacktrace") + 3] == ["shell", "suggestions"]
     assert kinds[kinds.index("kv") + 1 : kinds.index("kv") + 3] == ["stats", "table"]
     assert kinds[kinds.index("input") + 1 : kinds.index("input") + 3] == ["button", "status"]

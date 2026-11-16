@@ -31,7 +31,7 @@ TERMINAL_FEATURES: Final = (
 
 Kind: TypeAlias = Literal[
     "col", "row", "card", "section", "rule", "spacer", "text", "md", "code", "diff", "ansi",
-    "math", "image", "media", "kv", "stats", "table", "tree", "json", "badge", "kbd", "icon", "spinner",
+    "math", "image", "media", "web", "kv", "stats", "table", "tree", "json", "badge", "kbd", "icon", "spinner",
     "shimmer", "elapsed", "progress", "rate", "list", "item", "tabs", "editor", "input", "button",
     "status", "seg", "overlay", "toast", "rows", "picker", "prefs", "tool", "checklist", "agent",
     "chart", "meter", "block", "effort", "select", "switch", "slider", "field", "otp", "buttons",
@@ -256,10 +256,11 @@ def open_surface(
     listen: bool | None = None,
     adopt: bool | None = None,
     closable: bool | None = None,
+    chat: bool | None = None,
     font: Font | None = None,
 ) -> Outgoing:
     """Opens a surface (`o`). `closable=True` lets Tern close the pane without
-    asking; `font="sans"` sets its regions in the UI face (machine strings stay mono)."""
+    asking; `chat=True` makes it a chat session; `font="sans"` sets its regions in the UI face (machine strings stay mono)."""
     body = _drop_none(
         {
             "id": id,
@@ -269,6 +270,7 @@ def open_surface(
             "listen": listen,
             "adopt": adopt,
             "closable": closable,
+            "chat": chat,
             "font": font,
         }
     )

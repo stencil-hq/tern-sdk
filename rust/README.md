@@ -197,6 +197,8 @@ closed by this session resumes its last sent `main` and frame sequence;
 `dock` and `layer` start empty. An unknown adopted id first deletes `main`.
 `.closable(true)` tells Tern closing the pane loses nothing: while that
 surface is open, the pane closes without the "a program is running" prompt.
+`.chat(true)` opens a chat session: `main` is its transcript, `dock` its
+composer; Tern draws it in the user's chat style and treats the pane as an agent.
 Frame writes commit the sent view, sequence and queued operations only on
 success; an ack-triggered write error reaches `next`/`pump` for handling.
 Close still attempts `x`, mode reset, and tty restoration after a write error.

@@ -221,9 +221,11 @@ for a question. A stacktrace's frame index arrives as `item="3"`.
 - `start(input, output, ...)` runs the handshake on given file descriptors
   or binary streams without the environment checks (tests drive it over
   `os.pipe()`).
-- `session.open(id=None, *, mode="inline", title=None, role=None, listen=True, adopt=None, keep=True, closable=False, font=None)`
+- `session.open(id=None, *, mode="inline", title=None, role=None, listen=True, adopt=None, keep=True, closable=False, chat=False, font=None)`
   opens a surface (`s1`, `s2`, ...). `closable=True` tells Tern closing the
   pane loses nothing, so it closes without the "a program is running" prompt.
+  `chat=True` makes it a chat session (`main` the transcript, `dock` its
+  composer), drawn in the user's chat style, its pane an agent.
   `font="sans"` draws the surface in the UI face (default: the terminal's mono).
 - `surface.render(view)` or `surface.render(main=..., dock=..., layer=...)`
   sends only the difference. A node given for a region is that region's

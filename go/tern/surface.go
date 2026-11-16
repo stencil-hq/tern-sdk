@@ -39,6 +39,9 @@ type SurfaceOptions struct {
 	// Closable opens with closable:true: closing the pane loses nothing,
 	// so Tern closes it without asking.
 	Closable bool
+	// Chat opens with chat:true: the surface is a chat session (main a
+	// transcript, dock its composer) and its pane an agent.
+	Chat bool
 	// Font is the regions' base face: FontSans for apps (machine strings
 	// stay mono), FontMono (the default) for terminal-like output.
 	Font Font
@@ -84,6 +87,7 @@ func (s *Session) Open(opts SurfaceOptions) (*Surface, error) {
 		Role:     opts.Role,
 		Adopt:    opts.Adopt,
 		Closable: opts.Closable,
+		Chat:     opts.Chat,
 		Font:     opts.Font,
 	}
 	if opts.NoListen {

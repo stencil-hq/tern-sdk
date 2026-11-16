@@ -75,6 +75,8 @@ pub mod kind {
 	pub const IMAGE: &str = "image";
 	/// A file Tern loads by path and shows in its media viewer.
 	pub const MEDIA: &str = "media";
+	/// A live web page by address, in an inline web view.
+	pub const WEB: &str = "web";
 	/// A selectable list.
 	pub const LIST: &str = "list";
 	/// One list row.
@@ -182,7 +184,7 @@ pub mod kind {
 	pub const EL: &str = "el";
 
 	/// Every kind of protocol version 1.
-	pub const ALL: [&str; 75] = [
+	pub const ALL: [&str; 76] = [
 		COL,
 		ROW,
 		CARD,
@@ -206,6 +208,7 @@ pub mod kind {
 		ICON,
 		IMAGE,
 		MEDIA,
+		WEB,
 		LIST,
 		ITEM,
 		TABS,
@@ -393,6 +396,9 @@ pub struct Open {
 	/// asking.
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub closable: Option<bool>,
+	/// `true`: the surface is a chat session and its pane an agent.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub chat:     Option<bool>,
 	/// The surface's base face (`mono` when absent).
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub font:     Option<Font>,

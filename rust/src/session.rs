@@ -216,6 +216,9 @@ pub struct SurfaceOptions {
 	/// Closing the pane loses nothing, so Tern closes it without asking
 	/// (default `false`).
 	pub closable: bool,
+	/// A chat session: `main` a transcript, `dock` its composer (default
+	/// `false`).
+	pub chat:     bool,
 	/// The base face (default mono; `Font::Sans` for apps).
 	pub font:     Option<Font>,
 }
@@ -231,6 +234,7 @@ impl Default for SurfaceOptions {
 			adopt:    false,
 			keep:     true,
 			closable: false,
+			chat:     false,
 			font:     None,
 		}
 	}
@@ -297,6 +301,12 @@ impl SurfaceOptions {
 	/// prompt.
 	pub const fn closable(mut self, closable: bool) -> Self {
 		self.closable = closable;
+		self
+	}
+
+	/// Sets whether the surface is a chat session Tern treats as an agent.
+	pub const fn chat(mut self, chat: bool) -> Self {
+		self.chat = chat;
 		self
 	}
 
@@ -727,6 +737,7 @@ impl<M> Session<M> {
 			listen:   (!options.listen).then_some(false),
 			adopt:    options.adopt.then_some(true),
 			closable: options.closable.then_some(true),
+			chat:     options.chat.then_some(true),
 			font:     options.font,
 		}))?;
 		let previous = options
