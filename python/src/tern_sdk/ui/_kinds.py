@@ -411,7 +411,8 @@ def code(
     """A highlighted code block. `folds` are runs of lines drawn as one row until opened; `overview` shows a strip
     of the lines' heat above them that scrolls the block on click or drag.
     `nums` is each line's number, strictly ascending, in place of counting
-    from `start`; a `…` row is drawn where the numbers jump."""
+    from `start`; a `…` row is drawn where the numbers jump, except between two
+    `accent` marks (search hits without context)."""
     own = {
         "text": text, "lang": lang, "path": path, "numbers": numbers, "start": start, "nums": nums, "marks": marks,
         "wrap": wrap, "folds": folds, "overview": overview,

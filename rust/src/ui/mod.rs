@@ -626,7 +626,7 @@ impl<M> Code<M> {
 		start(i64) = "start";
 		/// Each line's number, strictly ascending, in place of counting from
 		/// `start`: a `…` row goes where the numbers jump (search hits,
-		/// excerpts).
+		/// excerpts), except between two `accent` marks (hits without context).
 		nums(Vec<u64>) = "nums";
 		/// Marked lines.
 		marks(Vec<CodeMark>) = "marks";

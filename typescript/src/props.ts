@@ -586,7 +586,7 @@ export interface CodeProps {
    readonly path?: string;
    readonly numbers?: boolean;
    readonly start?: number;
-   /** Each line's number, strictly ascending, in place of counting from `start`; a `…` row where they jump. */
+   /** Each line's number, strictly ascending, in place of counting from `start`; a `…` row where they jump, except between two `accent` marks (search hits without context). */
    readonly nums?: readonly number[];
    readonly marks?: readonly CodeMark[];
    readonly wrap?: boolean;

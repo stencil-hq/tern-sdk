@@ -72,7 +72,8 @@ type Code struct {
 	// Start is the first line's number (default 1).
 	Start *int `json:"start,omitzero"`
 	// Nums is each line's number, strictly ascending, in place of counting
-	// from Start; a … row is drawn where the numbers jump.
+	// from Start; a … row is drawn where the numbers jump, except between two
+	// accent marks (search hits without context).
 	Nums []int `json:"nums,omitzero"`
 	// Marks are marked lines.
 	Marks []CodeMark `json:"marks,omitzero"`
