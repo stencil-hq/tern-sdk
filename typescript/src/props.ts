@@ -2258,6 +2258,41 @@ export interface QuestionsProps {
    readonly submit?: string;
 }
 
+/** A margin comment of a `doc`. */
+export interface DocComment {
+   /** Names the comment in `comment` and `uncomment` events. */
+   readonly id: string;
+   /** The commented text. */
+   readonly quote: string;
+   /** The UTF-16 offset of the quote's first character in the source. */
+   readonly at?: number;
+   readonly note: string;
+}
+
+/** Scrolls a `doc` so heading number `heading` (0-based, all levels) sits at the top. */
+export interface DocJump {
+   readonly heading: number;
+   /** Each new `n` scrolls again. */
+   readonly n: number;
+}
+
+/**
+ * Props of `doc`: a rich Markdown document the user reads, selects, edits in
+ * place and comments on. Edits send `change` with the whole source, comments
+ * `comment` and `uncomment`, entering and leaving editing `editing`.
+ */
+export interface DocProps {
+   /** The Markdown source; one equal to the current source is a no-op (the echo of its own `change`). */
+   readonly text?: string;
+   /** Double-click edits in place; Esc or a press outside leaves. */
+   readonly edit?: boolean;
+   /** A still, non-empty selection shows a Comment bubble. */
+   readonly comment?: boolean;
+   /** The comments drawn in the margin. */
+   readonly comments?: readonly DocComment[];
+   readonly jump?: DocJump;
+}
+
 /** The tags `el` draws. */
 export const EL_TAGS = [
    'div',
@@ -2406,6 +2441,7 @@ export interface KindProps {
    shell: ShellProps;
    suggestions: SuggestionsProps;
    questions: QuestionsProps;
+   doc: DocProps;
    el: ElProps;
 }
 

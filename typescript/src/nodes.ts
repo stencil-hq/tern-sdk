@@ -8,13 +8,16 @@ import type {
    ActionEvent,
    ActivateEvent,
    ChangeEvent,
+   CommentEvent,
    EditEvent,
+   EditingEvent,
    FocusEvent,
    Json,
    JsonObject,
    SelectEvent,
    SendEvent,
    ToggleEvent,
+   UncommentEvent,
    UndoEvent,
 } from './wire.js';
 
@@ -37,6 +40,9 @@ export interface Handlers {
    readonly onSelect?: Handler<SelectEvent>;
    readonly onActivate?: Handler<ActivateEvent>;
    readonly onChange?: Handler<ChangeEvent>;
+   readonly onComment?: Handler<CommentEvent>;
+   readonly onUncomment?: Handler<UncommentEvent>;
+   readonly onEditing?: Handler<EditingEvent>;
    readonly onFocus?: Handler<FocusEvent>;
    readonly onEdit?: Handler<EditEvent>;
    readonly onUndo?: Handler<UndoEvent>;
@@ -237,6 +243,15 @@ function takeHandler(handlers: Mutable<Handlers>, key: string, value: unknown): 
       case 'onChange':
          if (isHandler<ChangeEvent>(value)) handlers.onChange = value;
          return true;
+      case 'onComment':
+         if (isHandler<CommentEvent>(value)) handlers.onComment = value;
+         return true;
+      case 'onUncomment':
+         if (isHandler<UncommentEvent>(value)) handlers.onUncomment = value;
+         return true;
+      case 'onEditing':
+         if (isHandler<EditingEvent>(value)) handlers.onEditing = value;
+         return true;
       case 'onFocus':
          if (isHandler<FocusEvent>(value)) handlers.onFocus = value;
          return true;
@@ -303,6 +318,7 @@ const PLAIN_TEXT: Readonly<Record<string, true>> = {
    math: true,
    editor: true,
    input: true,
+   doc: true,
    badge: true,
    button: true,
    toast: true,

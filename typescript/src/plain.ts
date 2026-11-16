@@ -367,6 +367,7 @@ class Plain {
             return [[...kids, own].filter(Boolean).join(' ')].flatMap(line => line.split('\n'));
          }
          case 'md':
+         case 'doc':
          case 'code':
          case 'math':
             return prop(p, 'text').split('\n');

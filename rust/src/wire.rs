@@ -180,11 +180,14 @@ pub mod kind {
 	pub const SUGGESTIONS: &str = "suggestions";
 	/// A questionnaire answered in steps.
 	pub const QUESTIONS: &str = "questions";
+	/// A rich Markdown document the user reads, selects, edits in place and
+	/// comments on.
+	pub const DOC: &str = "doc";
 	/// A plain HTML element.
 	pub const EL: &str = "el";
 
 	/// Every kind of protocol version 1.
-	pub const ALL: [&str; 76] = [
+	pub const ALL: [&str; 77] = [
 		COL,
 		ROW,
 		CARD,
@@ -260,12 +263,13 @@ pub mod kind {
 		SHELL,
 		SUGGESTIONS,
 		QUESTIONS,
+		DOC,
 		EL,
 	];
 
 	/// The kinds whose `text` prop is primary text, updated with `text` and
 	/// `splice` ops.
-	pub const TEXT_KINDS: [&str; 9] = [TEXT, MD, CODE, ANSI, MATH, EDITOR, INPUT, SHIMMER, EL];
+	pub const TEXT_KINDS: [&str; 10] = [TEXT, MD, CODE, ANSI, MATH, EDITOR, INPUT, SHIMMER, DOC, EL];
 
 	/// Whether `kind` keeps primary text in its `text` prop.
 	pub fn has_text(kind: &str) -> bool {
@@ -1199,7 +1203,8 @@ event_struct!(
 	///
 	/// The new value is a switch's state, a slider's value or range, a
 	/// select's option, a calendar's day, a table's picks, a split's shares,
-	/// a pager's page, a carousel's slide or a question's answer.
+	/// a pager's page, a carousel's slide or a question's answer; a `doc`
+	/// sends its whole new source as `text` instead.
 	Change {
 		/// The surface.
 		sf: Option<String>,
@@ -1208,6 +1213,8 @@ event_struct!(
 		/// The control's value, the `prefs` row's new value or the kind's
 		/// new value.
 		value: Value,
+		/// A `doc`'s whole new Markdown source, after the user's edits.
+		text: Option<String>,
 		/// The control's new state.
 		checked: Option<bool>,
 		/// Whether the user reacted with a `message`'s reaction chip now.
@@ -1218,6 +1225,50 @@ event_struct!(
 		item: Option<String>,
 		/// Form values, inside an `el` form.
 		values: Option<Map<String, Value>>,
+	}
+);
+
+event_struct!(
+	/// `comment`: a new `doc` comment on the selection `quote`, or, with
+	/// `comment`, the edited note of that existing comment.
+	Comment {
+		/// The surface.
+		sf: Option<String>,
+		/// The `doc`.
+		id: String,
+		/// The existing comment whose note was edited.
+		comment: Option<String>,
+		/// A new comment's selected text.
+		quote: Option<String>,
+		/// A new comment's UTF-16 offset of the quote's first character in
+		/// the source.
+		at: Option<usize>,
+		/// The note.
+		note: String,
+	}
+);
+
+event_struct!(
+	/// `uncomment`: a `doc` comment was deleted.
+	Uncomment {
+		/// The surface.
+		sf: Option<String>,
+		/// The `doc`.
+		id: String,
+		/// The comment's id.
+		comment: String,
+	}
+);
+
+event_struct!(
+	/// `editing`: a `doc` started or stopped in-place editing.
+	Editing {
+		/// The surface.
+		sf: Option<String>,
+		/// The `doc`.
+		id: String,
+		/// Whether it is editing now.
+		on: bool,
 	}
 );
 
@@ -1324,6 +1375,12 @@ pub enum Event {
 	Action(Action),
 	/// `change`.
 	Change(Change),
+	/// `comment`.
+	Comment(Comment),
+	/// `uncomment`.
+	Uncomment(Uncomment),
+	/// `editing`.
+	Editing(Editing),
 	/// `focus`.
 	Focus(Focus),
 	/// `edit`.
@@ -1359,6 +1416,9 @@ impl Event {
 			"activate" => typed(map).map_or_else(Self::Unknown, Self::Activate),
 			"action" => typed(map).map_or_else(Self::Unknown, Self::Action),
 			"change" => typed(map).map_or_else(Self::Unknown, Self::Change),
+			"comment" => typed(map).map_or_else(Self::Unknown, Self::Comment),
+			"uncomment" => typed(map).map_or_else(Self::Unknown, Self::Uncomment),
+			"editing" => typed(map).map_or_else(Self::Unknown, Self::Editing),
 			"focus" => typed(map).map_or_else(Self::Unknown, Self::Focus),
 			"edit" => typed(map).map_or_else(Self::Unknown, Self::Edit),
 			"undo" => typed(map).map_or_else(Self::Unknown, Self::Undo),
@@ -1381,6 +1441,9 @@ impl Event {
 			Self::Select(e) | Self::Activate(e) => &e.raw,
 			Self::Action(e) => &e.raw,
 			Self::Change(e) => &e.raw,
+			Self::Comment(e) => &e.raw,
+			Self::Uncomment(e) => &e.raw,
+			Self::Editing(e) => &e.raw,
 			Self::Focus(e) => &e.raw,
 			Self::Edit(e) => &e.raw,
 			Self::Undo(e) => &e.raw,
@@ -1476,6 +1539,37 @@ mod tests {
 			panic!("not a change");
 		};
 		assert_eq!((c.item.as_deref(), c.on), (Some("db"), Some(false)));
+	}
+
+	#[test]
+	fn doc_events_decode() {
+		let Event::Change(c) = decode(json!({"ev": "change", "id": "main.d", "text": "# Hi"})) else {
+			panic!("not a change");
+		};
+		assert_eq!(c.text.as_deref(), Some("# Hi"));
+		let Event::Comment(c) =
+			decode(json!({"ev": "comment", "id": "main.d", "quote": "Hi", "at": 2, "note": "why?"}))
+		else {
+			panic!("not a comment");
+		};
+		assert_eq!(
+			(c.quote.as_deref(), c.at, c.note.as_str(), c.comment),
+			(Some("Hi"), Some(2), "why?", None)
+		);
+		let Event::Comment(c) =
+			decode(json!({"ev": "comment", "id": "main.d", "comment": "c1", "note": "ok"}))
+		else {
+			panic!("not a comment");
+		};
+		assert_eq!((c.comment.as_deref(), c.quote), (Some("c1"), None));
+		assert!(matches!(
+			decode(json!({"ev": "uncomment", "id": "main.d", "comment": "c1"})),
+			Event::Uncomment(u) if u.comment == "c1"
+		));
+		assert!(matches!(
+			decode(json!({"ev": "editing", "id": "main.d", "on": true})),
+			Event::Editing(e) if e.on
+		));
 	}
 
 	#[test]

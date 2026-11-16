@@ -19,7 +19,7 @@ CREDITS: Final = 2
 MAX_BLOB: Final = 16 << 20
 """The largest blob, decoded, that Tern accepts."""
 
-TEXT_KINDS: Final = frozenset(("text", "md", "code", "ansi", "math", "editor", "input", "shimmer", "el"))
+TEXT_KINDS: Final = frozenset(("text", "md", "code", "ansi", "math", "editor", "input", "shimmer", "doc", "el"))
 """Kinds whose `text` prop is primary text, updated with the `text` op."""
 PROGRAM_FEATURES: Final = ("edit", "undo", "send")
 """Features a program may announce in its `hello`."""
@@ -37,7 +37,7 @@ Kind: TypeAlias = Literal[
     "chart", "meter", "block", "effort", "select", "switch", "slider", "field", "otp", "buttons",
     "avatar", "avatars", "breadcrumb", "pager", "empty", "skeleton", "calendar", "date", "menu",
     "menubar", "nav", "split", "scroll", "carousel", "message", "attachment", "trace", "stacktrace",
-    "shell", "suggestions", "questions", "el",
+    "shell", "suggestions", "questions", "doc", "el",
 ]  # fmt: skip
 """A node kind."""
 KINDS: Final[tuple[Kind, ...]] = get_args(Kind)
@@ -613,15 +613,46 @@ class ChangeEvent(Event):
     """An `el` checkbox or radio flipped, a `prefs` row's value or a
     question's answer changed (`item`), or a control's value changed (a
     switch's bool, a slider's number or pair, a table's picks). `on` is a
-    message reaction's new state."""
+    message reaction's new state; `text` a `doc`'s whole new Markdown source
+    after the user's edits."""
 
     id: str | None
     value: Json
+    text: str | None
     checked: bool | None
     on: bool | None
     name: str | None
     item: str | None
     values: dict[str, Json] | None
+
+
+@dataclass(frozen=True, kw_only=True)
+class CommentEvent(Event):
+    """A comment on `doc` `id`: a new one on the selection `quote` (its first
+    character at UTF-16 offset `at` of the source), or, with `comment`, the
+    edited `note` of that existing comment."""
+
+    id: str | None
+    comment: str | None
+    quote: str | None
+    at: int | None
+    note: str | None
+
+
+@dataclass(frozen=True, kw_only=True)
+class UncommentEvent(Event):
+    """Comment `comment` of `doc` `id` was deleted."""
+
+    id: str | None
+    comment: str | None
+
+
+@dataclass(frozen=True, kw_only=True)
+class EditingEvent(Event):
+    """`doc` `id` started (`on`) or stopped in-place editing."""
+
+    id: str | None
+    on: bool | None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -725,12 +756,26 @@ def decode_event(raw: dict[str, Json]) -> Event:
                 **base,
                 id=_str(raw, "id"),
                 value=raw.get("value"),
+                text=_str(raw, "text"),
                 checked=_bool(raw, "checked"),
                 on=_bool(raw, "on"),
                 name=_str(raw, "name"),
                 item=_str(raw, "item"),
                 values=_obj(raw, "values"),
             )
+        case "comment":
+            return CommentEvent(
+                **base,
+                id=_str(raw, "id"),
+                comment=_str(raw, "comment"),
+                quote=_str(raw, "quote"),
+                at=_int(raw, "at"),
+                note=_str(raw, "note"),
+            )
+        case "uncomment":
+            return UncommentEvent(**base, id=_str(raw, "id"), comment=_str(raw, "comment"))
+        case "editing":
+            return EditingEvent(**base, id=_str(raw, "id"), on=_bool(raw, "on"))
         case "focus":
             return FocusEvent(**base, id=_str(raw, "id"))
         case "edit":

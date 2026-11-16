@@ -284,15 +284,43 @@ type Action struct {
 // carousel), a string (a select, a calendar) or a list (a range, a split's
 // shares, a table's picks), as decoded by encoding/json. On is a message
 // reaction's new state; Item is the question a questionnaire's answer is for.
+// A doc sends its whole new Markdown source, after the user's edits, as Text.
 type Change struct {
 	EventBase
 	ID      string `json:"id"`
 	Value   any    `json:"value"`
+	Text    string `json:"text,omitempty"`
 	Checked bool   `json:"checked"`
 	On      bool   `json:"on"`
 	Name    string `json:"name,omitempty"`
 	Item    string `json:"item,omitempty"`
 	Values  Values `json:"values,omitempty"`
+}
+
+// Comment reports a doc comment: a new one on the selection Quote (its
+// first character at UTF-16 offset At of the source), or, when Comment is
+// set, the edited Note of that existing comment.
+type Comment struct {
+	EventBase
+	ID      string `json:"id"`
+	Comment string `json:"comment,omitempty"`
+	Quote   string `json:"quote,omitempty"`
+	At      *int   `json:"at,omitempty"`
+	Note    string `json:"note"`
+}
+
+// Uncomment reports that comment Comment of doc ID was deleted.
+type Uncomment struct {
+	EventBase
+	ID      string `json:"id"`
+	Comment string `json:"comment"`
+}
+
+// Editing reports that doc ID started (On) or stopped in-place editing.
+type Editing struct {
+	EventBase
+	ID string `json:"id"`
+	On bool   `json:"on"`
 }
 
 // Focus asks the program to move its focus to field ID.
@@ -364,6 +392,15 @@ func (e *Action) Target() string { return e.ID }
 func (e *Change) Target() string { return e.ID }
 
 // Target is the node the event is about.
+func (e *Comment) Target() string { return e.ID }
+
+// Target is the node the event is about.
+func (e *Uncomment) Target() string { return e.ID }
+
+// Target is the node the event is about.
+func (e *Editing) Target() string { return e.ID }
+
+// Target is the node the event is about.
 func (e *Focus) Target() string { return e.ID }
 
 // Target is the node the event is about.
@@ -406,6 +443,12 @@ func DecodeEvent(body []byte) (Event, bool) {
 		ev = &Action{}
 	case "change":
 		ev = &Change{}
+	case "comment":
+		ev = &Comment{}
+	case "uncomment":
+		ev = &Uncomment{}
+	case "editing":
+		ev = &Editing{}
 	case "focus":
 		ev = &Focus{}
 	case "edit":

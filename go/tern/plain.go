@@ -270,7 +270,7 @@ func (p plainer) node(t *tree) []string {
 		return splitLines(richText(pr))
 	case KindShimmer, KindSeg:
 		return splitLines(richText(pr))
-	case KindMd, KindCode, KindMath:
+	case KindMd, KindDoc, KindCode, KindMath:
 		return splitLines(str(pr, "text"))
 	case KindEditor, KindInput:
 		text := str(pr, "text")

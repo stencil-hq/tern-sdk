@@ -102,6 +102,7 @@ const (
 	KindShell       = "shell"
 	KindSuggestions = "suggestions"
 	KindQuestions   = "questions"
+	KindDoc         = "doc"
 )
 
 // Kinds lists every node kind of the TSP vocabulary.
@@ -115,17 +116,19 @@ var Kinds = []string{
 	KindField, KindOtp, KindButtons, KindAvatar, KindAvatars, KindBreadcrumb, KindPager, KindEmpty,
 	KindSkeleton, KindCalendar, KindDate, KindMenu, KindMenubar, KindNav, KindSplit, KindScroll,
 	KindCarousel, KindMessage, KindAttachment, KindTrace, KindStacktrace, KindShell,
-	KindSuggestions, KindQuestions,
+	KindSuggestions, KindQuestions, KindDoc,
 }
 
 // TextKinds lists the kinds whose primary text lives in the text prop and
 // is updated with the text and splice ops.
-var TextKinds = []string{KindText, KindMd, KindCode, KindAnsi, KindMath, KindEditor, KindInput, KindShimmer, KindEl}
+var TextKinds = []string{
+	KindText, KindMd, KindCode, KindAnsi, KindMath, KindEditor, KindInput, KindShimmer, KindDoc, KindEl,
+}
 
 // IsTextKind reports whether kind keeps its primary text in the text prop.
 func IsTextKind(kind string) bool {
 	switch kind {
-	case KindText, KindMd, KindCode, KindAnsi, KindMath, KindEditor, KindInput, KindShimmer, KindEl:
+	case KindText, KindMd, KindCode, KindAnsi, KindMath, KindEditor, KindInput, KindShimmer, KindDoc, KindEl:
 		return true
 	}
 	return false

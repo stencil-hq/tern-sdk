@@ -9,7 +9,7 @@ use serde_json::{Map, Value};
 
 use crate::{
 	Error,
-	wire::{Action, Change, Edit, Event},
+	wire::{Action, Change, Comment, Edit, Event},
 };
 
 /// A routed event turned into a program message (or not, when it doesn't
@@ -477,6 +477,39 @@ where
 	})
 }
 
+/// The handler of a `comment` event.
+pub fn comment_handler<M, F>(f: F) -> Handler<M>
+where
+	F: Fn(&Comment) -> M + Send + Sync + 'static,
+{
+	Arc::new(move |e| match e {
+		Event::Comment(c) => Some(f(c)),
+		_ => None,
+	})
+}
+
+/// The handler of an `uncomment` event, from the comment's id.
+pub fn uncomment_handler<M, F>(f: F) -> Handler<M>
+where
+	F: Fn(&str) -> M + Send + Sync + 'static,
+{
+	Arc::new(move |e| match e {
+		Event::Uncomment(u) => Some(f(&u.comment)),
+		_ => None,
+	})
+}
+
+/// The handler of an `editing` event, from whether editing is on.
+pub fn editing_handler<M, F>(f: F) -> Handler<M>
+where
+	F: Fn(bool) -> M + Send + Sync + 'static,
+{
+	Arc::new(move |e| match e {
+		Event::Editing(ed) => Some(f(ed.on)),
+		_ => None,
+	})
+}
+
 /// The handler of an `edit` event.
 pub fn edit_handler<M, F>(f: F) -> Handler<M>
 where
@@ -765,6 +798,48 @@ macro_rules! event_methods {
 				.push((
 					$crate::ui::node::Trigger::Event("change"),
 					$crate::ui::node::change_handler(f),
+				));
+			self
+		}
+
+		/// Maps `comment` events (a `doc` comment added, or its note edited)
+		/// to a message.
+		pub fn on_comment(
+			mut self,
+			f: impl Fn(&$crate::wire::Comment) -> M + Send + Sync + 'static,
+		) -> Self {
+			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
+				.handlers
+				.push((
+					$crate::ui::node::Trigger::Event("comment"),
+					$crate::ui::node::comment_handler(f),
+				));
+			self
+		}
+
+		/// Maps `uncomment` events (the deleted `doc` comment's id) to a
+		/// message.
+		pub fn on_uncomment(mut self, f: impl Fn(&str) -> M + Send + Sync + 'static) -> Self {
+			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
+				.handlers
+				.push((
+					$crate::ui::node::Trigger::Event("uncomment"),
+					$crate::ui::node::uncomment_handler(f),
+				));
+			self
+		}
+
+		/// Maps `editing` events (whether a `doc` is editing now) to a
+		/// message.
+		pub fn on_editing(mut self, f: impl Fn(bool) -> M + Send + Sync + 'static) -> Self {
+			$crate::ui::node::AsNode::as_node(&mut self)
+				.inner_mut()
+				.handlers
+				.push((
+					$crate::ui::node::Trigger::Event("editing"),
+					$crate::ui::node::editing_handler(f),
 				));
 			self
 		}

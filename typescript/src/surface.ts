@@ -263,6 +263,18 @@ export class Surface implements AsyncDisposable {
             const fn = handlers.onChange;
             return fn && (() => fn(event));
          }
+         case 'comment': {
+            const fn = handlers.onComment;
+            return fn && (() => fn(event));
+         }
+         case 'uncomment': {
+            const fn = handlers.onUncomment;
+            return fn && (() => fn(event));
+         }
+         case 'editing': {
+            const fn = handlers.onEditing;
+            return fn && (() => fn(event));
+         }
          case 'focus': {
             const fn = handlers.onFocus;
             return fn && (() => fn(event));

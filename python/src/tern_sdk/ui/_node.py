@@ -10,13 +10,16 @@ from ..wire import (
     ActionEvent,
     ActivateEvent,
     ChangeEvent,
+    CommentEvent,
     EditEvent,
+    EditingEvent,
     Event,
     FocusEvent,
     Json,
     SelectEvent,
     SendEvent,
     ToggleEvent,
+    UncommentEvent,
     UndoEvent,
 )
 from ._types import Actions, Bounds, Mark, Text, Tone
@@ -62,6 +65,9 @@ class Handlers(TypedDict, total=False):
     on_select: Callable[[SelectEvent], object] | None
     on_activate: Callable[[ActivateEvent], object] | None
     on_change: Callable[[ChangeEvent], object] | None
+    on_comment: Callable[[CommentEvent], object] | None
+    on_uncomment: Callable[[UncommentEvent], object] | None
+    on_editing: Callable[[EditingEvent], object] | None
     on_focus: Callable[[FocusEvent], object] | None
     on_edit: Callable[[EditEvent], object] | None
     on_undo: Callable[[UndoEvent], object] | None
@@ -150,6 +156,9 @@ _EVENT_HANDLERS = (
     ("on_select", "select"),
     ("on_activate", "activate"),
     ("on_change", "change"),
+    ("on_comment", "comment"),
+    ("on_uncomment", "uncomment"),
+    ("on_editing", "editing"),
     ("on_focus", "focus"),
     ("on_edit", "edit"),
     ("on_undo", "undo"),

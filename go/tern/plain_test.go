@@ -84,6 +84,7 @@ func TestPlainSanitizesEveryOutputPath(t *testing.T) {
 		{KindText, map[string]any{"text": dirty}},
 		{KindText, map[string]any{"spans": []any{map[string]any{"t": dirty}}}},
 		{KindMd, map[string]any{"text": dirty}},
+		{KindDoc, map[string]any{"text": dirty}},
 		{KindCode, map[string]any{"text": dirty}},
 		{KindMath, map[string]any{"text": dirty}},
 		{KindEditor, map[string]any{"text": dirty}},
@@ -370,6 +371,8 @@ func TestPlainNewKinds(t *testing.T) {
 		{"questions", n(KindQuestions, map[string]any{"items": []any{map[string]any{"id": "db", "prompt": "Which DB?",
 			"choices": []any{"pg", map[string]any{"value": "my", "label": "MySQL"}}}, map[string]any{"prompt": "no id"}}}),
 			"Which DB?\n  - pg\n  - MySQL\n"},
+		{"doc without its comments", n(KindDoc, map[string]any{"text": "# Plan\nShip it",
+			"comments": []any{map[string]any{"id": "c1", "quote": "Ship", "note": "when?"}}}), "# Plan\nShip it\n"},
 		{"secret input", n(KindInput, map[string]any{"text": "abc", "secret": true, "reveal": true}), "•••\n"},
 		{"cited text", n(KindText, map[string]any{"spans": []any{
 			map[string]any{"t": "Go", "cite": []any{map[string]any{"href": "a"}}},

@@ -1524,6 +1524,14 @@ mod tests {
 	}
 
 	#[test]
+	fn docs_read_as_their_source_without_comments() {
+		let view: View = View::new().main(crate::nodes![
+			ui::doc("# Plan\nShip it").comments(vec![ui::DocComment::new("c1", "Ship", "when?")])
+		]);
+		assert_eq!(plain(view, 40), "# Plan\nShip it\n");
+	}
+
+	#[test]
 	fn headed_statuses_use_parentheses() {
 		for kind in ["card", "section", "overlay"] {
 			assert_eq!(

@@ -91,6 +91,7 @@ export const KINDS = [
    'shell',
    'suggestions',
    'questions',
+   'doc',
    'el',
 ] as const;
 
@@ -107,6 +108,7 @@ export const TEXT_KINDS = [
    'editor',
    'input',
    'shimmer',
+   'doc',
    'el',
 ] as const;
 
@@ -542,18 +544,58 @@ export interface ActionEvent {
  * An `el` checkbox or radio flipped, a `prefs` row changed, or a control
  * took a new `value` (a switch's state, a slider's number or range, a page,
  * a pick, picked ids, a question's answer with the question as `item`);
- * a message reaction flipped (`value` its text, `on` its state).
+ * a message reaction flipped (`value` its text, `on` its state); a `doc`'s
+ * source edited by the user (`text` the whole new Markdown source).
  */
 export interface ChangeEvent {
    readonly ev: 'change';
    readonly sf: string;
    readonly id: string;
    readonly value?: Json;
+   /** A `doc`'s whole new Markdown source. */
+   readonly text?: string;
    readonly checked?: boolean;
    readonly name?: string;
    readonly item?: string;
    readonly on?: boolean;
    readonly values?: FormValues;
+   readonly raw: JsonObject;
+}
+
+/**
+ * A `doc` comment: a new one on the selection `quote` (its first character
+ * at UTF-16 offset `at` of the source), or, with `comment`, the edited note
+ * of that existing comment.
+ */
+export interface CommentEvent {
+   readonly ev: 'comment';
+   readonly sf: string;
+   readonly id: string;
+   /** The id of the existing comment whose note was edited. */
+   readonly comment?: string;
+   /** A new comment's selected text. */
+   readonly quote?: string;
+   /** A new comment's UTF-16 offset of the quote's first character in the source. */
+   readonly at?: number;
+   readonly note: string;
+   readonly raw: JsonObject;
+}
+
+/** A `doc` comment was deleted. */
+export interface UncommentEvent {
+   readonly ev: 'uncomment';
+   readonly sf: string;
+   readonly id: string;
+   readonly comment: string;
+   readonly raw: JsonObject;
+}
+
+/** A `doc` started (`on`) or stopped in-place editing. */
+export interface EditingEvent {
+   readonly ev: 'editing';
+   readonly sf: string;
+   readonly id: string;
+   readonly on: boolean;
    readonly raw: JsonObject;
 }
 
@@ -634,6 +676,9 @@ export type TspEvent =
    | ActivateEvent
    | ActionEvent
    | ChangeEvent
+   | CommentEvent
+   | UncommentEvent
+   | EditingEvent
    | FocusEvent
    | EditEvent
    | UndoEvent
@@ -782,6 +827,7 @@ export function decodeEvent(raw: JsonObject): TspEvent {
             { ev, sf, id, raw },
             {
                value: raw['value'],
+               text: str(raw, 'text'),
                checked: bool(raw, 'checked'),
                name: str(raw, 'name'),
                item: str(raw, 'item'),
@@ -789,6 +835,26 @@ export function decodeEvent(raw: JsonObject): TspEvent {
                values: formValues(raw),
             }
          );
+      }
+      case 'comment': {
+         const note = str(raw, 'note');
+         if (sf === undefined || id === undefined || note === undefined) return unknown();
+         return defined<CommentEvent>(
+            { ev, sf, id, note, raw },
+            { comment: str(raw, 'comment'), quote: str(raw, 'quote'), at: num(raw, 'at') }
+         );
+      }
+      case 'uncomment': {
+         const comment = str(raw, 'comment');
+         return sf !== undefined && id !== undefined && comment !== undefined
+            ? { ev, sf, id, comment, raw }
+            : unknown();
+      }
+      case 'editing': {
+         const on = bool(raw, 'on');
+         return sf !== undefined && id !== undefined && on !== undefined
+            ? { ev, sf, id, on, raw }
+            : unknown();
       }
       case 'focus':
       case 'undo':

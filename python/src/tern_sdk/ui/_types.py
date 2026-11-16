@@ -1104,3 +1104,22 @@ class Question(TypedDict, total=False):
     multi: bool
     other: QuestionOther | bool
     required: bool
+
+
+class DocComment(TypedDict, total=False):
+    """A margin comment of a `doc`; `comment` and `uncomment` events name its
+    `id`, `at` is the UTF-16 offset of the quote's first character in the
+    source."""
+
+    id: Required[str]
+    quote: Required[str]
+    at: int
+    note: Required[str]
+
+
+class DocJump(TypedDict):
+    """Scrolls a `doc` so heading number `heading` (0-based, all levels) sits
+    at the top; each new `n` scrolls again."""
+
+    heading: int
+    n: int

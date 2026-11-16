@@ -80,6 +80,12 @@ type Handlers struct {
 	OnActivate func(*Activate)
 	// OnChange runs when a control or prefs row changes.
 	OnChange func(*Change)
+	// OnComment runs when the user adds a doc comment or edits its note.
+	OnComment func(*Comment)
+	// OnUncomment runs when the user deletes a doc comment.
+	OnUncomment func(*Uncomment)
+	// OnEditing runs when a doc starts or stops in-place editing.
+	OnEditing func(*Editing)
 	// OnFocus runs when a click asks for the keys in the node.
 	OnFocus func(*Focus)
 	// OnEdit runs on native editing edits to the field.
@@ -94,6 +100,7 @@ type Handlers struct {
 func (h *Handlers) empty() bool {
 	return h.OnClick == nil && h.OnDblClick == nil && len(h.OnMenu) == 0 && len(h.OnHold) == 0 && len(h.OnAction) == 0 &&
 		h.OnToggle == nil && h.OnSelect == nil && h.OnActivate == nil && h.OnChange == nil &&
+		h.OnComment == nil && h.OnUncomment == nil && h.OnEditing == nil &&
 		h.OnFocus == nil && h.OnEdit == nil && h.OnUndo == nil && h.OnSend == nil
 }
 
@@ -203,6 +210,12 @@ func (b *bound) route(ev Event) bool {
 		return call(b.OnActivate, e)
 	case *Change:
 		return call(b.OnChange, e)
+	case *Comment:
+		return call(b.OnComment, e)
+	case *Uncomment:
+		return call(b.OnUncomment, e)
+	case *Editing:
+		return call(b.OnEditing, e)
 	case *Focus:
 		return call(b.OnFocus, e)
 	case *Edit:

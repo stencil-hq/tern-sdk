@@ -203,7 +203,8 @@ from_node!(
 	Stacktrace,
 	Shell,
 	Suggestions,
-	Questions
+	Questions,
+	Doc
 );
 
 /// What a slot prop (`card` `head`/`end`, `section` `head`, `overlay`
@@ -348,7 +349,8 @@ slot_from!(
 	Stacktrace,
 	Shell,
 	Suggestions,
-	Questions
+	Questions,
+	Doc
 );
 
 /// Sets slot prop `slot` of `node` from text or a node.
@@ -2947,6 +2949,39 @@ pub fn questions<M>() -> Questions<M> {
 	new("questions")
 }
 
+common_kind!(
+	/// `doc`: a rich Markdown document the user reads, selects, edits in
+	/// place and comments on.
+	///
+	/// The user's edits send `change` with the whole new source as `text`; a
+	/// comment on a selection sends `comment` (`quote`, `at`, `note`), an
+	/// edited note `comment` (`comment`, `note`), a deleted one `uncomment`;
+	/// entering and leaving editing send `editing`.
+	Doc
+);
+
+impl<M> Doc<M> {
+	props! {
+		/// The Markdown source. One equal to the doc's current source is a
+		/// no-op (the echo of its own `change`).
+		text(String) = "text";
+		/// The user may edit: double-click enters editing; Esc or a press
+		/// outside leaves.
+		edit(bool) = "edit";
+		/// A still, non-empty selection shows a Comment bubble.
+		comment(bool) = "comment";
+		/// The comments drawn in the margin.
+		comments(Vec<DocComment>) = "comments";
+		/// Scrolls a heading to the top.
+		jump(DocJump) = "jump";
+	}
+}
+
+/// A rich Markdown document.
+pub fn doc<M>(source: impl Into<String>) -> Doc<M> {
+	new::<M, Doc<M>>("doc").text(source)
+}
+
 /// Appends `value` to the list prop `key`.
 fn push<M>(node: &mut Node<M>, key: &str, value: &impl serde::Serialize) {
 	let Ok(value) = serde_json::to_value(value) else {
@@ -3287,6 +3322,23 @@ mod tests {
 		assert_eq!(node.props()["reactions"], json!([{"text": "👍", "count": 2, "on": true}]));
 		assert_eq!(node.child_nodes()[0].props()["key"], "avatar");
 		assert_eq!(node.child_nodes()[1].kind(), "md");
+	}
+
+	#[test]
+	fn docs_take_comments_and_jumps() {
+		let d = doc::<()>("# A\n\nHi")
+			.edit(true)
+			.comment(true)
+			.comments(vec![DocComment::new("c1", "Hi", "why?").at(5)])
+			.jump(DocJump::new(0, 1));
+		assert_eq!(
+			wire(d),
+			json!({"k": "doc", "p": {
+				"text": "# A\n\nHi", "edit": true, "comment": true,
+				"comments": [{"id": "c1", "quote": "Hi", "at": 5, "note": "why?"}],
+				"jump": {"heading": 0, "n": 1}
+			}})
+		);
 	}
 
 	#[test]

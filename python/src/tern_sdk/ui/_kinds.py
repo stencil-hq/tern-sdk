@@ -56,6 +56,8 @@ from ._types import (
     Crumb,
     Decor,
     DiffMode,
+    DocComment,
+    DocJump,
     EffortLevel,
     ElapsedFormat,
     EmptyVariant,
@@ -1360,6 +1362,27 @@ def questions(
     `<id>.other`."""
     own = {"items": items, "step": step, "answers": answers, "variant": variant, "hint": hint, "submit": submit}
     return make("questions", own, children, common)
+
+
+def doc(
+    text: str = "",
+    *,
+    edit: bool | None = None,
+    comment: bool | None = None,
+    comments: Sequence[DocComment] | None = None,
+    jump: DocJump | None = None,
+    **common: Unpack[Common],
+) -> Node:
+    """A rich Markdown document the user reads, selects, edits in place and
+    comments on. A `text` equal to the doc's current source is a no-op (the
+    echo of its own `change`). With `edit`, a double-click edits in place (Esc
+    or a press outside leaves) and the edits send `change` with the whole new
+    source as `text`; with `comment`, a still selection offers a Comment
+    bubble that sends `comment` (`quote`, `at`, `note`). An edited note sends
+    `comment` (`comment`, `note`), a deleted one `uncomment`, and entering and
+    leaving editing `editing` (`on`)."""
+    own = {"text": text, "edit": edit, "comment": comment, "comments": comments, "jump": jump}
+    return make("doc", own, (), common)
 
 
 def agent(

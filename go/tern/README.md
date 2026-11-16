@@ -212,8 +212,9 @@ ui.Editor{Common: ui.Common{Key: "ed", OnSend: func(e *tern.Send) { … }}}
 - `OnAction` runs on `action` events by `act` (or `act=value` when the
   value is a string; a table's sort, an otp's cell or a questionnaire's
   answers arrive in `Action.Value` as decoded JSON).
-- `OnToggle`, `OnSelect`, `OnActivate`, `OnChange`, `OnFocus`, `OnEdit`,
-  `OnUndo`, `OnSend` run on those events.
+- `OnToggle`, `OnSelect`, `OnActivate`, `OnChange`, `OnComment`,
+  `OnUncomment`, `OnEditing`, `OnFocus`, `OnEdit`, `OnUndo`, `OnSend` run on
+  those events.
 
 An event is routed by its `sf` and `id` to the node with that id in the
 view last rendered (a list's `select`/`activate` name the list). Handlers

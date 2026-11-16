@@ -12,12 +12,12 @@ from tern_sdk.session import Session
 
 def test_kinds_keep_terns_order_with_stats_and_button() -> None:
     kinds = list(wire.KINDS)
-    assert len(kinds) == 76
+    assert len(kinds) == 77
     assert kinds[kinds.index("stacktrace") + 1 : kinds.index("stacktrace") + 3] == ["shell", "suggestions"]
     assert kinds[kinds.index("kv") + 1 : kinds.index("kv") + 3] == ["stats", "table"]
     assert kinds[kinds.index("input") + 1 : kinds.index("input") + 3] == ["button", "status"]
     assert kinds[kinds.index("effort") + 1 : kinds.index("effort") + 3] == ["select", "switch"]
-    assert kinds[-3:] == ["suggestions", "questions", "el"]
+    assert kinds[-3:] == ["questions", "doc", "el"]
     assert "font" in wire.TERMINAL_FEATURES
 
 
@@ -193,3 +193,8 @@ def test_plain_fallbacks_for_new_kinds_and_cells() -> None:
         "  Name",
         "  No runs",
     ]
+
+
+def test_doc_falls_back_to_its_source_without_comments() -> None:
+    d = ui.doc("# Plan\n\nShip it", comments=[{"id": "c1", "quote": "Ship", "at": 8, "note": "when?"}])
+    assert tern_sdk.plain(d).split("\n") == ["# Plan", "", "Ship it"]

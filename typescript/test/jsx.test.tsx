@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { html, node, plain, span, ui, View, type Renderable } from '../src/index.js';
+import { html, node, Node, plain, span, ui, View, type Renderable } from '../src/index.js';
 
 /** A node (or span) as JSON without ids. */
 function json(value: unknown): unknown {
@@ -636,6 +636,25 @@ describe('controls, chat and work kinds', () => {
          { label: 'p50', values: [1, null, { value: 3, title: 'peak' }] },
          { label: 'p95', token: 'warning', values: [2, 4, 6] },
       ]);
+   });
+
+   test('a doc takes its source as children, comments, a jump and doc handlers', () => {
+      const fn = (): void => {};
+      const comments = [{ id: 'c1', quote: 'Ship', at: 8, note: 'when?' }];
+      const tree = (
+         <doc edit comment comments={comments} jump={{ heading: 0, n: 1 }} onComment={fn} onUncomment={fn} onEditing={fn}>
+            {'# Plan\nShip it'}
+         </doc>
+      );
+      expect(json(tree)).toEqual({
+         k: 'doc',
+         p: { edit: true, comment: true, comments, jump: { heading: 0, n: 1 }, text: '# Plan\nShip it' },
+      });
+      if (!(tree instanceof Node)) throw new Error('not a node');
+      const { handlers } = tree;
+      expect([handlers?.onComment, handlers?.onUncomment, handlers?.onEditing]).toEqual([fn, fn, fn]);
+      expect(json(ui.doc('a'))).toEqual({ k: 'doc', p: { text: 'a' } });
+      expect(plain(tree)).toBe('# Plan\nShip it');
    });
 
    test('rule ends and message avatars are slots', () => {

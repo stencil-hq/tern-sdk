@@ -58,6 +58,49 @@ type Md struct {
 // Node builds the md.
 func (m Md) Node() tern.Node { return Build(tern.KindMd, m, nil) }
 
+// Doc is a rich Markdown document the user reads, selects, edits in place
+// and comments on (kind doc). The user's edits send change with the whole
+// new source as Text; a comment on a selection sends comment (Quote, At,
+// Note), an edited note comment (Comment, Note), a deleted one uncomment;
+// entering and leaving editing send editing.
+type Doc struct {
+	Common
+	// Text is the Markdown source. One equal to the doc's current source is
+	// a no-op (the echo of its own change).
+	Text string `json:"text,omitzero"`
+	// Edit lets the user edit: a double-click enters editing, Esc or a press
+	// outside leaves.
+	Edit bool `json:"edit,omitzero"`
+	// Comment shows a Comment bubble on a still, non-empty selection.
+	Comment bool `json:"comment,omitzero"`
+	// Comments are the comments drawn in the margin.
+	Comments []DocComment `json:"comments,omitzero"`
+	// Jump scrolls a heading to the top.
+	Jump *DocJump `json:"jump,omitzero"`
+}
+
+// DocComment is a margin comment of a doc.
+type DocComment struct {
+	// ID names the comment in comment and uncomment events.
+	ID string `json:"id"`
+	// Quote is the commented text.
+	Quote string `json:"quote"`
+	// At is the UTF-16 offset of the quote's first character in the source.
+	At *int `json:"at,omitzero"`
+	// Note is the comment's note.
+	Note string `json:"note"`
+}
+
+// DocJump scrolls a doc so heading number Heading (0-based, all levels)
+// sits at the top; each new N scrolls again.
+type DocJump struct {
+	Heading int `json:"heading"`
+	N       int `json:"n"`
+}
+
+// Node builds the doc.
+func (d Doc) Node() tern.Node { return Build(tern.KindDoc, d, nil) }
+
 // Code is highlighted code (kind code).
 type Code struct {
 	Common

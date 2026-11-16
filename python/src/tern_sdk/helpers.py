@@ -263,7 +263,7 @@ def _render(node: Mapping[str, Json], cols: int) -> list[str]:
             if k == "seg" and kids:
                 seg = " ".join([*(" ".join(_render(c, cols)) for c in kids), seg]).strip()
             return seg.split("\n")
-        case "md" | "code" | "math" | "editor" | "input":
+        case "md" | "doc" | "code" | "math" | "editor" | "input":
             text = _text(p.get("text"))
             if k == "input" and p.get("secret") is True:
                 return ["•" * len(text)]

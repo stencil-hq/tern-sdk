@@ -248,6 +248,21 @@ func TestEventsCarryNewKindsPayloads(t *testing.T) {
 	if e := decode(`{"ev":"change","id":"q","item":"db","value":["pg"]}`).(*Change); e.Item != "db" {
 		t.Errorf("questions change %+v", e)
 	}
+	if e := decode(`{"ev":"change","id":"d","text":"# A"}`).(*Change); e.Text != "# A" || e.Value != nil {
+		t.Errorf("doc change %+v", e)
+	}
+	if e := decode(`{"ev":"comment","id":"d","quote":"A","at":2,"note":"why?"}`).(*Comment); e.Quote != "A" || e.At == nil || *e.At != 2 || e.Note != "why?" || e.Comment != "" {
+		t.Errorf("doc comment %+v", e)
+	}
+	if e := decode(`{"ev":"comment","id":"d","comment":"c1","note":"ok"}`).(*Comment); e.Comment != "c1" || e.At != nil || e.Target() != "d" {
+		t.Errorf("doc note edit %+v", e)
+	}
+	if e := decode(`{"ev":"uncomment","id":"d","comment":"c1"}`).(*Uncomment); e.Comment != "c1" || e.Target() != "d" {
+		t.Errorf("doc uncomment %+v", e)
+	}
+	if e := decode(`{"ev":"editing","id":"d","on":true}`).(*Editing); !e.On || e.Target() != "d" {
+		t.Errorf("doc editing %+v", e)
+	}
 	if e := decode(`{"ev":"select","id":"st","item":3}`).(*Select); e.Item != "3" {
 		t.Errorf("stacktrace select %+v", e)
 	}

@@ -134,7 +134,7 @@ Any builder takes handlers; each receives the typed event:
 | `on_menu={"rerun": fn}` | context-menu picks (adds the names to `actions.menu`) |
 | `on_hold={"copy": fn}` | hold-menu picks on a phone (adds the names to `actions.hold`) |
 | `on_action={"name": fn}` | `action` events with that `act` |
-| `on_toggle`, `on_select`, `on_activate`, `on_change`, `on_focus`, `on_edit`, `on_undo`, `on_send` | those events |
+| `on_toggle`, `on_select`, `on_activate`, `on_change`, `on_comment`, `on_uncomment`, `on_editing`, `on_focus`, `on_edit`, `on_undo`, `on_send` | those events |
 
 Events are routed by `sf` and `id` to the node with that id in the view last
 rendered (for a list's `select`/`activate`, the list). Handlers run inside
@@ -201,6 +201,8 @@ with an older Tern.
   `id` is its content), `ui.stacktrace(frames, *, error, selected)`, `ui.shell(presentation, *, trace, cwd, lang, inspector, replay_epoch, live_origin)`
   (the shared Raw/Pseudo `ShellVizPresentation`; controls send `shell-viz` actions), `ui.suggestions(items)` and
   `ui.questions(items, *other_inputs, step, answers)`.
+- Documents: `ui.doc(text, *, edit, comment, comments, jump)`, Markdown the user edits in place
+  (`change` with the whole source as `text`) and comments on (`comment`, `uncomment`; `editing`).
 - Extended kinds: `ui.rule(label, *, variant, icon, time, end)`, `ui.text(..., cite, sources)` with
   `ui.span(t, cite=...)`, `ui.chart` kinds `line`, `area` and `donut` (`ChartSeries`, `labels`, `unit`,
   `last`, `total`, `caption`), `ui.table(..., sort, multi, picked, variant, bar, hint)` with `sortable`
@@ -211,7 +213,11 @@ line) for selects, menus and traces; `ActionEvent.value` is any JSON (a
 table's `{col, dir}` sort or picked ids, a questionnaire's answers) and
 `ActionEvent.checked` a menu row's new state; `ChangeEvent.value` is a bool,
 number, pair, list or string, with `on` for a message reaction and `item`
-for a question. A stacktrace's frame index arrives as `item="3"`.
+for a question, and `text` (the whole new source) from a `doc`;
+`CommentEvent` has `quote`, `at` and `note` (or `comment` and `note` for an
+edited note), `UncommentEvent.comment` the deleted comment and
+`EditingEvent.on` whether a doc is editing. A stacktrace's frame index
+arrives as `item="3"`.
 
 ### Session
 

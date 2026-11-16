@@ -99,6 +99,20 @@ def test_new_kinds_events_keep_their_payloads() -> None:
     assert isinstance(crumb, wire.SelectEvent) and crumb.item == "src"
 
 
+def test_doc_events_are_typed() -> None:
+    change = wire.decode_event({"ev": "change", "sf": "s1", "id": "d", "text": "# A"})
+    assert isinstance(change, wire.ChangeEvent) and (change.text, change.value) == ("# A", None)
+    added = wire.decode_event({"ev": "comment", "sf": "s1", "id": "d", "quote": "A", "at": 2, "note": "why?"})
+    assert isinstance(added, wire.CommentEvent)
+    assert (added.quote, added.at, added.note, added.comment) == ("A", 2, "why?", None)
+    edited = wire.decode_event({"ev": "comment", "sf": "s1", "id": "d", "comment": "c1", "note": "ok"})
+    assert isinstance(edited, wire.CommentEvent) and (edited.comment, edited.quote) == ("c1", None)
+    gone = wire.decode_event({"ev": "uncomment", "sf": "s1", "id": "d", "comment": "c1"})
+    assert isinstance(gone, wire.UncommentEvent) and gone.comment == "c1"
+    editing = wire.decode_event({"ev": "editing", "sf": "s1", "id": "d", "on": True})
+    assert isinstance(editing, wire.EditingEvent) and editing.on is True
+
+
 def test_split_keeps_body_with_semicolons_and_equals() -> None:
     m = wire.split(b'f;c=k7;m=1;{"a":"x=1;"}')
     assert m is not None and m.params == (("c", "k7"), ("m", "1")) and m.body == b'{"a":"x=1;"}'

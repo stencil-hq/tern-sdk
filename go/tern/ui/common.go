@@ -77,6 +77,12 @@ type Common struct {
 	OnActivate func(*tern.Activate) `json:"-"`
 	// OnChange runs when a control or prefs row changes.
 	OnChange func(*tern.Change) `json:"-"`
+	// OnComment runs when the user adds a doc comment or edits its note.
+	OnComment func(*tern.Comment) `json:"-"`
+	// OnUncomment runs when the user deletes a doc comment.
+	OnUncomment func(*tern.Uncomment) `json:"-"`
+	// OnEditing runs when a doc starts or stops in-place editing.
+	OnEditing func(*tern.Editing) `json:"-"`
 	// OnFocus runs when a click asks for the keys in the node.
 	OnFocus func(*tern.Focus) `json:"-"`
 	// OnEdit runs on native edits to the field.
@@ -90,34 +96,37 @@ type Common struct {
 // CommonWithoutTitle holds common props for Tool and Prefs, whose Title is
 // content rather than a tooltip. The conflicting common prop is not exposed.
 type CommonWithoutTitle struct {
-	Key        string                        `json:"key,omitzero"`
-	Role       string                        `json:"role,omitzero"`
-	Tone       Tone                          `json:"tone,omitzero"`
-	Hidden     bool                          `json:"hidden,omitzero"`
-	Mark       Mark                          `json:"mark,omitzero"`
-	Actions    *Actions                      `json:"actions,omitzero"`
-	Hovercard  Hovercard                     `json:"hovercard,omitzero"`
-	Aria       string                        `json:"aria,omitzero"`
-	Href       string                        `json:"href,omitzero"`
-	Grow       float64                       `json:"grow,omitzero"`
-	Shrink     *float64                      `json:"shrink,omitzero"`
-	Basis      Basis                         `json:"basis,omitzero"`
-	Min        *Bounds                       `json:"min,omitzero"`
-	Max        *Bounds                       `json:"max,omitzero"`
-	Props      map[string]any                `json:"-"`
-	OnClick    func(*tern.Action)            `json:"-"`
-	OnDblClick func(*tern.Action)            `json:"-"`
-	OnMenu     map[string]func(*tern.Action) `json:"-"`
-	OnHold     map[string]func(*tern.Action) `json:"-"`
-	OnAction   map[string]func(*tern.Action) `json:"-"`
-	OnToggle   func(*tern.Toggle)            `json:"-"`
-	OnSelect   func(*tern.Select)            `json:"-"`
-	OnActivate func(*tern.Activate)          `json:"-"`
-	OnChange   func(*tern.Change)            `json:"-"`
-	OnFocus    func(*tern.Focus)             `json:"-"`
-	OnEdit     func(*tern.Edit)              `json:"-"`
-	OnUndo     func(*tern.Undo)              `json:"-"`
-	OnSend     func(*tern.Send)              `json:"-"`
+	Key         string                        `json:"key,omitzero"`
+	Role        string                        `json:"role,omitzero"`
+	Tone        Tone                          `json:"tone,omitzero"`
+	Hidden      bool                          `json:"hidden,omitzero"`
+	Mark        Mark                          `json:"mark,omitzero"`
+	Actions     *Actions                      `json:"actions,omitzero"`
+	Hovercard   Hovercard                     `json:"hovercard,omitzero"`
+	Aria        string                        `json:"aria,omitzero"`
+	Href        string                        `json:"href,omitzero"`
+	Grow        float64                       `json:"grow,omitzero"`
+	Shrink      *float64                      `json:"shrink,omitzero"`
+	Basis       Basis                         `json:"basis,omitzero"`
+	Min         *Bounds                       `json:"min,omitzero"`
+	Max         *Bounds                       `json:"max,omitzero"`
+	Props       map[string]any                `json:"-"`
+	OnClick     func(*tern.Action)            `json:"-"`
+	OnDblClick  func(*tern.Action)            `json:"-"`
+	OnMenu      map[string]func(*tern.Action) `json:"-"`
+	OnHold      map[string]func(*tern.Action) `json:"-"`
+	OnAction    map[string]func(*tern.Action) `json:"-"`
+	OnToggle    func(*tern.Toggle)            `json:"-"`
+	OnSelect    func(*tern.Select)            `json:"-"`
+	OnActivate  func(*tern.Activate)          `json:"-"`
+	OnChange    func(*tern.Change)            `json:"-"`
+	OnComment   func(*tern.Comment)           `json:"-"`
+	OnUncomment func(*tern.Uncomment)         `json:"-"`
+	OnEditing   func(*tern.Editing)           `json:"-"`
+	OnFocus     func(*tern.Focus)             `json:"-"`
+	OnEdit      func(*tern.Edit)              `json:"-"`
+	OnUndo      func(*tern.Undo)              `json:"-"`
+	OnSend      func(*tern.Send)              `json:"-"`
 }
 
 func (c CommonWithoutTitle) common() Common {
@@ -125,40 +134,44 @@ func (c CommonWithoutTitle) common() Common {
 		Props: c.Props, OnClick: c.OnClick, OnDblClick: c.OnDblClick,
 		OnMenu: c.OnMenu, OnHold: c.OnHold, OnAction: c.OnAction, OnToggle: c.OnToggle,
 		OnSelect: c.OnSelect, OnActivate: c.OnActivate, OnChange: c.OnChange,
+		OnComment: c.OnComment, OnUncomment: c.OnUncomment, OnEditing: c.OnEditing,
 		OnFocus: c.OnFocus, OnEdit: c.OnEdit, OnUndo: c.OnUndo, OnSend: c.OnSend,
 	}
 }
 
 // CommonWithoutMax holds common props for List, whose Max is a height cap.
 type CommonWithoutMax struct {
-	Key        string                        `json:"key,omitzero"`
-	Role       string                        `json:"role,omitzero"`
-	Tone       Tone                          `json:"tone,omitzero"`
-	Hidden     bool                          `json:"hidden,omitzero"`
-	Mark       Mark                          `json:"mark,omitzero"`
-	Actions    *Actions                      `json:"actions,omitzero"`
-	Title      string                        `json:"title,omitzero"`
-	Hovercard  Hovercard                     `json:"hovercard,omitzero"`
-	Aria       string                        `json:"aria,omitzero"`
-	Href       string                        `json:"href,omitzero"`
-	Grow       float64                       `json:"grow,omitzero"`
-	Shrink     *float64                      `json:"shrink,omitzero"`
-	Basis      Basis                         `json:"basis,omitzero"`
-	Min        *Bounds                       `json:"min,omitzero"`
-	Props      map[string]any                `json:"-"`
-	OnClick    func(*tern.Action)            `json:"-"`
-	OnDblClick func(*tern.Action)            `json:"-"`
-	OnMenu     map[string]func(*tern.Action) `json:"-"`
-	OnHold     map[string]func(*tern.Action) `json:"-"`
-	OnAction   map[string]func(*tern.Action) `json:"-"`
-	OnToggle   func(*tern.Toggle)            `json:"-"`
-	OnSelect   func(*tern.Select)            `json:"-"`
-	OnActivate func(*tern.Activate)          `json:"-"`
-	OnChange   func(*tern.Change)            `json:"-"`
-	OnFocus    func(*tern.Focus)             `json:"-"`
-	OnEdit     func(*tern.Edit)              `json:"-"`
-	OnUndo     func(*tern.Undo)              `json:"-"`
-	OnSend     func(*tern.Send)              `json:"-"`
+	Key         string                        `json:"key,omitzero"`
+	Role        string                        `json:"role,omitzero"`
+	Tone        Tone                          `json:"tone,omitzero"`
+	Hidden      bool                          `json:"hidden,omitzero"`
+	Mark        Mark                          `json:"mark,omitzero"`
+	Actions     *Actions                      `json:"actions,omitzero"`
+	Title       string                        `json:"title,omitzero"`
+	Hovercard   Hovercard                     `json:"hovercard,omitzero"`
+	Aria        string                        `json:"aria,omitzero"`
+	Href        string                        `json:"href,omitzero"`
+	Grow        float64                       `json:"grow,omitzero"`
+	Shrink      *float64                      `json:"shrink,omitzero"`
+	Basis       Basis                         `json:"basis,omitzero"`
+	Min         *Bounds                       `json:"min,omitzero"`
+	Props       map[string]any                `json:"-"`
+	OnClick     func(*tern.Action)            `json:"-"`
+	OnDblClick  func(*tern.Action)            `json:"-"`
+	OnMenu      map[string]func(*tern.Action) `json:"-"`
+	OnHold      map[string]func(*tern.Action) `json:"-"`
+	OnAction    map[string]func(*tern.Action) `json:"-"`
+	OnToggle    func(*tern.Toggle)            `json:"-"`
+	OnSelect    func(*tern.Select)            `json:"-"`
+	OnActivate  func(*tern.Activate)          `json:"-"`
+	OnChange    func(*tern.Change)            `json:"-"`
+	OnComment   func(*tern.Comment)           `json:"-"`
+	OnUncomment func(*tern.Uncomment)         `json:"-"`
+	OnEditing   func(*tern.Editing)           `json:"-"`
+	OnFocus     func(*tern.Focus)             `json:"-"`
+	OnEdit      func(*tern.Edit)              `json:"-"`
+	OnUndo      func(*tern.Undo)              `json:"-"`
+	OnSend      func(*tern.Send)              `json:"-"`
 }
 
 func (c CommonWithoutMax) common() Common {
@@ -166,6 +179,7 @@ func (c CommonWithoutMax) common() Common {
 		Props: c.Props, OnClick: c.OnClick, OnDblClick: c.OnDblClick,
 		OnMenu: c.OnMenu, OnHold: c.OnHold, OnAction: c.OnAction, OnToggle: c.OnToggle,
 		OnSelect: c.OnSelect, OnActivate: c.OnActivate, OnChange: c.OnChange,
+		OnComment: c.OnComment, OnUncomment: c.OnUncomment, OnEditing: c.OnEditing,
 		OnFocus: c.OnFocus, OnEdit: c.OnEdit, OnUndo: c.OnUndo, OnSend: c.OnSend,
 	}
 }
@@ -173,33 +187,36 @@ func (c CommonWithoutMax) common() Common {
 // PickerCommon holds common props for Picker, whose Title and Actions are
 // the heading and action bar rather than a tooltip and pointer gestures.
 type PickerCommon struct {
-	Key        string                        `json:"key,omitzero"`
-	Role       string                        `json:"role,omitzero"`
-	Tone       Tone                          `json:"tone,omitzero"`
-	Hidden     bool                          `json:"hidden,omitzero"`
-	Mark       Mark                          `json:"mark,omitzero"`
-	Hovercard  Hovercard                     `json:"hovercard,omitzero"`
-	Aria       string                        `json:"aria,omitzero"`
-	Href       string                        `json:"href,omitzero"`
-	Grow       float64                       `json:"grow,omitzero"`
-	Shrink     *float64                      `json:"shrink,omitzero"`
-	Basis      Basis                         `json:"basis,omitzero"`
-	Min        *Bounds                       `json:"min,omitzero"`
-	Max        *Bounds                       `json:"max,omitzero"`
-	Props      map[string]any                `json:"-"`
-	OnClick    func(*tern.Action)            `json:"-"`
-	OnDblClick func(*tern.Action)            `json:"-"`
-	OnMenu     map[string]func(*tern.Action) `json:"-"`
-	OnHold     map[string]func(*tern.Action) `json:"-"`
-	OnAction   map[string]func(*tern.Action) `json:"-"`
-	OnToggle   func(*tern.Toggle)            `json:"-"`
-	OnSelect   func(*tern.Select)            `json:"-"`
-	OnActivate func(*tern.Activate)          `json:"-"`
-	OnChange   func(*tern.Change)            `json:"-"`
-	OnFocus    func(*tern.Focus)             `json:"-"`
-	OnEdit     func(*tern.Edit)              `json:"-"`
-	OnUndo     func(*tern.Undo)              `json:"-"`
-	OnSend     func(*tern.Send)              `json:"-"`
+	Key         string                        `json:"key,omitzero"`
+	Role        string                        `json:"role,omitzero"`
+	Tone        Tone                          `json:"tone,omitzero"`
+	Hidden      bool                          `json:"hidden,omitzero"`
+	Mark        Mark                          `json:"mark,omitzero"`
+	Hovercard   Hovercard                     `json:"hovercard,omitzero"`
+	Aria        string                        `json:"aria,omitzero"`
+	Href        string                        `json:"href,omitzero"`
+	Grow        float64                       `json:"grow,omitzero"`
+	Shrink      *float64                      `json:"shrink,omitzero"`
+	Basis       Basis                         `json:"basis,omitzero"`
+	Min         *Bounds                       `json:"min,omitzero"`
+	Max         *Bounds                       `json:"max,omitzero"`
+	Props       map[string]any                `json:"-"`
+	OnClick     func(*tern.Action)            `json:"-"`
+	OnDblClick  func(*tern.Action)            `json:"-"`
+	OnMenu      map[string]func(*tern.Action) `json:"-"`
+	OnHold      map[string]func(*tern.Action) `json:"-"`
+	OnAction    map[string]func(*tern.Action) `json:"-"`
+	OnToggle    func(*tern.Toggle)            `json:"-"`
+	OnSelect    func(*tern.Select)            `json:"-"`
+	OnActivate  func(*tern.Activate)          `json:"-"`
+	OnChange    func(*tern.Change)            `json:"-"`
+	OnComment   func(*tern.Comment)           `json:"-"`
+	OnUncomment func(*tern.Uncomment)         `json:"-"`
+	OnEditing   func(*tern.Editing)           `json:"-"`
+	OnFocus     func(*tern.Focus)             `json:"-"`
+	OnEdit      func(*tern.Edit)              `json:"-"`
+	OnUndo      func(*tern.Undo)              `json:"-"`
+	OnSend      func(*tern.Send)              `json:"-"`
 }
 
 func (c PickerCommon) common() Common {
@@ -207,6 +224,7 @@ func (c PickerCommon) common() Common {
 		Props: c.Props, OnClick: c.OnClick, OnDblClick: c.OnDblClick,
 		OnMenu: c.OnMenu, OnHold: c.OnHold, OnAction: c.OnAction, OnToggle: c.OnToggle,
 		OnSelect: c.OnSelect, OnActivate: c.OnActivate, OnChange: c.OnChange,
+		OnComment: c.OnComment, OnUncomment: c.OnUncomment, OnEditing: c.OnEditing,
 		OnFocus: c.OnFocus, OnEdit: c.OnEdit, OnUndo: c.OnUndo, OnSend: c.OnSend,
 	}
 }
@@ -216,36 +234,40 @@ func (c PickerCommon) common() Common {
 // common prop and the handlers that set it (OnClick, OnDblClick, OnMenu, OnHold)
 // are not exposed; OnAction handles the buttons.
 type CommonWithoutActions struct {
-	Key        string                        `json:"key,omitzero"`
-	Role       string                        `json:"role,omitzero"`
-	Tone       Tone                          `json:"tone,omitzero"`
-	Hidden     bool                          `json:"hidden,omitzero"`
-	Mark       Mark                          `json:"mark,omitzero"`
-	Title      string                        `json:"title,omitzero"`
-	Hovercard  Hovercard                     `json:"hovercard,omitzero"`
-	Aria       string                        `json:"aria,omitzero"`
-	Href       string                        `json:"href,omitzero"`
-	Grow       float64                       `json:"grow,omitzero"`
-	Shrink     *float64                      `json:"shrink,omitzero"`
-	Basis      Basis                         `json:"basis,omitzero"`
-	Min        *Bounds                       `json:"min,omitzero"`
-	Max        *Bounds                       `json:"max,omitzero"`
-	Props      map[string]any                `json:"-"`
-	OnAction   map[string]func(*tern.Action) `json:"-"`
-	OnToggle   func(*tern.Toggle)            `json:"-"`
-	OnSelect   func(*tern.Select)            `json:"-"`
-	OnActivate func(*tern.Activate)          `json:"-"`
-	OnChange   func(*tern.Change)            `json:"-"`
-	OnFocus    func(*tern.Focus)             `json:"-"`
-	OnEdit     func(*tern.Edit)              `json:"-"`
-	OnUndo     func(*tern.Undo)              `json:"-"`
-	OnSend     func(*tern.Send)              `json:"-"`
+	Key         string                        `json:"key,omitzero"`
+	Role        string                        `json:"role,omitzero"`
+	Tone        Tone                          `json:"tone,omitzero"`
+	Hidden      bool                          `json:"hidden,omitzero"`
+	Mark        Mark                          `json:"mark,omitzero"`
+	Title       string                        `json:"title,omitzero"`
+	Hovercard   Hovercard                     `json:"hovercard,omitzero"`
+	Aria        string                        `json:"aria,omitzero"`
+	Href        string                        `json:"href,omitzero"`
+	Grow        float64                       `json:"grow,omitzero"`
+	Shrink      *float64                      `json:"shrink,omitzero"`
+	Basis       Basis                         `json:"basis,omitzero"`
+	Min         *Bounds                       `json:"min,omitzero"`
+	Max         *Bounds                       `json:"max,omitzero"`
+	Props       map[string]any                `json:"-"`
+	OnAction    map[string]func(*tern.Action) `json:"-"`
+	OnToggle    func(*tern.Toggle)            `json:"-"`
+	OnSelect    func(*tern.Select)            `json:"-"`
+	OnActivate  func(*tern.Activate)          `json:"-"`
+	OnChange    func(*tern.Change)            `json:"-"`
+	OnComment   func(*tern.Comment)           `json:"-"`
+	OnUncomment func(*tern.Uncomment)         `json:"-"`
+	OnEditing   func(*tern.Editing)           `json:"-"`
+	OnFocus     func(*tern.Focus)             `json:"-"`
+	OnEdit      func(*tern.Edit)              `json:"-"`
+	OnUndo      func(*tern.Undo)              `json:"-"`
+	OnSend      func(*tern.Send)              `json:"-"`
 }
 
 func (c CommonWithoutActions) common() Common {
 	return Common{
 		Props: c.Props, OnAction: c.OnAction, OnToggle: c.OnToggle,
 		OnSelect: c.OnSelect, OnActivate: c.OnActivate, OnChange: c.OnChange,
+		OnComment: c.OnComment, OnUncomment: c.OnUncomment, OnEditing: c.OnEditing,
 		OnFocus: c.OnFocus, OnEdit: c.OnEdit, OnUndo: c.OnUndo, OnSend: c.OnSend,
 	}
 }
@@ -269,6 +291,7 @@ func (c Common) handlers() tern.Handlers {
 	return tern.Handlers{
 		OnClick: c.OnClick, OnDblClick: c.OnDblClick, OnMenu: c.OnMenu, OnHold: c.OnHold, OnAction: c.OnAction,
 		OnToggle: c.OnToggle, OnSelect: c.OnSelect, OnActivate: c.OnActivate, OnChange: c.OnChange,
+		OnComment: c.OnComment, OnUncomment: c.OnUncomment, OnEditing: c.OnEditing,
 		OnFocus: c.OnFocus, OnEdit: c.OnEdit, OnUndo: c.OnUndo, OnSend: c.OnSend,
 	}
 }

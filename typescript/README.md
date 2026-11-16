@@ -207,12 +207,15 @@ Nodes carry handlers instead of naming actions by hand:
 | `onMenu={{ rerun: fn }}` | a context-menu pick (names join `actions.menu`) |
 | `onHold={{ copy: fn }}` | a hold-menu pick on a phone (names join `actions.hold`) |
 | `onAction={{ name: fn }}` | `action` events with that `act` |
-| `onToggle`, `onSelect`, `onActivate`, `onChange`, `onFocus`, `onEdit`, `onUndo`, `onSend` | those events |
+| `onToggle`, `onSelect`, `onActivate`, `onChange`, `onComment`, `onUncomment`, `onEditing`, `onFocus`, `onEdit`, `onUndo`, `onSend` | those events |
 
 `toggle` carries `collapsed` (a fold) or `open` (a menu, a select, a trace
 step, with the menu or step as `item`). `action` and `change` carry the
 kind's `value` as JSON: a string, a number, a pair, ids or an object of
-answers; a menu's check rows add `checked`, a message reaction `on`.
+answers; a menu's check rows add `checked`, a message reaction `on`. A
+`doc`'s `change` carries its whole new source as `text`; `comment`
+carries `quote`, `at` and `note` (or `comment` and `note` for an edited
+note), `uncomment` the `comment` id and `editing` its `on` state.
 
 Events route by `sf` and `id` to the node with that id in the view last
 rendered (a list's `select`/`activate` go to the list). Handlers run before

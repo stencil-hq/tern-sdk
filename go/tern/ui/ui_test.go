@@ -484,6 +484,10 @@ func TestWorkKinds(t *testing.T) {
 			Other: &ui.Other{}}}, Answers: map[string]any{"db": "pg"}, Hint: new("")},
 			`{"answers":{"db":"pg"},"hint":"","items":[{"choices":[{"label":"Postgres","value":"pg"}],"id":"db",` +
 				`"other":{},"prompt":"Which DB?"}]}`},
+		{ui.Doc{Text: "# A", Edit: true, Comment: true, Comments: []ui.DocComment{{ID: "c1", Quote: "A", At: new(2), Note: "why?"}},
+			Jump: &ui.DocJump{Heading: 0, N: 1}},
+			`{"comment":true,"comments":[{"at":2,"id":"c1","note":"why?","quote":"A"}],"edit":true,` +
+				`"jump":{"heading":0,"n":1},"text":"# A"}`},
 		{ui.Tool{Status: ui.Asking, Confirm: ui.ConfirmScopes, Approved: ui.ApprovedSession,
 			Ask: &ui.ToolAsk{Always: ui.NoAlways, Scopes: []ui.AskScope{{ID: "once"}}, Scope: "once"}},
 			`{"approved":"session","ask":{"always":false,"scope":"once","scopes":[{"id":"once"}]},"confirm":"scopes","status":"ask"}`},

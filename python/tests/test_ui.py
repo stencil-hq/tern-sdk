@@ -51,6 +51,35 @@ def test_action_and_event_handlers_route_by_event() -> None:
     assert seen == ["go", "edit"]
 
 
+def test_doc_props_and_handlers() -> None:
+    seen: list[str] = []
+    n = ui.doc(
+        "# A",
+        edit=True,
+        comment=True,
+        comments=[{"id": "c1", "quote": "A", "at": 2, "note": "why?"}],
+        jump={"heading": 0, "n": 1},
+        on_comment=lambda e: seen.append("comment"),
+        on_uncomment=lambda e: seen.append("uncomment"),
+        on_editing=lambda e: seen.append("editing"),
+    )
+    assert n.to_json() == {
+        "k": "doc",
+        "p": {
+            "text": "# A",
+            "edit": True,
+            "comment": True,
+            "comments": [{"id": "c1", "quote": "A", "at": 2, "note": "why?"}],
+            "jump": {"heading": 0, "n": 1},
+        },
+    }
+    for ev in ("comment", "uncomment", "editing", "change"):
+        fn = route(n.handlers, decode_event({"ev": ev, "id": "d"}))
+        if fn is not None:
+            fn(None)
+    assert seen == ["comment", "uncomment", "editing"]
+
+
 def test_snake_case_keywords_map_to_wire_names() -> None:
     assert ui.editor("a", max_lines=4).props == {"text": "a", "maxLines": 4}
     assert ui.tool(target_kind="path", title="Edit").props == {"title": "Edit", "targetKind": "path"}

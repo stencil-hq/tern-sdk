@@ -2483,3 +2483,47 @@ impl From<Vec<String>> for QuestionAnswer {
 		Self::Many(values)
 	}
 }
+
+/// A margin comment of a `doc` node.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
+pub struct DocComment {
+	/// Names the comment in `comment` and `uncomment` events.
+	pub id:    String,
+	/// The commented text.
+	pub quote: String,
+	/// The UTF-16 offset of the quote's first character in the source.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub at:    Option<usize>,
+	/// The note.
+	pub note:  String,
+}
+
+impl DocComment {
+	/// Comment `id` on `quote` reading `note`.
+	pub fn new(id: impl Into<String>, quote: impl Into<String>, note: impl Into<String>) -> Self {
+		Self { id: id.into(), quote: quote.into(), at: None, note: note.into() }
+	}
+
+	/// Sets the UTF-16 offset of the quote's first character in the source.
+	pub const fn at(mut self, at: usize) -> Self {
+		self.at = Some(at);
+		self
+	}
+}
+
+/// Where a `doc` scrolls: heading number `heading` (0-based, all levels) at
+/// the top, again for each new `n`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
+pub struct DocJump {
+	/// The heading's number among all headings, from 0.
+	pub heading: u32,
+	/// Scrolls again each time it changes.
+	pub n:       u64,
+}
+
+impl DocJump {
+	/// Scrolls to heading `heading`; `n` must differ from the last jump's.
+	pub const fn new(heading: u32, n: u64) -> Self {
+		Self { heading, n }
+	}
+}

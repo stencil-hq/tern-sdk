@@ -65,6 +65,7 @@ export type PlainTextKind =
    | 'math'
    | 'editor'
    | 'input'
+   | 'doc'
    | 'badge'
    | 'button'
    | 'toast';
@@ -190,6 +191,7 @@ export const ui: { readonly [K in BuildKind]: Builder<K> } = {
    shell: builder('shell'),
    suggestions: builder('suggestions'),
    questions: builder('questions'),
+   doc: builder('doc'),
    el: builder('el'),
 };
 
