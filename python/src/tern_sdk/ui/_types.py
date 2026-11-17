@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 
 Tone: TypeAlias = Literal["neutral", "accent", "info", "success", "warning", "error", "pending", "muted", "user"]
 """The semantic color of a node's chrome."""
+Transition: TypeAlias = Literal["layout"]
+"""How a node transitions its descendants between renders (`layout`: ones with a `motion_key` glide)."""
 Mark: TypeAlias = Literal["pick", "drop"]
 """A transient selection drawn over a node."""
 Status: TypeAlias = Literal["pending", "running", "done", "error", "cancelled"]

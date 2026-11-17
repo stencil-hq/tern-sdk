@@ -451,7 +451,16 @@ export interface CommonProps {
    readonly basis?: number | 'content';
    readonly min?: Bounds;
    readonly max?: Bounds;
+   /** `layout` makes the node a layout-transition container: descendants with a `motionKey` glide to their new boxes. */
+   readonly transition?: Transition;
+   /** The `transition`'s duration in ms (default 200, at most 1000; 0 snaps). */
+   readonly transitionMs?: number;
+   /** Identity within the nearest `transition` container, kept across parents (unlike `key`), so the node glides there. */
+   readonly motionKey?: string;
 }
+
+/** How a node transitions its descendants between renders. */
+export type Transition = 'layout' | (string & {});
 
 /** Space between a stack's children. */
 export type Gap = 'none' | 'xs' | 'sm' | 'md' | 'lg' | (string & {});

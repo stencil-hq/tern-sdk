@@ -605,6 +605,28 @@ macro_rules! base_methods {
 			self
 		}
 
+		/// Makes the node a layout-transition container: its descendants with a
+		/// `motion_key` glide to their new boxes when a later render moves them.
+		pub fn transition(mut self, transition: impl Into<$crate::ui::Transition>) -> Self {
+			let transition = transition.into();
+			$crate::ui::node::AsNode::as_node(&mut self).set("transition", &transition);
+			self
+		}
+
+		/// The `transition`'s duration in ms (default 200, at most 1000; 0 snaps).
+		pub fn transition_ms(mut self, ms: f64) -> Self {
+			$crate::ui::node::AsNode::as_node(&mut self).set("transitionMs", &ms);
+			self
+		}
+
+		/// The node's identity within its nearest `transition` container, kept
+		/// across parents (unlike `key`), so it glides to a new parent.
+		pub fn motion_key(mut self, motion_key: impl Into<String>) -> Self {
+			let motion_key = motion_key.into();
+			$crate::ui::node::AsNode::as_node(&mut self).set("motionKey", &motion_key);
+			self
+		}
+
 		/// Sets any prop untyped; `null` removes it.
 		pub fn prop(mut self, name: &str, value: impl ::serde::Serialize) -> Self {
 			$crate::ui::node::AsNode::as_node(&mut self).set(name, &value);

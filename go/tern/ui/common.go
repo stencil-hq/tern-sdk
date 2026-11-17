@@ -51,6 +51,15 @@ type Common struct {
 	Shrink *float64 `json:"shrink,omitzero"`
 	// Basis is the flex basis: a fraction of the parent, or BasisContent.
 	Basis Basis `json:"basis,omitzero"`
+	// Transition makes the node a layout-transition container: descendants
+	// with a MotionKey glide to their new boxes when a later render moves them.
+	Transition Transition `json:"transition,omitzero"`
+	// TransitionMs is the Transition's duration in ms (default 200, at most
+	// 1000; 0 snaps).
+	TransitionMs *float64 `json:"transitionMs,omitzero"`
+	// MotionKey is the node's identity within its nearest Transition
+	// container, kept across parents (unlike Key), so it glides to a new parent.
+	MotionKey string `json:"motionKey,omitzero"`
 	// Min bounds the node's size from below.
 	Min *Bounds `json:"min,omitzero"`
 	// Max bounds the node's size from above (a max height also clips).
@@ -96,18 +105,23 @@ type Common struct {
 // CommonWithoutTitle holds common props for Tool and Prefs, whose Title is
 // content rather than a tooltip. The conflicting common prop is not exposed.
 type CommonWithoutTitle struct {
-	Key         string                        `json:"key,omitzero"`
-	Role        string                        `json:"role,omitzero"`
-	Tone        Tone                          `json:"tone,omitzero"`
-	Hidden      bool                          `json:"hidden,omitzero"`
-	Mark        Mark                          `json:"mark,omitzero"`
-	Actions     *Actions                      `json:"actions,omitzero"`
-	Hovercard   Hovercard                     `json:"hovercard,omitzero"`
-	Aria        string                        `json:"aria,omitzero"`
-	Href        string                        `json:"href,omitzero"`
-	Grow        float64                       `json:"grow,omitzero"`
-	Shrink      *float64                      `json:"shrink,omitzero"`
-	Basis       Basis                         `json:"basis,omitzero"`
+	Key       string    `json:"key,omitzero"`
+	Role      string    `json:"role,omitzero"`
+	Tone      Tone      `json:"tone,omitzero"`
+	Hidden    bool      `json:"hidden,omitzero"`
+	Mark      Mark      `json:"mark,omitzero"`
+	Actions   *Actions  `json:"actions,omitzero"`
+	Hovercard Hovercard `json:"hovercard,omitzero"`
+	Aria      string    `json:"aria,omitzero"`
+	Href      string    `json:"href,omitzero"`
+	Grow      float64   `json:"grow,omitzero"`
+	Shrink    *float64  `json:"shrink,omitzero"`
+	Basis     Basis     `json:"basis,omitzero"`
+
+	Transition   Transition `json:"transition,omitzero"`
+	TransitionMs *float64   `json:"transitionMs,omitzero"`
+	MotionKey    string     `json:"motionKey,omitzero"`
+
 	Min         *Bounds                       `json:"min,omitzero"`
 	Max         *Bounds                       `json:"max,omitzero"`
 	Props       map[string]any                `json:"-"`
@@ -141,19 +155,24 @@ func (c CommonWithoutTitle) common() Common {
 
 // CommonWithoutMax holds common props for List, whose Max is a height cap.
 type CommonWithoutMax struct {
-	Key         string                        `json:"key,omitzero"`
-	Role        string                        `json:"role,omitzero"`
-	Tone        Tone                          `json:"tone,omitzero"`
-	Hidden      bool                          `json:"hidden,omitzero"`
-	Mark        Mark                          `json:"mark,omitzero"`
-	Actions     *Actions                      `json:"actions,omitzero"`
-	Title       string                        `json:"title,omitzero"`
-	Hovercard   Hovercard                     `json:"hovercard,omitzero"`
-	Aria        string                        `json:"aria,omitzero"`
-	Href        string                        `json:"href,omitzero"`
-	Grow        float64                       `json:"grow,omitzero"`
-	Shrink      *float64                      `json:"shrink,omitzero"`
-	Basis       Basis                         `json:"basis,omitzero"`
+	Key       string    `json:"key,omitzero"`
+	Role      string    `json:"role,omitzero"`
+	Tone      Tone      `json:"tone,omitzero"`
+	Hidden    bool      `json:"hidden,omitzero"`
+	Mark      Mark      `json:"mark,omitzero"`
+	Actions   *Actions  `json:"actions,omitzero"`
+	Title     string    `json:"title,omitzero"`
+	Hovercard Hovercard `json:"hovercard,omitzero"`
+	Aria      string    `json:"aria,omitzero"`
+	Href      string    `json:"href,omitzero"`
+	Grow      float64   `json:"grow,omitzero"`
+	Shrink    *float64  `json:"shrink,omitzero"`
+	Basis     Basis     `json:"basis,omitzero"`
+
+	Transition   Transition `json:"transition,omitzero"`
+	TransitionMs *float64   `json:"transitionMs,omitzero"`
+	MotionKey    string     `json:"motionKey,omitzero"`
+
 	Min         *Bounds                       `json:"min,omitzero"`
 	Props       map[string]any                `json:"-"`
 	OnClick     func(*tern.Action)            `json:"-"`
@@ -187,17 +206,22 @@ func (c CommonWithoutMax) common() Common {
 // PickerCommon holds common props for Picker, whose Title and Actions are
 // the heading and action bar rather than a tooltip and pointer gestures.
 type PickerCommon struct {
-	Key         string                        `json:"key,omitzero"`
-	Role        string                        `json:"role,omitzero"`
-	Tone        Tone                          `json:"tone,omitzero"`
-	Hidden      bool                          `json:"hidden,omitzero"`
-	Mark        Mark                          `json:"mark,omitzero"`
-	Hovercard   Hovercard                     `json:"hovercard,omitzero"`
-	Aria        string                        `json:"aria,omitzero"`
-	Href        string                        `json:"href,omitzero"`
-	Grow        float64                       `json:"grow,omitzero"`
-	Shrink      *float64                      `json:"shrink,omitzero"`
-	Basis       Basis                         `json:"basis,omitzero"`
+	Key       string    `json:"key,omitzero"`
+	Role      string    `json:"role,omitzero"`
+	Tone      Tone      `json:"tone,omitzero"`
+	Hidden    bool      `json:"hidden,omitzero"`
+	Mark      Mark      `json:"mark,omitzero"`
+	Hovercard Hovercard `json:"hovercard,omitzero"`
+	Aria      string    `json:"aria,omitzero"`
+	Href      string    `json:"href,omitzero"`
+	Grow      float64   `json:"grow,omitzero"`
+	Shrink    *float64  `json:"shrink,omitzero"`
+	Basis     Basis     `json:"basis,omitzero"`
+
+	Transition   Transition `json:"transition,omitzero"`
+	TransitionMs *float64   `json:"transitionMs,omitzero"`
+	MotionKey    string     `json:"motionKey,omitzero"`
+
 	Min         *Bounds                       `json:"min,omitzero"`
 	Max         *Bounds                       `json:"max,omitzero"`
 	Props       map[string]any                `json:"-"`
@@ -234,18 +258,23 @@ func (c PickerCommon) common() Common {
 // common prop and the handlers that set it (OnClick, OnDblClick, OnMenu, OnHold)
 // are not exposed; OnAction handles the buttons.
 type CommonWithoutActions struct {
-	Key         string                        `json:"key,omitzero"`
-	Role        string                        `json:"role,omitzero"`
-	Tone        Tone                          `json:"tone,omitzero"`
-	Hidden      bool                          `json:"hidden,omitzero"`
-	Mark        Mark                          `json:"mark,omitzero"`
-	Title       string                        `json:"title,omitzero"`
-	Hovercard   Hovercard                     `json:"hovercard,omitzero"`
-	Aria        string                        `json:"aria,omitzero"`
-	Href        string                        `json:"href,omitzero"`
-	Grow        float64                       `json:"grow,omitzero"`
-	Shrink      *float64                      `json:"shrink,omitzero"`
-	Basis       Basis                         `json:"basis,omitzero"`
+	Key       string    `json:"key,omitzero"`
+	Role      string    `json:"role,omitzero"`
+	Tone      Tone      `json:"tone,omitzero"`
+	Hidden    bool      `json:"hidden,omitzero"`
+	Mark      Mark      `json:"mark,omitzero"`
+	Title     string    `json:"title,omitzero"`
+	Hovercard Hovercard `json:"hovercard,omitzero"`
+	Aria      string    `json:"aria,omitzero"`
+	Href      string    `json:"href,omitzero"`
+	Grow      float64   `json:"grow,omitzero"`
+	Shrink    *float64  `json:"shrink,omitzero"`
+	Basis     Basis     `json:"basis,omitzero"`
+
+	Transition   Transition `json:"transition,omitzero"`
+	TransitionMs *float64   `json:"transitionMs,omitzero"`
+	MotionKey    string     `json:"motionKey,omitzero"`
+
 	Min         *Bounds                       `json:"min,omitzero"`
 	Max         *Bounds                       `json:"max,omitzero"`
 	Props       map[string]any                `json:"-"`
@@ -469,6 +498,15 @@ const (
 	TonePending Tone = "pending"
 	ToneMuted   Tone = "muted"
 	ToneUser    Tone = "user"
+)
+
+// Transition is how a node transitions its descendants between renders.
+type Transition string
+
+// Transitions.
+const (
+	// TransitionLayout glides descendants with a MotionKey to their new boxes.
+	TransitionLayout Transition = "layout"
 )
 
 // Mark is a transient selection drawn over a node.

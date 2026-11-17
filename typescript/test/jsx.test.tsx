@@ -13,6 +13,13 @@ function added(view: Renderable): unknown {
 }
 
 describe('TSX', () => {
+   test('layout transition props keep their wire names', () => {
+      expect(json(<col transition="layout" transitionMs={300} motionKey="card-7" />)).toEqual({
+         k: 'col',
+         p: { transition: 'layout', transitionMs: 300, motionKey: 'card-7' },
+      });
+   });
+
    test('keyed fragment components retain their children and text parts', () => {
       const Row = () => (
          <>

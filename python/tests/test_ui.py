@@ -22,6 +22,11 @@ def test_click_handler_names_the_click_action_unless_the_node_does() -> None:
     assert route(n.handlers, decode_event({"ev": "action", "act": "click"})) is None
 
 
+def test_layout_transition_props_use_wire_names() -> None:
+    n = ui.col(transition="layout", transition_ms=300, motion_key="card-7")
+    assert n.props == {"transition": "layout", "transitionMs": 300, "motionKey": "card-7"}
+
+
 def test_menu_handlers_add_their_names_once() -> None:
     n = ui.card(actions={"menu": ["rerun"]}, on_menu={"rerun": noop, "sort=name": noop})
     assert n.props["actions"] == {"menu": ["rerun", "sort=name"]}

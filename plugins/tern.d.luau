@@ -178,6 +178,8 @@ export type Node = {
 	--- Node kind (`"text"`, `"col"`, `"table"`, …).
 	k: string,
 	--- Props; any node also takes `key`, `tone`, `role` and `collapsed`. A `list` keeps its selected row in view only with `max = {lines = N}`.
+	--- A container with `transition = "layout"` (`transitionMs`, default 200) glides its descendants that carry a
+	--- `motionKey` (unique within it, kept across parents) to their new places on each update.
 	p: { [string]: any }?,
 	--- Children.
 	c: { Node }?,
@@ -1268,6 +1270,48 @@ export type WidgetView = {
 	value: number?,
 	--- The `graph` style's samples, 0–1 each (clamped), oldest first; the newest 120 are kept.
 	series: { number }?,
+	--- The hover card's rows, in place of `title`'s lines; the first 32 are kept. A row that breaks a bound
+	--- below is left out (and logged) without failing the render; a `card` that isn't a list fails it.
+	card: { WidgetCardRow }?,
+}
+
+--- A row of a widget's hover card.
+export type WidgetCardRow = {
+	--- The row's id (1–64 characters): its buttons' `widget_action` events carry it as `row`. Required with
+	--- `actions`.
+	id: string?,
+	--- Label before the text (≤ 200 characters).
+	label: string?,
+	--- Its text (≤ 200 characters).
+	text: string,
+	--- Link the text opens as a plugin view's `href` span does (⌘-click, PC Ctrl-click): an http(s) URL with a
+	--- host, a `file:` URL, or a `tern-<plugin>:` URL `tern.route.link` handlers claim.
+	href: string?,
+	--- Tone of the text (`"accent"`, `"muted"`, `"ok"`, `"warn"`, `"error"`; the row's `data-tone`).
+	tone: string?,
+	--- Up to 3 small buttons after the text.
+	actions: { WidgetCardButton }?,
+}
+
+--- A button of a widget card's row: a click delivers `widget_action` to the plugin.
+export type WidgetCardButton = {
+	--- The action id (1–64 characters), the event's `act`.
+	id: string,
+	--- Its label (1–64 characters).
+	label: string,
+}
+
+--- A click on a button of a widget's card (`tern.on("widget_action", …)`): in the half that offers the
+--- widget (the window half when both do).
+export type WidgetActionEvent = {
+	--- The widget's id within the plugin.
+	widget: string,
+	--- The row's `id`.
+	row: string,
+	--- The button's `id`.
+	act: string,
+	--- Host only: the key of the window it came from, when known.
+	window: string?,
 }
 
 --- Window only: the Files pane as a `tern.files.button` handler sees it.
@@ -2421,11 +2465,13 @@ declare tern: {
 	--- and `process_exit(ev: ProcessExitEvent, cx)`.
 	--- Host: `spawn(spec: SpawnSpec) -> SpawnSpec?` and `reopen(ev: ReopenEvent) -> string?` (sync filters; a string
 	--- replaces `ev.command`) and `(ev, cx: EffectCx)` for `command_started`,
-	--- `command_finished`, `cwd`, `title`, `pane_exited`. Window: `window_start(cx: WindowCx)` and `(ev, cx: WindowCx)`
+	--- `command_finished`, `cwd`, `title`, `pane_exited`, `widget_action` (WidgetActionEvent).
+	--- Window: `window_start(cx: WindowCx)` and `(ev, cx: WindowCx)`
 	--- for `focus`, `pane_created`, `pane_closed`, `tab_created`, `tab_closed`, `command_started`, `command_finished`, `cwd`,
 	--- `title`, `agent_finished`, `agent_state` (AgentStateEvent), `float_moved` (FloatMovedEvent), `session_ended`
-	--- (SessionEndedEvent), `budget` (BudgetEvent) and `canvas_action(ev: CanvasAction, cx) -> boolean?` (truthy
-	--- consumes the owner's click).
+	--- (SessionEndedEvent), `budget` (BudgetEvent), `canvas_action(ev: CanvasAction, cx) -> boolean?` (truthy
+	--- consumes the owner's click) and `widget_action(ev: WidgetActionEvent, cx) -> boolean?` (truthy takes the
+	--- click; none toasts).
 	--- `window_start` runs once per plugin per window. The `spawn` and `reopen` waits (50 ms) count from when the
 	--- request is queued.
 	on: (name: string, fn: (...any) -> ...any) -> (),

@@ -22,7 +22,7 @@ from ..wire import (
     UncommentEvent,
     UndoEvent,
 )
-from ._types import Actions, Bounds, Mark, Text, Tone
+from ._types import Actions, Bounds, Mark, Text, Tone, Transition
 
 Handler: TypeAlias = Callable[[Any], object]
 """A function run on an event routed to its node."""
@@ -91,6 +91,14 @@ class BaseProps(Handlers, total=False):
     grow: float | None
     shrink: float | None
     basis: float | Literal["content"] | None
+    transition: Transition | str | None
+    """Makes the node a layout-transition container: descendants with a
+    `motion_key` glide to their new boxes when a later render moves them."""
+    transition_ms: float | None
+    """The `transition`'s duration in ms (default 200, at most 1000; 0 snaps)."""
+    motion_key: str | None
+    """The node's identity within its nearest `transition` container, kept
+    across parents (unlike `key`), so it glides to a new parent."""
     props: Mapping[str, Json] | None
     """Extra props set untyped, merged last (an escape hatch for newer props)."""
 
@@ -167,8 +175,10 @@ _EVENT_HANDLERS = (
 _EVENT_ROUTES = frozenset(r for _, r in _EVENT_HANDLERS)
 _COMMON = (
     "key", "role", "tone", "hidden", "mark", "title", "hovercard", "aria", "href", "grow",
-    "shrink", "basis", "min", "max", "actions",
+    "shrink", "basis", "min", "max", "actions", "transition",
 )  # fmt: skip
+_COMMON_RENAMED = (("transition_ms", "transitionMs"), ("motion_key", "motionKey"))
+"""Common props whose keyword differs from the wire name."""
 
 
 def text_props(text: Text | None) -> dict[str, Json]:
@@ -207,6 +217,10 @@ def make(
     common = common or {}
     for name in _COMMON:
         value = common.get(name)
+        if value is not None:
+            props[name] = jsonify(value)
+    for kw, name in _COMMON_RENAMED:
+        value = common.get(kw)
         if value is not None:
             props[name] = jsonify(value)
     actions: dict[str, Json] | None = None

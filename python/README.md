@@ -120,7 +120,8 @@ ui.col(
 ```
 
 The common props (`key`, `role`, `tone`, `hidden`, `mark`, `actions`,
-`title`, `aria`, `href`, `grow`, `shrink`, `basis`, `min`, `max`) are
+`title`, `aria`, `href`, `grow`, `shrink`, `basis`, `min`, `max`,
+`transition`, `transition_ms`, `motion_key`) are
 keywords on every builder. In `ui.html.*`, a leading string child is the
 element's `text`; later string children become `span` elements.
 

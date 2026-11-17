@@ -82,6 +82,14 @@ string_enum!(
 );
 
 string_enum!(
+	/// A node's transition of its descendants between renders.
+	Transition {
+		/// Descendants with a `motionKey` glide to their new layout boxes.
+		Layout = "layout",
+	}
+);
+
+string_enum!(
 	/// The state of a card or tool.
 	Status {
 		/// Not started.

@@ -3028,6 +3028,20 @@ mod tests {
 	}
 
 	#[test]
+	fn layout_transition_props_serialize() {
+		let c = col::<()>()
+			.transition(Transition::Layout)
+			.transition_ms(300.0)
+			.motion_key("card-7");
+		assert_eq!(
+			wire(c),
+			json!({"k": "col", "p": {
+				"transition": "layout", "transitionMs": 300.0, "motionKey": "card-7"
+			}})
+		);
+	}
+
+	#[test]
 	fn typed_values_and_escape_hatches_serialize() {
 		let c = card::<()>()
 			.head("Deploy")
