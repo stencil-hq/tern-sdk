@@ -156,7 +156,7 @@ impl Options {
 }
 
 /// What the terminal draws and supports, kept current by `resize`,
-/// `theme` and `motion` events.
+/// `theme`, `motion` and `features` events.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Capabilities {
 	/// The terminal (`tern`).
@@ -1094,6 +1094,7 @@ impl<M> Session<M> {
 			},
 			Event::Theme(t) => self.caps.dark = t.dark,
 			Event::Motion(m) => self.caps.reduce_motion = m.reduce,
+			Event::Features(f) => self.caps.features.clone_from(&f.features),
 			Event::Gone(g) => {
 				for state in &mut self.surfaces {
 					if g.ids.contains(&state.id) && g.sf.as_ref().is_none_or(|sf| *sf == state.id) {

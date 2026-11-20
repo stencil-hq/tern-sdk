@@ -601,6 +601,17 @@ impl<M> Md<M> {
 		stream(bool) = "stream";
 		/// Spans drawn in place of their literal text.
 		marks(Vec<Span>) = "marks";
+		/// The folder a shell code block's Run runs in (`~` the home, a
+		/// relative path under the pane's folder); default the pane's.
+		cwd(String) = "cwd";
+		/// `false`: shell code blocks offer no Run.
+		run(bool) = "run";
+		/// Code block heads are icons (Run a play, Copy a copy turning into
+		/// a check), their words in `title` and `aria-label`.
+		icons(bool) = "icons";
+		/// `"always"`: code block heads always show; default `"hover"`
+		/// (on hover or focus, always on a phone).
+		head(String) = "head";
 	}
 }
 

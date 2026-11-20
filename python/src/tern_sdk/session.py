@@ -31,6 +31,7 @@ from .wire import (
     BlobsReply,
     Cell,
     Event,
+    FeaturesEvent,
     GoneEvent,
     HelloReply,
     Json,
@@ -68,7 +69,7 @@ _TTY_LOCK = threading.Lock()
 @dataclass
 class Capabilities:
     """What the terminal said in its `hello` reply, kept current by
-    `resize`, `theme` and `motion` events."""
+    `resize`, `theme`, `motion` and `features` events."""
 
     version: int = wire.VERSION
     term: str | None = None
@@ -870,6 +871,8 @@ class Session:
         elif isinstance(event, MotionEvent):
             if event.reduce is not None:
                 self.caps.reduce_motion = event.reduce
+        elif isinstance(event, FeaturesEvent):
+            self.caps.features = event.features
         elif isinstance(event, GoneEvent):
             for id in event.ids:
                 gone = self._surfaces.pop(id, None)

@@ -552,6 +552,13 @@ class MotionEvent(Event):
 
 
 @dataclass(frozen=True, kw_only=True)
+class FeaturesEvent(Event):
+    """The terminal's features changed (a setting); they replace the `hello` reply's."""
+
+    features: tuple[str, ...]
+
+
+@dataclass(frozen=True, kw_only=True)
 class VisibleEvent(Event):
     """The pane was hidden or shown."""
 
@@ -725,6 +732,8 @@ def decode_event(raw: dict[str, Json]) -> Event:
             return ThemeEvent(**base, dark=_bool(raw, "dark"))
         case "motion":
             return MotionEvent(**base, reduce=_bool(raw, "reduce"))
+        case "features":
+            return FeaturesEvent(**base, features=_strs(raw, "features"))
         case "visible":
             return VisibleEvent(**base, visible=_bool(raw, "visible"))
         case "toggle":

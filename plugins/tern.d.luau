@@ -298,6 +298,21 @@ export type TableOpts = {
 	empty: Spans?,
 }
 
+--- Options of `tern.ui.md`: how its code blocks run and show their heads.
+export type MdOpts = {
+	--- The folder a shell code block's Run runs in: `~` the home, a relative path under the pane's folder
+	--- (default the pane's). Run reports a path that is no folder.
+	cwd: string?,
+	--- `false`: shell code blocks offer no Run (for text the plugin does not trust).
+	run: boolean?,
+	--- Code block heads are icons (Run a play, Copy a copy turning into a check), their words in the tooltip
+	--- and accessible name.
+	icons: boolean?,
+	--- `always`: code block heads always show, above the code; `hover` (default) shows them on hover or
+	--- focus, and always on a phone.
+	head: ("hover" | "always")?,
+}
+
 --- How a `button` looks: `default` (a chip), `primary` (the one main action), `quiet` (no chrome until
 --- hovered) or `danger` (destructive).
 export type ButtonVariant = "default" | "primary" | "quiet" | "danger"
@@ -1719,6 +1734,19 @@ export type CanvasAction = {
 	owner: string,
 }
 
+--- Window only: `canvas_resized` payload: the user let go of a split they dragged (or reset) in a canvas this plugin
+--- owns. The canvas already keeps `sizes` as that split's `sizes`.
+export type CanvasResized = {
+	--- Canvas pane.
+	pane: number,
+	--- Creating owner.
+	owner: string,
+	--- The split's node id, as a click reports it (`main.regions`).
+	node: string,
+	--- One share per pane, as drawn, summing to 1.
+	sizes: { number },
+}
+
 --- A native or Ready plugin block available on the current host.
 export type BlockTypeInfo = {
 	--- Fully qualified block kind.
@@ -1776,7 +1804,15 @@ declare extern type CanvasCx with
 	function get(self, pane: number): CanvasInfo?
 	--- Lists canvas metadata without view or dock.
 	function list(self): { CanvasInfo }
+	--- Scrolls a canvas's pane to the Markdown heading `target` names, by its text or a link's fragment
+	--- (GitHub's anchors: `notes-1` is the second `Notes`); `false` and why when it draws no such heading.
+	--- Exactly one field; a pane that is no canvas raises.
+	function reveal(self, pane: number, target: CanvasReveal): (boolean, string?)
 end
+
+--- What `cx.canvas:reveal` scrolls to: a heading by its `heading` text (`"Setup guide"`), or by a link's
+--- `anchor` (`"setup-guide"`, `"#setup-guide"`).
+export type CanvasReveal = { heading: string?, anchor: string? }
 
 --- A whiteboard page area in page units (one view px at 100%).
 export type WhiteboardArea = { x: number, y: number, w: number, h: number }
@@ -2399,8 +2435,8 @@ declare tern: {
 		code: (text: string, lang: string?, start: number?) -> Node,
 		--- A unified diff; `path` picks the grammar.
 		diff: (text: string, path: string?) -> Node,
-		--- Markdown.
-		md: (text: string) -> Node,
+		--- Markdown; `opts` shape its code blocks' Run and heads.
+		md: (text: string, opts: MdOpts?) -> Node,
 		--- A meter at `value` (0–1) labeled `label`.
 		meter: (value: number, label: Spans) -> Node,
 		--- A progress bar at `value` (0–1), indeterminate when nil.
@@ -2470,8 +2506,8 @@ declare tern: {
 	--- for `focus`, `pane_created`, `pane_closed`, `tab_created`, `tab_closed`, `command_started`, `command_finished`, `cwd`,
 	--- `title`, `agent_finished`, `agent_state` (AgentStateEvent), `float_moved` (FloatMovedEvent), `session_ended`
 	--- (SessionEndedEvent), `budget` (BudgetEvent), `canvas_action(ev: CanvasAction, cx) -> boolean?` (truthy
-	--- consumes the owner's click) and `widget_action(ev: WidgetActionEvent, cx) -> boolean?` (truthy takes the
-	--- click; none toasts).
+	--- consumes the owner's click), `canvas_resized` (CanvasResized; every owner handler runs) and
+	--- `widget_action(ev: WidgetActionEvent, cx) -> boolean?` (truthy takes the click; none toasts).
 	--- `window_start` runs once per plugin per window. The `spawn` and `reopen` waits (50 ms) count from when the
 	--- request is queued.
 	on: (name: string, fn: (...any) -> ...any) -> (),

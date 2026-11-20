@@ -477,6 +477,13 @@ export interface MotionEvent {
    readonly raw: JsonObject;
 }
 
+/** The terminal's features changed (a setting); the list replaces the `hello` reply's. */
+export interface FeaturesEvent {
+   readonly ev: 'features';
+   readonly features: readonly TerminalFeature[];
+   readonly raw: JsonObject;
+}
+
 /** The pane was hidden or shown. */
 export interface VisibleEvent {
    readonly ev: 'visible';
@@ -670,6 +677,7 @@ export type TspEvent =
    | ResizeEvent
    | ThemeEvent
    | MotionEvent
+   | FeaturesEvent
    | VisibleEvent
    | ToggleEvent
    | SelectEvent
@@ -780,6 +788,10 @@ export function decodeEvent(raw: JsonObject): TspEvent {
       case 'motion': {
          const reduce = bool(raw, 'reduce');
          return reduce !== undefined ? { ev, reduce, raw } : unknown();
+      }
+      case 'features': {
+         const features = strings(raw, 'features');
+         return features !== undefined ? { ev, features, raw } : unknown();
       }
       case 'visible': {
          const visible = bool(raw, 'visible');

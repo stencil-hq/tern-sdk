@@ -53,6 +53,17 @@ type Md struct {
 	Stream bool `json:"stream,omitzero"`
 	// Marks are spans drawn in place of their literal text in prose.
 	Marks []Span `json:"marks,omitzero"`
+	// Cwd is the folder a shell code block's Run runs in (~ the home, a
+	// relative path under the pane's folder); empty: the pane's.
+	Cwd string `json:"cwd,omitzero"`
+	// Run, when false, offers no Run on shell code blocks (default on).
+	Run *bool `json:"run,omitzero"`
+	// Icons draws code block heads as icons (Run a play, Copy a copy
+	// turning into a check), their words in title and aria-label.
+	Icons bool `json:"icons,omitzero"`
+	// Head is hover (default: code block heads show on hover or focus,
+	// always on a phone) or always.
+	Head string `json:"head,omitzero"`
 }
 
 // Node builds the md.

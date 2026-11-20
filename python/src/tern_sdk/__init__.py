@@ -25,6 +25,7 @@ from .wire import (
     EditingEvent,
     ErrorEvent,
     Event,
+    FeaturesEvent,
     FocusEvent,
     GoneEvent,
     HelloReply,
@@ -45,7 +46,7 @@ from .wire import (
 __all__ = [
     "DA1", "AckEvent", "ActionEvent", "ActivateEvent", "Answer", "AnyView", "BlobsReply",
     "Capabilities", "Cell", "ChangeEvent", "CommentEvent", "Da1", "EditEvent", "EditingEvent",
-    "ErrorEvent", "Event",
+    "ErrorEvent", "Event", "FeaturesEvent",
     "FocusEvent", "GoneEvent", "HelloReply", "InputItem", "InputParser", "Key", "KeyDecoder",
     "MotionEvent", "Node", "ReconcileError", "Reply", "ResizeEvent", "SelectEvent", "SendEvent",
     "Session", "Surface", "ThemeEvent", "ToggleEvent", "UncommentEvent", "UndoEvent", "UnknownEvent",

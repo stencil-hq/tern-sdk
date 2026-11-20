@@ -557,6 +557,14 @@ export interface MdProps {
    /** The source is still arriving. */
    readonly stream?: boolean;
    readonly marks?: readonly (string | SpanData)[];
+   /** The folder a shell code block's Run runs in (`~` the home, relative under the pane's folder); default the pane's. */
+   readonly cwd?: string;
+   /** `false`: shell code blocks offer no Run. */
+   readonly run?: boolean;
+   /** Code block heads are icons (Run a play, Copy a copy turning into a check), their words in `title` and `aria-label`. */
+   readonly icons?: boolean;
+   /** `always`: code block heads always show; default `hover` (they show on hover or focus, always on a phone). */
+   readonly head?: 'hover' | 'always' | (string & {});
 }
 
 /** A marked line of a `code` node. */

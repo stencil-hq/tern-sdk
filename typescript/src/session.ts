@@ -177,7 +177,7 @@ export class Session implements AsyncIterable<SessionInput>, AsyncDisposable {
       };
    }
 
-   /** What the terminal supports, kept current by `resize`, `theme` and `motion`. */
+   /** What the terminal supports, kept current by `resize`, `theme`, `motion` and `features`. */
    get caps(): Capabilities {
       return this.#caps;
    }
@@ -581,6 +581,9 @@ export class Session implements AsyncIterable<SessionInput>, AsyncDisposable {
             break;
          case 'motion':
             this.#caps = { ...this.#caps, reduceMotion: event.reduce };
+            break;
+         case 'features':
+            this.#caps = { ...this.#caps, features: event.features };
             break;
          case 'gone':
             for (const id of event.ids) this.#surfaces.get(id)?.gone();

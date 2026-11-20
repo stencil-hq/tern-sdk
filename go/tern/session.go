@@ -92,7 +92,7 @@ type Options struct {
 }
 
 // Caps are what the terminal said it supports, kept current by resize,
-// theme and motion events.
+// theme, motion and features events.
 type Caps struct {
 	Term         string
 	Ver          string
@@ -484,6 +484,8 @@ func (s *Session) event(ev Event) {
 		s.caps.Dark = e.Dark
 	case *Motion:
 		s.caps.ReduceMotion = e.Reduce
+	case *Features:
+		s.caps.Features = e.Features
 	case *Gone:
 		for _, id := range e.IDs {
 			if g := s.surfaces[id]; g != nil && (e.SF == "" || e.SF == id) {

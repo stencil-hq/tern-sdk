@@ -83,7 +83,7 @@ type Input interface {
 }
 
 // Event is a terminal → program e message. Switch on its concrete type:
-// *Ack, *Resize, *Theme, *Motion, *Visible, *Toggle, *Select, *Activate,
+// *Ack, *Resize, *Theme, *Motion, *Features, *Visible, *Toggle, *Select, *Activate,
 // *Action, *Change, *Focus, *Edit, *Undo, *Send, *ErrorEvent, *Gone or
 // *UnknownEvent.
 type Event interface {
@@ -173,6 +173,13 @@ type Theme struct {
 type Motion struct {
 	EventBase
 	Reduce bool `json:"reduce"`
+}
+
+// Features reports that the terminal's features changed (a setting): the
+// list replaces the hello reply's.
+type Features struct {
+	EventBase
+	Features []string `json:"features"`
 }
 
 // Visible reports that the pane was hidden or shown.
@@ -431,6 +438,8 @@ func DecodeEvent(body []byte) (Event, bool) {
 		ev = &Theme{}
 	case "motion":
 		ev = &Motion{}
+	case "features":
+		ev = &Features{}
 	case "visible":
 		ev = &Visible{}
 	case "toggle":

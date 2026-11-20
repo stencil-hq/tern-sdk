@@ -1127,6 +1127,14 @@ event_struct!(
 );
 
 event_struct!(
+	/// `features`: the terminal's features changed (a setting).
+	Features {
+		/// Every terminal feature now, replacing the `hello` reply's.
+		features: Vec<String>,
+	}
+);
+
+event_struct!(
 	/// `visible`: the pane was hidden or shown.
 	Visible {
 		/// The surface.
@@ -1363,6 +1371,8 @@ pub enum Event {
 	Theme(Theme),
 	/// `motion`.
 	Motion(Motion),
+	/// `features`.
+	Features(Features),
 	/// `visible`.
 	Visible(Visible),
 	/// `toggle`.
@@ -1410,6 +1420,7 @@ impl Event {
 			"resize" => typed(map).map_or_else(Self::Unknown, Self::Resize),
 			"theme" => typed(map).map_or_else(Self::Unknown, Self::Theme),
 			"motion" => typed(map).map_or_else(Self::Unknown, Self::Motion),
+			"features" => typed(map).map_or_else(Self::Unknown, Self::Features),
 			"visible" => typed(map).map_or_else(Self::Unknown, Self::Visible),
 			"toggle" => typed(map).map_or_else(Self::Unknown, Self::Toggle),
 			"select" => typed(map).map_or_else(Self::Unknown, Self::Select),
@@ -1436,6 +1447,7 @@ impl Event {
 			Self::Resize(e) => &e.raw,
 			Self::Theme(e) => &e.raw,
 			Self::Motion(e) => &e.raw,
+			Self::Features(e) => &e.raw,
 			Self::Visible(e) => &e.raw,
 			Self::Toggle(e) => &e.raw,
 			Self::Select(e) | Self::Activate(e) => &e.raw,

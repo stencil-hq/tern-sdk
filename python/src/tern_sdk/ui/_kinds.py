@@ -391,9 +391,23 @@ def text(
     return make("text", own, (), common)
 
 
-def md(text: str, *, stream: bool | None = None, marks: Spans | None = None, **common: Unpack[Common]) -> Node:
-    """Markdown; `stream` while the source is still arriving."""
-    return make("md", {"text": text, "stream": stream, "marks": marks}, (), common)
+def md(
+    text: str,
+    *,
+    stream: bool | None = None,
+    marks: Spans | None = None,
+    cwd: str | None = None,
+    run: bool | None = None,
+    icons: bool | None = None,
+    head: str | None = None,
+    **common: Unpack[Common],
+) -> Node:
+    """Markdown; `stream` while the source is still arriving. `cwd` is the folder a shell code
+    block's Run runs in (`~` the home, a relative path under the pane's folder), `run=False`
+    offers no Run, `icons` draws code block heads as icons (their words in `title` and
+    `aria-label`), `head="always"` keeps them shown (default `"hover"`)."""
+    own = {"text": text, "stream": stream, "marks": marks, "cwd": cwd, "run": run, "icons": icons, "head": head}
+    return make("md", own, (), common)
 
 
 def code(
