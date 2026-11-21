@@ -1051,9 +1051,11 @@ declare extern type SettingsCx with
 	function keybinds(self): {[string]: string | {string}}
 	--- Binds a shortcut or sequence to an action id or priority-ordered action ids.
 	function bind(self, chord: string, actions: string | {string}): ()
-	--- Leaves this shortcut to the program by writing an empty settings.keybinds override.
-	--- To restore defaults instead, replace keybinds with a table omitting that shortcut.
+	--- Leaves this shortcut to the program by writing an empty settings.keybinds override;
+	--- reset(chord) restores its defaults instead.
 	function unbind(self, chord: string): ()
+	--- Drops this shortcut's override, however spelled, so its default bindings run again.
+	function reset(self, chord: string): ()
 end
 
 --- An opaque VM-local connection id returned by cx.db:open; not a pane id.
