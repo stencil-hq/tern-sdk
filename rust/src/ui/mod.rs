@@ -3053,6 +3053,18 @@ mod tests {
 	}
 
 	#[test]
+	fn drag_and_drop_props_serialize() {
+		assert_eq!(
+			wire(col::<()>().drag("reorder-layer")),
+			json!({"k": "col", "p": {"drag": "reorder-layer"}})
+		);
+		assert_eq!(
+			wire(text::<()>("a").drop("move-fact")),
+			json!({"k": "text", "p": {"text": "a", "drop": "move-fact"}})
+		);
+	}
+
+	#[test]
 	fn typed_values_and_escape_hatches_serialize() {
 		let c = card::<()>()
 			.head("Deploy")

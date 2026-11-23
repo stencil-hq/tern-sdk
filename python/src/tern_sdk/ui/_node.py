@@ -99,6 +99,14 @@ class BaseProps(Handlers, total=False):
     motion_key: str | None
     """The node's identity within its nearest `transition` container, kept
     across parents (unlike `key`), so it glides to a new parent."""
+    drag: str | None
+    """Lets the user drag the node's children to another index (a finger
+    drags after a long press): the release sends `action` with this `act`,
+    `item` the child's id and `value` its new 0-based index."""
+    drop: str | None
+    """Lets the user drop a `drag` container's child on the node: the release
+    sends `action` with this `act`, `item` the child's id and `value`
+    `"before"` or `"after"`."""
     props: Mapping[str, Json] | None
     """Extra props set untyped, merged last (an escape hatch for newer props)."""
 
@@ -175,7 +183,7 @@ _EVENT_HANDLERS = (
 _EVENT_ROUTES = frozenset(r for _, r in _EVENT_HANDLERS)
 _COMMON = (
     "key", "role", "tone", "hidden", "mark", "title", "hovercard", "aria", "href", "grow",
-    "shrink", "basis", "min", "max", "actions", "transition",
+    "shrink", "basis", "min", "max", "actions", "transition", "drag", "drop",
 )  # fmt: skip
 _COMMON_RENAMED = (("transition_ms", "transitionMs"), ("motion_key", "motionKey"))
 """Common props whose keyword differs from the wire name."""

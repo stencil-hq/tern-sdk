@@ -627,6 +627,24 @@ macro_rules! base_methods {
 			self
 		}
 
+		/// Lets the user drag the node's children to another index (a finger
+		/// drags after a long press): the release sends `action` `act` with
+		/// `item` the child's id and `value` its new 0-based index.
+		pub fn drag(mut self, act: impl Into<String>) -> Self {
+			let act = act.into();
+			$crate::ui::node::AsNode::as_node(&mut self).set("drag", &act);
+			self
+		}
+
+		/// Lets the user drop a `drag` container's child on the node: the
+		/// release sends `action` `act` with `item` the child's id and `value`
+		/// `"before"` or `"after"`.
+		pub fn drop(mut self, act: impl Into<String>) -> Self {
+			let act = act.into();
+			$crate::ui::node::AsNode::as_node(&mut self).set("drop", &act);
+			self
+		}
+
 		/// Sets any prop untyped; `null` removes it.
 		pub fn prop(mut self, name: &str, value: impl ::serde::Serialize) -> Self {
 			$crate::ui::node::AsNode::as_node(&mut self).set(name, &value);

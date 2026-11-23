@@ -180,6 +180,11 @@ export type Node = {
 	--- Props; any node also takes `key`, `tone`, `role` and `collapsed`. A `list` keeps its selected row in view only with `max = {lines = N}`.
 	--- A container with `transition = "layout"` (`transitionMs`, default 200) glides its descendants that carry a
 	--- `motionKey` (unique within it, kept across parents) to their new places on each update.
+	--- A container with `drag = act` lets the user drag its children to another index (a mouse drag; on a touch
+	--- screen, touch and hold, then drag); the release sends `{ev = "action", id = <container>, act, item = <child
+	--- id>, value = <new 0-based index>}` and nothing reaches the block while the child moves. A node with
+	--- `drop = act` takes a child of another `drag` container dropped on it: `{ev = "action", id = <node>, act,
+	--- item = <child id>, value = "before" | "after"}`.
 	p: { [string]: any }?,
 	--- Children.
 	c: { Node }?,
@@ -442,12 +447,21 @@ export type Columns = {
 --- action/select/activate/change/toggle/focus/edit/undo, and `send` (`id`, `text`: a prompt Tern submits into editor
 --- `id`) once they list the "send" feature; lens events are not filtered. An action name containing
 --- `=` is split into `act` and `value`; `mods` lists `shift`/`ctrl`/`alt`/`meta`, present only when a modifier was
---- held. `change` comes from a clicked `tern.ui.el` checkbox/radio (`id`, `name`, `value`, `checked`).
+--- held. `change` comes from a clicked `tern.ui.el` checkbox/radio (`id`, `name`, `value`, `checked`). A drag in a
+--- `drag` container or onto a `drop` node arrives as one `action` on the release (see `Node.p`).
 export type UiEvent = {
 	--- Event name.
 	ev: string,
 	--- The node the event came from.
 	id: string?,
+	--- `action`: the action's name, up to its first `=`.
+	act: string?,
+	--- What was picked inside `id`: a list item, a table row, or the child a `drag` container moved or a `drop`
+	--- node took (that child's id).
+	item: string?,
+	--- The rest of an action name after `=`, a control's new value, a `drag` move's new 0-based index, or
+	--- `"before"`/`"after"` for a drop.
+	value: any,
 	--- `change`: the control's `name`, when it has one.
 	name: string?,
 	--- `change`: whether the control is now checked.
@@ -1400,7 +1414,8 @@ export type LinkRequest = {
 	mods: { cmd: boolean, alt: boolean, shift: boolean, ctrl: boolean },
 }
 
---- Window only: a route's answer, with one of `block`, `url`, `path` or `handled` set; returning nil runs the built-in.
+--- Window only: a route's answer, with one of `block`, `url`, `path` or `handled` set; returning nil runs the built-in, as
+--- does a route that raises or overruns its 50 ms budget (an error toast says so).
 export type RouteDecision = {
 	--- Opens a plugin block of this kind (`"plugin.kind"`) instead, on the file's host (`route.open`) or the clicked
 	--- pane's (`route.link`); when no Ready plugin there defines it, an error toast names the kind and host.
@@ -1413,7 +1428,7 @@ export type RouteDecision = {
 	path: string?,
 	--- Where the rewritten path opens.
 	how: How?,
-	--- True when the plugin handled it; nothing else runs.
+	--- True when the plugin handled it; nothing else runs (`tern open` succeeds without a block for that file).
 	handled: boolean?,
 }
 

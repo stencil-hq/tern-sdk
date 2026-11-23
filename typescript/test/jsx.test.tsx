@@ -20,6 +20,11 @@ describe('TSX', () => {
       });
    });
 
+   test('drag and drop props keep their wire names', () => {
+      expect(json(<col drag="reorder-layer" />)).toEqual({ k: 'col', p: { drag: 'reorder-layer' } });
+      expect(json(<col drop="move-fact" />)).toEqual({ k: 'col', p: { drop: 'move-fact' } });
+   });
+
    test('keyed fragment components retain their children and text parts', () => {
       const Row = () => (
          <>

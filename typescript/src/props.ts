@@ -457,6 +457,18 @@ export interface CommonProps {
    readonly transitionMs?: number;
    /** Identity within the nearest `transition` container, kept across parents (unlike `key`), so the node glides there. */
    readonly motionKey?: string;
+   /**
+    * Lets the user drag the node's children to another index (a finger drags
+    * after a long press): the release sends `action` with this `act`, `item`
+    * the child's id and `value` its new 0-based index.
+    */
+   readonly drag?: string;
+   /**
+    * Lets the user drop a `drag` container's child on the node: the release
+    * sends `action` with this `act`, `item` the child's id and `value`
+    * `before` or `after`.
+    */
+   readonly drop?: string;
 }
 
 /** How a node transitions its descendants between renders. */

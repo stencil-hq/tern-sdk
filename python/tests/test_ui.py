@@ -27,6 +27,11 @@ def test_layout_transition_props_use_wire_names() -> None:
     assert n.props == {"transition": "layout", "transitionMs": 300, "motionKey": "card-7"}
 
 
+def test_drag_and_drop_props_keep_their_wire_names() -> None:
+    assert ui.col(drag="reorder-layer").props == {"drag": "reorder-layer"}
+    assert ui.text("a", drop="move-fact").props == {"text": "a", "drop": "move-fact"}
+
+
 def test_menu_handlers_add_their_names_once() -> None:
     n = ui.card(actions={"menu": ["rerun"]}, on_menu={"rerun": noop, "sort=name": noop})
     assert n.props["actions"] == {"menu": ["rerun", "sort=name"]}

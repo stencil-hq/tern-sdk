@@ -60,6 +60,7 @@ func TestPointersSayZero(t *testing.T) {
 		{ui.Editor{Field: ui.Field{Text: "ab", Cursor: new(0)}}, `{"cursor":0,"text":"ab"}`},
 		{ui.Col{Common: ui.Common{Shrink: new(0.0), Grow: 1}}, `{"grow":1,"shrink":0}`},
 		{ui.Col{Common: ui.Common{Transition: ui.TransitionLayout, TransitionMs: new(300.0), MotionKey: "card-7"}}, `{"motionKey":"card-7","transition":"layout","transitionMs":300}`},
+		{ui.Col{Common: ui.Common{Drag: "reorder-layer", Drop: "move-fact"}}, `{"drag":"reorder-layer","drop":"move-fact"}`},
 		{ui.Tool{Collapsible: true, Collapsed: new(false)}, `{"collapsed":false,"collapsible":true}`},
 	}
 	for _, c := range cases {

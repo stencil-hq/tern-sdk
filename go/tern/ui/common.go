@@ -60,6 +60,14 @@ type Common struct {
 	// MotionKey is the node's identity within its nearest Transition
 	// container, kept across parents (unlike Key), so it glides to a new parent.
 	MotionKey string `json:"motionKey,omitzero"`
+	// Drag lets the user drag the node's children to another index: the
+	// release sends an Action with this act, Item the child's id and Value its
+	// new 0-based index (a finger drags after a long press).
+	Drag string `json:"drag,omitzero"`
+	// Drop lets the user drop a Drag container's child on the node: the
+	// release sends an Action with this act, Item the child's id and Value
+	// "before" or "after".
+	Drop string `json:"drop,omitzero"`
 	// Min bounds the node's size from below.
 	Min *Bounds `json:"min,omitzero"`
 	// Max bounds the node's size from above (a max height also clips).
@@ -121,6 +129,8 @@ type CommonWithoutTitle struct {
 	Transition   Transition `json:"transition,omitzero"`
 	TransitionMs *float64   `json:"transitionMs,omitzero"`
 	MotionKey    string     `json:"motionKey,omitzero"`
+	Drag         string     `json:"drag,omitzero"`
+	Drop         string     `json:"drop,omitzero"`
 
 	Min         *Bounds                       `json:"min,omitzero"`
 	Max         *Bounds                       `json:"max,omitzero"`
@@ -172,6 +182,8 @@ type CommonWithoutMax struct {
 	Transition   Transition `json:"transition,omitzero"`
 	TransitionMs *float64   `json:"transitionMs,omitzero"`
 	MotionKey    string     `json:"motionKey,omitzero"`
+	Drag         string     `json:"drag,omitzero"`
+	Drop         string     `json:"drop,omitzero"`
 
 	Min         *Bounds                       `json:"min,omitzero"`
 	Props       map[string]any                `json:"-"`
@@ -221,6 +233,8 @@ type PickerCommon struct {
 	Transition   Transition `json:"transition,omitzero"`
 	TransitionMs *float64   `json:"transitionMs,omitzero"`
 	MotionKey    string     `json:"motionKey,omitzero"`
+	Drag         string     `json:"drag,omitzero"`
+	Drop         string     `json:"drop,omitzero"`
 
 	Min         *Bounds                       `json:"min,omitzero"`
 	Max         *Bounds                       `json:"max,omitzero"`
@@ -274,6 +288,8 @@ type CommonWithoutActions struct {
 	Transition   Transition `json:"transition,omitzero"`
 	TransitionMs *float64   `json:"transitionMs,omitzero"`
 	MotionKey    string     `json:"motionKey,omitzero"`
+	Drag         string     `json:"drag,omitzero"`
+	Drop         string     `json:"drop,omitzero"`
 
 	Min         *Bounds                       `json:"min,omitzero"`
 	Max         *Bounds                       `json:"max,omitzero"`
