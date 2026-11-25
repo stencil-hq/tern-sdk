@@ -309,6 +309,9 @@ pub mod feature {
 	pub const FONT: &str = "font";
 	/// Terminal: an `md` with `stream` types its arriving text out itself.
 	pub const PACE: &str = "pace";
+	/// Terminal: an `image` whose action is `annotate` opens the user's
+	/// annotation editor, its result coming back as a `change`.
+	pub const ANNOTATE: &str = "annotate";
 }
 
 // ---------------------------------------------------------------------------

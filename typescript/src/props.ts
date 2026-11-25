@@ -418,6 +418,8 @@ export interface Actions {
    readonly menu?: readonly MenuEntry[];
    /** What a long press on a touch screen offers (same entries as `menu`); a phone's hold menu lists them, the desktop ignores them. */
    readonly hold?: readonly MenuEntry[];
+   /** Runs on every press starting outside the node (and outside the dock's composer). */
+   readonly outside?: string;
 }
 
 /** The props every node takes. */

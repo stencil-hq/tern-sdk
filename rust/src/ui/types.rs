@@ -1758,7 +1758,8 @@ macro_rules! int_key {
 
 int_key!(i32, i64, u32, u64, usize);
 
-/// What a pointer does on a node: `{click?, dblclick?, menu?, hold?}`.
+/// What a pointer does on a node: `{click?, dblclick?, menu?, hold?,
+/// outside?}`.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
 pub struct Actions {
 	/// The click action.
@@ -1775,6 +1776,10 @@ pub struct Actions {
 	/// lists them; the desktop ignores them.
 	#[serde(skip_serializing_if = "Vec::is_empty")]
 	pub hold:     Vec<MenuEntry>,
+	/// The action a press starting outside the node (and outside the dock's
+	/// composer) runs, on every such press.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub outside:  Option<String>,
 }
 
 impl Actions {
@@ -1792,6 +1797,12 @@ impl Actions {
 	/// Sets the double-click action.
 	pub fn dblclick(mut self, act: impl Into<String>) -> Self {
 		self.dblclick = Some(act.into());
+		self
+	}
+
+	/// Sets the action a press outside the node runs.
+	pub fn outside(mut self, act: impl Into<String>) -> Self {
+		self.outside = Some(act.into());
 		self
 	}
 

@@ -159,6 +159,9 @@ const (
 	TermFeatureFont = "font"
 	// TermFeaturePace says an md node with stream types its arriving text out itself.
 	TermFeaturePace = "pace"
+	// TermFeatureAnnotate says an image whose action is annotate opens the
+	// user's annotation editor, its result coming back as a change event.
+	TermFeatureAnnotate = "annotate"
 )
 
 // Message verbs, program to terminal and terminal to program.

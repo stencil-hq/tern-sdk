@@ -253,6 +253,8 @@ class Actions(TypedDict, total=False):
     menu: Sequence[MenuEntry]
     hold: Sequence[MenuEntry]
     """Long-press entries (same shapes as `menu`): a phone's hold menu lists them; the desktop ignores them."""
+    outside: str
+    """Runs on every press starting outside the node (and outside the dock's composer)."""
 
 
 class LinesPreview(TypedDict):

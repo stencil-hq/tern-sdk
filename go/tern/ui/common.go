@@ -385,6 +385,9 @@ type Actions struct {
 	// entry shapes as Menu; a phone's hold menu lists them as rows, a
 	// desktop ignores them.
 	Hold []MenuEntry `json:"hold,omitzero"`
+	// Outside is the action a press starting outside the node (and
+	// outside the dock's composer) runs, on every such press.
+	Outside string `json:"outside,omitzero"`
 }
 
 // Build makes a node of kind from props, a struct of json-tagged fields
