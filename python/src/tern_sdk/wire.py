@@ -566,6 +566,14 @@ class VisibleEvent(Event):
 
 
 @dataclass(frozen=True, kw_only=True)
+class CheckoutEvent(Event):
+    """The window reads and shows the pane's checkout (its branch, changes and
+    pull request) itself; `shown` is whether it does."""
+
+    shown: bool | None
+
+
+@dataclass(frozen=True, kw_only=True)
 class ToggleEvent(Event):
     """A collapsible node (or a tree item, `key`) was folded or unfolded, or a
     menu or fold opened or closed (`open`; `item` the menubar menu or trace
@@ -736,6 +744,8 @@ def decode_event(raw: dict[str, Json]) -> Event:
             return FeaturesEvent(**base, features=_strs(raw, "features"))
         case "visible":
             return VisibleEvent(**base, visible=_bool(raw, "visible"))
+        case "checkout":
+            return CheckoutEvent(**base, shown=_bool(raw, "shown"))
         case "toggle":
             return ToggleEvent(
                 **base,

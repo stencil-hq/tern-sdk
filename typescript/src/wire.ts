@@ -492,6 +492,14 @@ export interface VisibleEvent {
    readonly raw: JsonObject;
 }
 
+/** The window reads and shows the pane's checkout (its branch, changes and pull request) itself. */
+export interface CheckoutEvent {
+   readonly ev: 'checkout';
+   readonly sf?: string;
+   readonly shown: boolean;
+   readonly raw: JsonObject;
+}
+
 /**
  * A node was folded or unfolded (`collapsed`), or a menu, a select or a
  * trace step opened or closed (`open`, with the menu or step as `item`).
@@ -679,6 +687,7 @@ export type TspEvent =
    | MotionEvent
    | FeaturesEvent
    | VisibleEvent
+   | CheckoutEvent
    | ToggleEvent
    | SelectEvent
    | ActivateEvent
@@ -798,6 +807,10 @@ export function decodeEvent(raw: JsonObject): TspEvent {
          return visible !== undefined
             ? defined<VisibleEvent>({ ev, visible, raw }, { sf })
             : unknown();
+      }
+      case 'checkout': {
+         const shown = bool(raw, 'shown');
+         return shown !== undefined ? defined<CheckoutEvent>({ ev, shown, raw }, { sf }) : unknown();
       }
       case 'toggle': {
          const collapsed = bool(raw, 'collapsed');

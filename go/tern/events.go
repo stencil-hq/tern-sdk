@@ -83,7 +83,7 @@ type Input interface {
 }
 
 // Event is a terminal → program e message. Switch on its concrete type:
-// *Ack, *Resize, *Theme, *Motion, *Features, *Visible, *Toggle, *Select, *Activate,
+// *Ack, *Resize, *Theme, *Motion, *Features, *Visible, *Checkout, *Toggle, *Select, *Activate,
 // *Action, *Change, *Focus, *Edit, *Undo, *Send, *ErrorEvent, *Gone or
 // *UnknownEvent.
 type Event interface {
@@ -186,6 +186,13 @@ type Features struct {
 type Visible struct {
 	EventBase
 	Visible bool `json:"visible"`
+}
+
+// Checkout reports that the window reads and shows the pane's checkout (its
+// branch, changes and pull request) itself; Shown is whether it does.
+type Checkout struct {
+	EventBase
+	Shown bool `json:"shown"`
 }
 
 // Toggle reports that the user folded or unfolded a node, or opened or
@@ -442,6 +449,8 @@ func DecodeEvent(body []byte) (Event, bool) {
 		ev = &Features{}
 	case "visible":
 		ev = &Visible{}
+	case "checkout":
+		ev = &Checkout{}
 	case "toggle":
 		ev = &Toggle{}
 	case "select":

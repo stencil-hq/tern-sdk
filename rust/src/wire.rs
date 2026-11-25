@@ -1145,6 +1145,18 @@ event_struct!(
 );
 
 event_struct!(
+	/// `checkout`: the window reads and shows the pane's checkout (its
+	/// branch, changes and pull request) itself.
+	Checkout {
+		/// The surface.
+		sf: Option<String>,
+		/// Whether the window shows the branch, its changes and its pull
+		/// request for the pane.
+		shown: bool,
+	}
+);
+
+event_struct!(
 	/// `toggle`: a collapsible node was folded or unfolded, or a menu,
 	/// select or trace line opened or closed.
 	Toggle {
@@ -1375,6 +1387,8 @@ pub enum Event {
 	Features(Features),
 	/// `visible`.
 	Visible(Visible),
+	/// `checkout`.
+	Checkout(Checkout),
 	/// `toggle`.
 	Toggle(Toggle),
 	/// `select`.
@@ -1422,6 +1436,7 @@ impl Event {
 			"motion" => typed(map).map_or_else(Self::Unknown, Self::Motion),
 			"features" => typed(map).map_or_else(Self::Unknown, Self::Features),
 			"visible" => typed(map).map_or_else(Self::Unknown, Self::Visible),
+			"checkout" => typed(map).map_or_else(Self::Unknown, Self::Checkout),
 			"toggle" => typed(map).map_or_else(Self::Unknown, Self::Toggle),
 			"select" => typed(map).map_or_else(Self::Unknown, Self::Select),
 			"activate" => typed(map).map_or_else(Self::Unknown, Self::Activate),
@@ -1449,6 +1464,7 @@ impl Event {
 			Self::Motion(e) => &e.raw,
 			Self::Features(e) => &e.raw,
 			Self::Visible(e) => &e.raw,
+			Self::Checkout(e) => &e.raw,
 			Self::Toggle(e) => &e.raw,
 			Self::Select(e) | Self::Activate(e) => &e.raw,
 			Self::Action(e) => &e.raw,
