@@ -51,7 +51,7 @@ ShimmerMode: TypeAlias = Literal["classic", "kitt"]
 """A shimmer's sweep."""
 ElapsedFormat: TypeAlias = Literal["short", "clock"]
 """How an `elapsed` timer reads."""
-MeterStyle: TypeAlias = Literal["bar", "ring", "blocks"]
+MeterStyle: TypeAlias = Literal["bar", "ring", "blocks", "wave"]
 """A meter's shape."""
 Size3: TypeAlias = Literal["sm", "md", "lg"]
 """Small, medium or large."""

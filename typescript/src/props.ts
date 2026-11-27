@@ -1115,7 +1115,8 @@ export interface MeterProps {
    readonly value?: number;
    readonly parts?: readonly MeterPart[];
    readonly thresholds?: Thresholds;
-   readonly style?: 'bar' | 'ring' | 'blocks' | (string & {});
+   /** `wave`: bars that swing with the value, animated by Tern (a live voice or audio level). */
+   readonly style?: 'bar' | 'ring' | 'blocks' | 'wave' | (string & {});
    readonly size?: 'sm' | 'md' | 'lg' | (string & {});
    readonly steps?: number;
    readonly marks?: readonly MeterMark[];

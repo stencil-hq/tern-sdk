@@ -113,7 +113,7 @@ type Meter struct {
 	Parts []Part `json:"parts,omitzero"`
 	// Thresholds set data-level warn or bad.
 	Thresholds *Thresholds `json:"thresholds,omitzero"`
-	// Style is bar (default), ring or blocks.
+	// Style is bar (default), ring, blocks or wave.
 	Style MeterStyle `json:"style,omitzero"`
 	// Size is sm (default), md or lg.
 	Size Size `json:"size,omitzero"`
@@ -135,6 +135,9 @@ const (
 	MeterBar    MeterStyle = "bar"
 	MeterRing   MeterStyle = "ring"
 	MeterBlocks MeterStyle = "blocks"
+	// MeterWave is bars that swing with the value, animated by Tern (a
+	// live voice or audio level).
+	MeterWave MeterStyle = "wave"
 )
 
 // MeterMark is a tick on a meter's track.

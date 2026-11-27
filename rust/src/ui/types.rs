@@ -323,6 +323,9 @@ string_enum!(
 		Ring = "ring",
 		/// A grid of squares.
 		Blocks = "blocks",
+		/// Bars that swing with the value, animated by Tern (a live voice
+		/// or audio level).
+		Wave = "wave",
 	}
 );
 

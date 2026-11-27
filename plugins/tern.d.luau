@@ -2031,9 +2031,9 @@ declare extern type LayoutCx with
 	function unpark(self, pane: number, reveal: Reveal?): (boolean, string?)
 	--- Gives the tab's tiled blocks equal shares.
 	function even(self, tab: number): ()
-	--- Names a tab; nil or blank restores its pane's label.
+	--- Names a tab; nil or blank restores its pane's label. Raises for an unknown tab.
 	function name_tab(self, tab: number, name: string?): ()
-	--- Sets a tab's color; nil clears it.
+	--- Sets a tab's color; nil clears it. Raises for an unknown tab.
 	function color_tab(self, tab: number, color: TabColor?): ()
 	--- Reorders a tab at a one-based position within its session.
 	function order_tab(self, tab: number, position: number): ()
